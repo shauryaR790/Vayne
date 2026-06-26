@@ -1,4 +1,4 @@
-"""VAYNE Typer CLI application."""
+"""VAYNE CLI — Typer entrypoint."""
 
 from __future__ import annotations
 
@@ -8,108 +8,69 @@ from typing import Annotated, Optional
 import typer
 
 from vayne import __version__
-from vayne.cli.display import (
-    LiveInvestigationUI,
-    LiveSession,
-    console,
-    print_banner,
-    print_final_report,
-    print_finding_analysis,
-    print_stage,
-)
-from vayne.models.schemas import AnalyzedFinding
-from vayne.pipeline.runner import InvestigationPipeline
+from vayne.cli.display import LiveUI, console, print_final_report
+from vayne.orchestrator.pipeline import Orchestrator
+from rich.live import Live
 
 app = typer.Typer(
     name="vayne",
-    help="VAYNE — AI security analyst validation engine",
-    add_completion=False,
+    help="VAYNE — AI Security Analyst validation engine",
     no_args_is_help=True,
 )
 
 
 @app.callback()
-def main_callback() -> None:
-    """VAYNE automates manual security finding validation."""
+def _callback() -> None:
+    """Automate post-scan finding validation like a human analyst."""
 
 
-@app.command("validate")
-def validate_cmd(
+@app.command("analyze")
+def analyze(
     paths: Annotated[
         list[Path],
-        typer.Argument(help="Scan files or directory (e.g. scan_results/)"),
+        typer.Argument(help="Scan files or directory, e.g. ./scan_results/"),
     ],
     name: Annotated[
-        Optional[str],
-        typer.Option("--name", "-n", help="Investigation name"),
+        Optional[str], typer.Option("--name", "-n", help="Investigation name")
     ] = None,
-    quiet: Annotated[
-        bool,
-        typer.Option("--quiet", "-q", help="Minimal output"),
-    ] = False,
+    output: Annotated[
+        Optional[Path], typer.Option("--output", "-o", help="Export report directory")
+    ] = None,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q")] = False,
 ) -> None:
-    """Validate and correlate findings from scanner outputs."""
-    print_banner()
-
-    investigation_name = name
-    if not investigation_name:
-        investigation_name = typer.prompt("Enter investigation name", default="investigation-01")
-
+    """Analyze and validate security scan outputs."""
     resolved = [p.resolve() for p in paths]
     for p in resolved:
         if not p.exists():
-            raise typer.BadParameter(f"Path not found: {p}")
+            raise typer.BadParameter(f"Not found: {p}")
+
+    inv_name = name or typer.prompt("Enter investigation name", default="investigation-01")
+    export_dir = output or Path("reports") / inv_name.replace(" ", "_").lower()
 
     if quiet:
-        _run_quiet(investigation_name, resolved)
+        report = Orchestrator(inv_name, resolved).run(export_dir=export_dir)
+        console.print(f"Done — {report.stats.findings_loaded} findings analyzed")
         return
 
-    ui = LiveInvestigationUI()
-    findings_buffer: list[AnalyzedFinding] = []
-
-    def on_stage(stage: str, detail: str, progress: float) -> None:
-        ui.on_stage(stage, detail, progress)
-        ui.refresh()
-
-    def on_finding(finding: AnalyzedFinding, index: int, total: int) -> None:
-        ui.on_finding(finding, index, total)
-        ui.refresh()
-        findings_buffer.append(finding)
-
-    pipeline = InvestigationPipeline(
-        name=investigation_name,
-        paths=resolved,
-        on_stage=on_stage,
-        on_finding=on_finding,
+    ui = LiveUI()
+    orch = Orchestrator(
+        inv_name,
+        resolved,
+        on_stage=ui.on_stage,
+        on_thinking=ui.on_thinking,
     )
 
-    with LiveSession(ui):
-        report = pipeline.run()
-        ui.set_loaded(report.stats.loaded)
-        ui.refresh()
+    with Live(ui.render(), console=console, refresh_per_second=10):
+        report = orch.run(export_dir=export_dir)
+        ui.update_stats(report)
 
     console.print()
-    print_stage("Loading scan files", f"Loaded {report.stats.loaded} findings")
-    print_stage("Normalizing findings", "Generated common schema")
-    print_stage("Correlating findings", f"Correlated {len(report.findings)} findings")
-    print_stage("Beginning validation", "Analysis complete")
-
-    for finding in findings_buffer:
-        print_finding_analysis(finding)
-
     print_final_report(report)
-
-
-def _run_quiet(name: str, paths: list[Path]) -> None:
-    pipeline = InvestigationPipeline(name=name, paths=paths)
-    report = pipeline.run()
-    s = report.stats
-    console.print(f"Loaded: {s.loaded} | Validated: {s.validated} | FP: {s.false_positives}")
+    console.print(f"\n[dim]Reports exported to {export_dir.resolve()}[/dim]")
 
 
 @app.command("version")
-def version_cmd() -> None:
-    """Show VAYNE version."""
+def version() -> None:
     console.print(f"VAYNE v{__version__}")
 
 

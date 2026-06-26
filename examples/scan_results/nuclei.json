@@ -1,33 +1,35 @@
 [
   {
     "template-id": "CVE-2021-41773",
-    "host": "10.0.0.12:443",
-    "matched-at": "https://10.0.0.12:443/cgi-bin/.%2e/",
+    "host": "edge.example.com:443",
+    "matched-at": "https://edge.example.com/cgi-bin/.%2e/",
     "info": {
-      "name": "Apache 2.4.49 Path Traversal",
+      "name": "Apache 2.4.49 Path Traversal RCE",
       "severity": "critical",
+      "description": "Unauthenticated path traversal leading to RCE",
       "tags": ["apache", "rce", "cve"]
     }
   },
   {
-    "template-id": "jenkins-anonymous-access",
-    "host": "10.0.0.44:8080",
-    "matched-at": "http://10.0.0.44:8080/login",
+    "template-id": "aws-s3-public-write",
+    "host": "assets.example.com",
+    "matched-at": "https://assets.example.com/public/",
     "info": {
-      "name": "Jenkins Anonymous Access",
-      "severity": "high",
-      "tags": ["jenkins", "misconfig"]
-    },
-    "curl-command": "authentication required - login page returned 401"
+      "name": "Public S3 Bucket Write",
+      "severity": "critical",
+      "description": "S3 bucket allows public write access",
+      "tags": ["s3", "aws", "public"]
+    }
   },
   {
-    "template-id": "ssl-dns-names",
-    "host": "10.0.0.99:443",
-    "matched-at": "https://10.0.0.99/",
+    "template-id": "github-secret-leak",
+    "host": "github.example.com",
+    "matched-at": "https://github.example.com/repo/.env",
     "info": {
-      "name": "SSL DNS Names",
-      "severity": "info",
-      "tags": ["ssl"]
+      "name": "GitHub Secret Exposure",
+      "severity": "high",
+      "description": "AWS credentials found in repository",
+      "tags": ["github", "secret", "credential"]
     }
   }
 ]

@@ -1,14 +1,10 @@
-"""FastAPI application entrypoint."""
+"""FastAPI entrypoint."""
 
 from fastapi import FastAPI
 
 from vayne import __version__
 
-app = FastAPI(
-    title="VAYNE",
-    description="AI security analyst validation engine",
-    version=__version__,
-)
+app = FastAPI(title="VAYNE", version=__version__, description="AI Security Analyst API")
 
 
 @app.get("/health")

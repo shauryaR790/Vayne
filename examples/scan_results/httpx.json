@@ -1,0 +1,4 @@
+[
+  {"url": "https://assets.example.com", "status-code": 200, "host": "assets.example.com", "technologies": ["AmazonS3", "CloudFront"]},
+  {"url": "https://edge.example.com", "status-code": 200, "host": "edge.example.com", "technologies": ["Apache"]}
+]

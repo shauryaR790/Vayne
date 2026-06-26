@@ -1,4 +1,4 @@
-"""Rich terminal display for VAYNE CLI."""
+"""Rich terminal UI for VAYNE."""
 
 from __future__ import annotations
 
@@ -8,268 +8,154 @@ from rich.console import Console, Group
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
-from vayne.models.schemas import AnalyzedFinding, Classification, InvestigationReport
+from vayne.models import Classification, InvestigationReport
 
 console = Console()
 
-
-def print_banner() -> None:
-    banner = """
-╭──────────────────────────────────────────────╮
-│                 VAYNE AI                     │
-│     Security Analyst Validation Engine       │
-╰──────────────────────────────────────────────╯
+BANNER = """
+┌─────────────────────┐
+│   VAYNE SECURITY AI │
+│  Analyst Validation │
+└─────────────────────┘
 """
-    console.print(banner, style="bold white")
 
 
-def print_stage(message: str, detail: str = "", success: bool = True) -> None:
-    icon = "✓" if success else "●"
-    style = "green" if success else "cyan"
-    line = f"[{style}]{icon}[/{style}] {message}"
-    if detail:
-        line += f" [dim]— {detail}[/dim]"
-    console.print(line)
-
-
-class LiveInvestigationUI:
-    """Live stats + thinking panel during pipeline execution."""
-
+class LiveUI:
     def __init__(self) -> None:
-        self.stage = "Initializing"
-        self.detail = ""
-        self.progress = 0.0
-        self.current_finding = ""
+        self.stage_num = 0
+        self.stage_label = "Initializing"
+        self.stage_detail = ""
+        self.thinking: list[str] = []
         self.stats = {
-            "loaded": 0,
-            "validated": 0,
-            "false_positives": 0,
-            "manual_review": 0,
-            "critical": 0,
-            "hours_saved": 0.0,
+            "findings": 0,
+            "paths": 0,
+            "fps": 0,
+            "hours": 0.0,
+            "confidence": 0,
+            "risk": 0.0,
         }
-        self.thinking_lines: list[str] = [
-            "• Waiting for scan inputs...",
-        ]
         self._progress = Progress(
             SpinnerColumn(),
-            TextColumn("[bold cyan]{task.description}"),
-            BarColumn(bar_width=40, complete_style="white", finished_style="green"),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeRemainingColumn(),
+            TextColumn("[bold]{task.description}"),
+            BarColumn(bar_width=36, complete_style="white"),
+            TextColumn("{task.percentage:>3.0f}%"),
             expand=True,
         )
-        self._task = self._progress.add_task("VAYNE", total=100)
+        self._task = self._progress.add_task("VAYNE", total=7)
 
-    def _thinking_panel(self) -> Panel:
-        body = "\n".join(self.thinking_lines[-8:])
-        return Panel(
-            body,
-            title="[bold]VAYNE THINKING[/bold]",
-            border_style="dim white",
-            padding=(1, 2),
-        )
+    def on_stage(self, num: int, label: str, detail: str) -> None:
+        self.stage_num = num
+        self.stage_label = label
+        self.stage_detail = detail
+        self._progress.update(self._task, completed=num)
 
-    def _stats_panel(self) -> Panel:
-        table = Table.grid(padding=(0, 2))
-        table.add_column(style="dim")
-        table.add_column(style="bold white")
-        rows = [
-            ("Findings Loaded", str(self.stats["loaded"])),
-            ("Validated", str(self.stats["validated"])),
-            ("False Positives", str(self.stats["false_positives"])),
-            ("Manual Review", str(self.stats["manual_review"])),
-            ("Critical Findings", str(self.stats["critical"])),
-            ("Analyst Hours Saved", f"{self.stats['hours_saved']:.1f}h"),
-        ]
-        for label, val in rows:
-            table.add_row(label + ":", val)
-        return Panel(table, title="[bold]LIVE STATS[/bold]", border_style="dim white")
+    def on_thinking(self, line: str) -> None:
+        self.thinking.append(line.replace("[VAYNE] ", ""))
+        if len(self.thinking) > 12:
+            self.thinking = self.thinking[-12:]
 
-    def _stage_panel(self) -> Panel:
-        text = Text()
-        text.append("Current Stage:\n", style="dim")
-        text.append(self.stage + "\n\n", style="bold white")
-        text.append("Current Finding:\n", style="dim")
-        text.append(self.current_finding or "—", style="bold cyan")
-        return Panel(text, title="[bold]PIPELINE[/bold]", border_style="dim white")
+    def update_stats(self, report: InvestigationReport) -> None:
+        s = report.stats
+        self.stats = {
+            "findings": s.findings_loaded,
+            "paths": s.attack_paths,
+            "fps": s.false_positives_removed,
+            "hours": s.analyst_hours_saved,
+            "confidence": s.confirmed * 90 // max(s.confirmed + s.manual_review, 1),
+            "risk": max((f.exploitability_score for f in report.findings), default=0),
+        }
 
     def render(self) -> Group:
-        self._progress.update(self._task, completed=int(self.progress * 100), description=self.stage)
         layout = Layout()
         layout.split_column(
+            Layout(Panel(Align.center(Text(BANNER, style="bold white")), border_style="white"), size=6),
             Layout(self._progress, size=3),
             Layout(name="body"),
         )
         layout["body"].split_row(
-            Layout(self._stage_panel(), ratio=2),
-            Layout(
-                Group(self._stats_panel(), self._thinking_panel()),
-                ratio=3,
-            ),
+            Layout(self._pipeline_panel(), ratio=2),
+            Layout(Group(self._stats_panel(), self._thinking_panel()), ratio=3),
         )
         return Group(layout)
 
-    def on_stage(self, stage: str, detail: str, progress: float) -> None:
-        self.stage = stage
-        self.detail = detail
-        self.progress = progress
-        self.thinking_lines.append(f"• {stage}...")
-        if "load" in stage.lower():
-            self.thinking_lines.append("• Parsing scanner outputs...")
-        if "normal" in stage.lower():
-            self.thinking_lines.append("• Building common schema...")
-        if "correlat" in stage.lower():
-            self.thinking_lines.append("• Merging signals across tools...")
-        if "validat" in stage.lower():
-            self.thinking_lines.extend(
-                [
-                    "• Checking host availability...",
-                    "• Verifying service fingerprint...",
-                    "• Looking for exploit prerequisites...",
-                    "• Attempting safe validation...",
-                ]
-            )
+    def _pipeline_panel(self) -> Panel:
+        t = Text()
+        t.append(f"[{self.stage_num}/7] ", style="bold cyan")
+        t.append(self.stage_label + "\n", style="bold white")
+        t.append(self.stage_detail, style="dim")
+        return Panel(t, title="Pipeline", border_style="dim white")
 
-    def on_finding(self, finding: AnalyzedFinding, index: int, total: int) -> None:
-        self.current_finding = finding.correlated.finding
+    def _stats_panel(self) -> Panel:
+        table = Table.grid(padding=(0, 1))
+        table.add_column(style="dim")
+        table.add_column(style="bold")
+        for k, v in [
+            ("Findings discovered", self.stats["findings"]),
+            ("Attack paths", self.stats["paths"]),
+            ("False positives removed", self.stats["fps"]),
+            ("Analyst time saved", f"{self.stats['hours']:.1f}h"),
+            ("Risk score", f"{self.stats['risk']:.1f}"),
+        ]:
+            table.add_row(k + ":", str(v))
+        return Panel(table, title="Live Stats", border_style="dim white")
 
-        if finding.classification == Classification.CONFIRMED:
-            self.stats["validated"] += 1
-        if finding.classification == Classification.PROBABLE_FALSE_POSITIVE:
-            self.stats["false_positives"] += 1
-        if finding.classification == Classification.MANUAL_REVIEW:
-            self.stats["manual_review"] += 1
-        if finding.correlated.severity.lower() in ("critical", "high"):
-            if finding.classification != Classification.PROBABLE_FALSE_POSITIVE:
-                self.stats["critical"] += 1
-
-        self.stats["hours_saved"] = round(index * 0.35, 1)
-
-    def set_loaded(self, count: int) -> None:
-        self.stats["loaded"] = count
-
-
-def print_finding_analysis(finding: AnalyzedFinding) -> None:
-    c = finding.correlated
-    v = finding.validation
-    console.print()
-    console.print(Rule(f"[bold]VAYNE[/bold] — Analyzing {c.finding}...", style="dim white"))
-
-    for reason in v.reasoning:
-        ok = not any(x in reason for x in ("failed", "not met", "required"))
-        icon = "✓" if ok else "✗"
-        style = "green" if ok else "red"
-        console.print(f"  [{style}]{icon}[/{style}] {reason}")
-
-    console.print()
-    console.print(f"  [dim]Confidence:[/dim] [bold]{v.confidence}%[/bold]")
-    console.print(f"  [dim]Conclusion:[/dim] [bold]{finding.status_label}[/bold]")
-    console.print(Rule(style="dim"))
+    def _thinking_panel(self) -> Panel:
+        body = "\n".join(f"• {l}" for l in self.thinking[-8:]) or "• Starting analysis..."
+        return Panel(body, title="VAYNE THINKING", border_style="dim white")
 
 
 def print_final_report(report: InvestigationReport) -> None:
     s = report.stats
     console.print()
-    console.print("═" * 54, style="bold white")
-    console.print(Align.center("[bold white]INVESTIGATION COMPLETE[/bold white]"))
-    console.print("═" * 54, style="bold white")
+    console.print(Rule("[bold white]INVESTIGATION COMPLETE[/bold white]"))
     console.print()
 
     summary = Table.grid(padding=(0, 2))
-    summary.add_column(style="dim")
-    summary.add_column(style="bold")
     for label, val in [
         ("Target", report.target),
         ("Duration", f"{report.duration_seconds:.0f}s"),
-        ("Findings", str(s.loaded)),
-        ("Validated", str(s.validated)),
-        ("Likely Exploitable", str(s.likely_exploitable)),
-        ("False Positives", str(s.false_positives)),
-        ("Manual Review", str(s.manual_review)),
-        ("Analyst Time Saved", f"{s.analyst_hours_saved}h"),
+        ("Findings", str(s.findings_loaded)),
+        ("Validated", str(s.confirmed)),
+        ("False Positives", str(s.false_positives_removed)),
+        ("Attack Paths", str(s.attack_paths)),
+        ("Analyst Hours Saved", f"{s.analyst_hours_saved}h"),
     ]:
         summary.add_row(label + ":", val)
     console.print(Panel(summary, border_style="white", box=box.ROUNDED))
-    console.print()
 
     priority = [
-        f for f in report.findings
-        if f.classification != Classification.PROBABLE_FALSE_POSITIVE
-    ][:6]
+        f
+        for f in report.findings
+        if f.validation.classification != Classification.FALSE_POSITIVE
+    ][:5]
     if not priority:
         priority = report.findings[:3]
 
-    for finding in priority:
-        _print_finding_card(finding)
+    for f in priority:
+        console.print(Rule(style="dim"))
+        sev = f.correlated.severity.upper()
+        console.print(f"[bold]{sev}[/bold] — {f.correlated.title}")
+        console.print(f"Status: [bold]{f.validation.classification.value}[/bold]")
+        console.print(f"Confidence: [bold]{f.validation.confidence}%[/bold]")
+        console.print("[dim]Reasoning:[/dim]")
+        for r in f.validation.reasoning:
+            icon = "✓" if "not" not in r else "✗"
+            console.print(f"  {icon} {r}")
+        console.print(f"[dim]Root cause:[/dim] {f.analyst.root_cause}")
+        console.print(f"[dim]Business impact:[/dim] {f.analyst.business_impact}")
+        console.print(f"[dim]Remediation:[/dim] {f.analyst.remediation_summary}")
 
-    if len(report.findings) > len(priority):
-        console.print(
-            f"[dim]… and {len(report.findings) - len(priority)} more findings in report[/dim]"
-        )
-
-
-def _print_finding_card(finding: AnalyzedFinding) -> None:
-    c = finding.correlated
-    sev = c.severity.upper()
-    console.print("═" * 54, style="dim white")
-    color = _sev_color(c.severity)
-    console.print(f"[bold {color}]{sev}[/bold {color}]")
-    console.print(f"[bold white]{c.finding}[/bold white]")
-    console.print()
-    console.print(f"[dim]Status:[/dim] [bold]{finding.status_label}[/bold]")
-    console.print(f"[dim]Confidence:[/dim] [bold]{finding.validation.confidence}%[/bold]")
-    console.print(f"[dim]Host:[/dim] {c.host}" + (f":{c.port}" if c.port else ""))
-    console.print()
-
-    console.print("[dim]Reasoning:[/dim]")
-    for r in finding.validation.reasoning:
-        ok = not any(x in r for x in ("failed", "not met"))
-        icon = "✓" if ok else "✗"
-        console.print(f"  {icon} {r}")
-
-    console.print()
-    if finding.analyst.why_it_matters:
-        console.print(f"[dim]Business Impact:[/dim] {finding.analyst.business_impact}")
-        console.print(f"[dim]Why it matters:[/dim] {finding.analyst.why_it_matters}")
-
-    if finding.analyst.remediation_steps:
-        console.print("[dim]Recommended Action:[/dim]")
-        for step in finding.analyst.remediation_steps[:2]:
-            console.print(f"  → {step}")
-    console.print()
-
-
-def _sev_color(severity: str) -> str:
-    return {
-        "critical": "red",
-        "high": "yellow",
-        "medium": "cyan",
-        "low": "green",
-    }.get(severity.lower(), "white")
-
-
-class LiveSession:
-    """Context manager wrapping Rich Live display."""
-
-    def __init__(self, ui: LiveInvestigationUI) -> None:
-        self.ui = ui
-        self._live: Live | None = None
-
-    def __enter__(self) -> LiveInvestigationUI:
-        self._live = Live(self.ui.render(), console=console, refresh_per_second=8)
-        self._live.__enter__()
-        return self.ui
-
-    def __exit__(self, *args: object) -> None:
-        if self._live:
-            self._live.__exit__(*args)
-
-    def refresh(self) -> None:
-        if self._live:
-            self._live.update(self.ui.render())
+    if report.attack_paths:
+        console.print(Rule("[bold]Attack Paths[/bold]", style="dim"))
+        for p in report.attack_paths:
+            chain = " → ".join(n.label for n in p.nodes)
+            console.print(f"[bold]{p.title}[/bold]")
+            console.print(f"  {chain}")
+            console.print(
+                f"  Risk {p.risk_score} | Confidence {p.confidence}% | {p.exploit_time}"
+            )

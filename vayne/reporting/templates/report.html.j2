@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VAYNE Investigation — {{ name }}</title>
+  <style>
+    body { font-family: ui-monospace, monospace; background: #000; color: #fff; margin: 2rem; }
+    h1, h2 { letter-spacing: 0.08em; text-transform: uppercase; }
+    .stat { border: 1px solid #333; padding: 1rem; margin: 0.5rem 0; }
+    .critical { border-left: 4px solid #fff; padding-left: 1rem; margin: 1.5rem 0; }
+    .path { color: #aaa; margin: 0.25rem 0; }
+    ul { line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h1>VAYNE Investigation Report</h1>
+  <p>{{ name }} — {{ target }}</p>
+  <p>Duration: {{ duration }}s</p>
+
+  <h2>Executive Summary</h2>
+  <div class="stat">
+    <p>Findings loaded: {{ stats.findings_loaded }}</p>
+    <p>Correlated: {{ stats.findings_correlated }}</p>
+    <p>False positives removed: {{ stats.false_positives_removed }}</p>
+    <p>Attack paths: {{ stats.attack_paths }}</p>
+    <p>Analyst hours saved: {{ stats.analyst_hours_saved }}h</p>
+  </div>
+
+  <h2>Validated Findings</h2>
+  {% for f in findings %}
+  <div class="critical">
+    <h3>{{ f.correlated.title }} — {{ f.validation.classification.value }}</h3>
+    <p>Confidence: {{ f.validation.confidence }}%</p>
+    <p><strong>Root cause:</strong> {{ f.analyst.root_cause }}</p>
+    <p><strong>Business impact:</strong> {{ f.analyst.business_impact }}</p>
+    <p><strong>Attack scenario:</strong> {{ f.analyst.attack_scenario }}</p>
+    <p><strong>Remediation:</strong> {{ f.analyst.remediation_summary }}</p>
+  </div>
+  {% endfor %}
+
+  <h2>Attack Paths</h2>
+  {% for p in attack_paths %}
+  <div class="stat">
+    <h3>{{ p.title }}</h3>
+    {% for n in p.nodes %}
+    <p class="path">→ {{ n.label }} ({{ n.risk_level }})</p>
+    {% endfor %}
+    <p>Risk: {{ p.risk_score }} | Confidence: {{ p.confidence }}%</p>
+  </div>
+  {% endfor %}
+</body>
+</html>

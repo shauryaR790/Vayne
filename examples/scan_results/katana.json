@@ -1,0 +1,4 @@
+[
+  {"endpoint": "https://github.example.com/repo/secrets/.env", "tag": "secret"},
+  {"endpoint": "https://assets.example.com/public/", "tag": "s3"}
+]

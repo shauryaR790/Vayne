@@ -1,42 +1,48 @@
-"""Burp Suite XML export parser."""
+"""Burp Suite XML parser."""
 
 from __future__ import annotations
 
-import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from vayne.models.schemas import RawFinding
+from vayne.models import Asset, Finding
+from vayne.parsers.common import extract_cve, merge_asset, new_id, now, parse_port
 
 
-def parse_burp_xml(path: Path) -> list[RawFinding]:
-    tree = ET.parse(path)
-    root = tree.getroot()
-    findings: list[RawFinding] = []
+def parse(path: Path) -> tuple[list[Finding], list[Asset]]:
+    root = ET.parse(path).getroot()
+    findings: list[Finding] = []
+    assets: dict[str, Asset] = {}
 
     for issue in root.findall(".//issue"):
-        host = _text(issue, "host")
-        port = _text(issue, "port")
-        name = _text(issue, "name") or _text(issue, "type")
-        severity = (_text(issue, "severity") or "info").lower()
-        detail = _text(issue, "issueDetail") or _text(issue, "issueBackground")
+        host = _txt(issue, "host")
+        port = parse_port(_txt(issue, "port"))
+        name = _txt(issue, "name") or _txt(issue, "type")
+        detail = _txt(issue, "issueDetail")
+        severity = (_txt(issue, "severity") or "info").lower()
+        service = _txt(issue, "service")
 
         findings.append(
-            RawFinding(
-                id=str(uuid.uuid4())[:12],
-                tool="burp",
+            Finding(
+                id=new_id(),
                 host=host,
+                service=service,
                 port=port,
-                service=_text(issue, "service"),
-                version="",
-                finding=name,
                 severity=severity,
-                evidence=detail[:500] if detail else "",
+                cve=extract_cve(f"{name} {detail}"),
+                title=name,
+                description=detail[:400],
+                evidence=detail[:500],
+                confidence=65,
+                source_tool="burp",
+                timestamp=now(),
             )
         )
-    return findings
+        merge_asset(assets, host, port=port, service=service, tag="burp")
+
+    return findings, list(assets.values())
 
 
-def _text(parent: ET.Element, tag: str) -> str:
+def _txt(parent: ET.Element, tag: str) -> str:
     el = parent.find(tag)
     return (el.text or "").strip() if el is not None else ""

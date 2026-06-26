@@ -1,7 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<nmaprun scanner="nmap" args="nmap -sV -oX nmap.xml 10.0.0.0/24">
+<?xml version="1.0"?>
+<nmaprun scanner="nmap">
   <host>
     <address addr="10.0.0.12" addrtype="ipv4"/>
+    <hostnames><hostname name="edge.example.com"/></hostnames>
     <ports>
       <port protocol="tcp" portid="443">
         <state state="open"/>
@@ -10,20 +11,12 @@
     </ports>
   </host>
   <host>
-    <address addr="10.0.0.44" addrtype="ipv4"/>
-    <ports>
-      <port protocol="tcp" portid="8080">
-        <state state="open"/>
-        <service name="http" product="Jenkins" version="2.414"/>
-      </port>
-    </ports>
-  </host>
-  <host>
-    <address addr="10.0.0.99" addrtype="ipv4"/>
+    <address addr="10.0.0.55" addrtype="ipv4"/>
+    <hostnames><hostname name="assets.example.com"/></hostnames>
     <ports>
       <port protocol="tcp" portid="443">
         <state state="open"/>
-        <service name="https" product="nginx" version="1.24.0"/>
+        <service name="https" product="AmazonS3"/>
       </port>
     </ports>
   </host>

@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<NessusClientData_v2>
+  <Report name="scan">
+    <ReportHost name="edge.example.com">
+      <ReportItem port="443" protocol="tcp" severity="4" pluginName="Apache HTTP Server Path Traversal">
+        <plugin_output>Server version 2.4.49 confirmed vulnerable to CVE-2021-41773</plugin_output>
+      </ReportItem>
+    </ReportHost>
+    <ReportHost name="jenkins.example.com">
+      <ReportItem port="8080" protocol="tcp" severity="3" pluginName="Jenkins Anonymous Access">
+        <plugin_output>Authentication required - login page returned 401</plugin_output>
+      </ReportItem>
+    </ReportHost>
+  </Report>
+</NessusClientData_v2>

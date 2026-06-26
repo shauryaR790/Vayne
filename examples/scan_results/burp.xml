@@ -1,19 +1,18 @@
 <?xml version="1.0"?>
-<issues burpVersion="2024.1">
+<issues>
   <issue>
-    <host>10.0.0.12</host>
+    <host>edge.example.com</host>
     <port>443</port>
     <service>https</service>
-    <name>Path traversal vulnerability</name>
+    <name>Apache path traversal</name>
     <severity>High</severity>
-    <issueDetail>Apache path traversal may allow RCE on version 2.4.49</issueDetail>
+    <issueDetail>Version 2.4.49 vulnerable to CVE-2021-41773 — no authentication required</issueDetail>
   </issue>
   <issue>
-    <host>10.0.0.44</host>
-    <port>8080</port>
-    <service>http</service>
-    <name>Exposed Jenkins dashboard</name>
-    <severity>Medium</severity>
-    <issueDetail>Authentication required. Exploit unsuccessful during validation.</issueDetail>
+    <host>assets.example.com</host>
+    <port>443</port>
+    <name>Public S3 bucket</name>
+    <severity>Critical</severity>
+    <issueDetail>Bucket allows public write. IAM admin role referenced in policy.</issueDetail>
   </issue>
 </issues>

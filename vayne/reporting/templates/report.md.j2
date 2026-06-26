@@ -1,0 +1,48 @@
+# VAYNE Investigation — {{ name }}
+
+**Target:** {{ target }}
+**Duration:** {{ duration }}s
+
+## Executive Summary
+
+| Metric | Value |
+|--------|-------|
+| Findings loaded | {{ stats.findings_loaded }} |
+| Correlated | {{ stats.findings_correlated }} |
+| False positives removed | {{ stats.false_positives_removed }} |
+| Attack paths | {{ stats.attack_paths }} |
+| Analyst hours saved | {{ stats.analyst_hours_saved }}h |
+
+## Validated Findings
+
+{% for f in findings %}
+### {{ f.correlated.title }}
+
+- **Status:** {{ f.validation.classification.value }}
+- **Confidence:** {{ f.validation.confidence }}%
+- **Root cause:** {{ f.analyst.root_cause }}
+- **Business impact:** {{ f.analyst.business_impact }}
+- **Attack scenario:** {{ f.analyst.attack_scenario }}
+- **Exploitability:** {{ f.analyst.exploitability }}
+
+#### Remediation Timeline
+
+- **Immediate:** {% for i in f.remediation.immediate %}{{ i }}{% if not loop.last %}; {% endif %}{% endfor %}
+- **24h:** {% for i in f.remediation.hours_24 %}{{ i }}{% if not loop.last %}; {% endif %}{% endfor %}
+- **72h:** {% for i in f.remediation.hours_72 %}{{ i }}{% if not loop.last %}; {% endif %}{% endfor %}
+
+{% endfor %}
+
+## Attack Paths
+
+{% for p in attack_paths %}
+### {{ p.title }}
+
+{% for n in p.nodes %}→ {{ n.label }} ({{ n.risk_level }})
+{% endfor %}
+
+- Risk score: {{ p.risk_score }}
+- Blast radius: {{ p.blast_radius }}
+- Exploit time: {{ p.exploit_time }}
+
+{% endfor %}
