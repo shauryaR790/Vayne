@@ -120,8 +120,9 @@ def print_final_report(report: InvestigationReport) -> None:
         ("Target", report.target),
         ("Duration", f"{report.duration_seconds:.0f}s"),
         ("Findings", str(s.findings_loaded)),
-        ("Validated", str(s.confirmed)),
+        ("Validated", str(s.validated)),
         ("False Positives", str(s.false_positives_removed)),
+        ("Retained", str(s.findings_retained)),
         ("Attack Paths", str(s.attack_paths)),
         ("Analyst Hours Saved", f"{s.analyst_hours_saved}h"),
     ]:
@@ -142,20 +143,71 @@ def print_final_report(report: InvestigationReport) -> None:
         console.print(f"[bold]{sev}[/bold] — {f.correlated.title}")
         console.print(f"Status: [bold]{f.validation.classification.value}[/bold]")
         console.print(f"Confidence: [bold]{f.validation.confidence}%[/bold]")
+        if f.validation.confidence_breakdown:
+            console.print("[dim]Confidence breakdown:[/dim]")
+            for b in f.validation.confidence_breakdown:
+                console.print(f"  {b}")
         console.print("[dim]Reasoning:[/dim]")
         for r in f.validation.reasoning:
             icon = "✓" if "not" not in r else "✗"
             console.print(f"  {icon} {r}")
         console.print(f"[dim]Root cause:[/dim] {f.analyst.root_cause}")
-        console.print(f"[dim]Business impact:[/dim] {f.analyst.business_impact}")
+        console.print(f"[dim]Impact assessment:[/dim] {f.analyst.impact_assessment}")
         console.print(f"[dim]Remediation:[/dim] {f.analyst.remediation_summary}")
 
+    console.print(Rule("[bold]Attack Paths[/bold]", style="dim"))
     if report.attack_paths:
-        console.print(Rule("[bold]Attack Paths[/bold]", style="dim"))
         for p in report.attack_paths:
             chain = " → ".join(n.label for n in p.nodes)
             console.print(f"[bold]{p.title}[/bold]")
             console.print(f"  {chain}")
+            risk_label = f"Risk {p.risk_score}"
             console.print(
-                f"  Risk {p.risk_score} | Confidence {p.confidence}% | {p.exploit_time}"
+                f"  {risk_label} | Confidence {p.confidence}% | "
+                f"Attacker effort {p.attacker_effort or 'unknown'}"
             )
+            if p.termination_message:
+                console.print(f"  [yellow]{p.termination_message}[/yellow]")
+            if p.missing_evidence:
+                for item in p.missing_evidence:
+                    console.print(f"  [yellow]Missing:[/yellow] {item}")
+            for edge in p.edges:
+                src = edge.source_id.split(":")[-1]
+                tgt = edge.target_id.split(":")[-1]
+                console.print(f"  [dim]EDGE {src} → {tgt}[/dim]")
+                console.print(f"    DISCOVERED FROM ({edge.source_tool}, finding {edge.source_finding_id}):")
+                for d in edge.discovered_from:
+                    console.print(f"      - {d}")
+                if edge.artifact_type:
+                    console.print(f"    artifact_type: {edge.artifact_type}")
+                console.print(f"    Evidence: {edge.evidence[:120]}")
+                console.print(
+                    f"    Confidence: {edge.confidence_contribution}%"
+                )
+                if edge.confidence_breakdown:
+                    for b in edge.confidence_breakdown[:8]:
+                        console.print(f"      {b}")
+                if edge.validation_checks_passed:
+                    console.print(
+                        f"    Validation: {', '.join(edge.validation_checks_passed)}"
+                    )
+            if p.scoring:
+                s = p.scoring
+                console.print("  [dim]Scoring formulas:[/dim]")
+                console.print(f"    Edge confidence: {s.edge_confidence_formula}")
+                console.print(f"    Path confidence: {s.confidence_formula}")
+                console.print(f"    → {s.confidence_calculation}")
+                console.print(f"    Attacker effort: {s.attacker_effort_formula}")
+                console.print(f"    → {s.attacker_effort_calculation}")
+                console.print(f"    Raw risk: {s.risk_score_formula}")
+                console.print(f"    → {s.risk_score_calculation}")
+    else:
+        console.print("[dim]NO ATTACK PATH DISCOVERED[/dim]")
+        console.print(
+            "[dim]No evidence-backed graph traversal from entry to a proven terminal node.[/dim]"
+        )
+
+    if report.proof_log:
+        console.print(Rule("[bold]Proof Mode Audit[/bold]", style="dim"))
+        for line in report.proof_log:
+            console.print(f"[dim]{line}[/dim]")

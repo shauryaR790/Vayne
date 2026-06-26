@@ -1,0 +1,12 @@
+[
+  {"template-id": "fp-dns-wildcard", "host": "noise1.example.com", "info": {"name": "DNS wildcard detected", "severity": "info"}, "matcher-name": "wildcard"},
+  {"template-id": "fp-tls-expired-self", "host": "noise2.example.com", "info": {"name": "Self-signed certificate", "severity": "low"}},
+  {"template-id": "fp-missing-csp", "host": "noise3.example.com", "info": {"name": "Content-Security-Policy missing", "severity": "info"}},
+  {"template-id": "fp-x-frame", "host": "noise4.example.com", "info": {"name": "X-Frame-Options missing", "severity": "info"}},
+  {"template-id": "fp-cookie-httponly", "host": "noise5.example.com", "info": {"name": "Cookie without HttpOnly", "severity": "info"}},
+  {"template-id": "fp-server-header", "host": "noise6.example.com", "info": {"name": "Server header disclosure", "severity": "info"}},
+  {"template-id": "fp-robots-txt", "host": "noise7.example.com", "info": {"name": "robots.txt found", "severity": "info"}},
+  {"template-id": "fp-email-exposure", "host": "noise8.example.com", "info": {"name": "Email address in page source", "severity": "info"}},
+  {"template-id": "fp-git-config", "host": "noise9.example.com", "info": {"name": "Possible .git/config exposure", "severity": "medium"}, "extracted-results": ["login required 401"]},
+  {"template-id": "fp-admin-panel", "host": "noise10.example.com", "info": {"name": "Admin panel detected", "severity": "low"}, "extracted-results": ["authentication required"]}
+]

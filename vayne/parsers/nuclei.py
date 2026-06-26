@@ -41,7 +41,7 @@ def parse(path: Path) -> tuple[list[Finding], list[Asset]]:
                 cwe=extract_cwe(text),
                 title=title,
                 description=info.get("description", ""),
-                evidence=matched,
+                evidence=f"{matched} — {info.get('description', '')}".strip(" —"),
                 confidence=75 if severity in ("critical", "high") else 55,
                 source_tool="nuclei",
                 timestamp=now(),

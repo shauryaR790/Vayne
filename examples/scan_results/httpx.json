@@ -1,4 +1,6 @@
 [
   {"url": "https://assets.example.com", "status-code": 200, "host": "assets.example.com", "technologies": ["AmazonS3", "CloudFront"]},
-  {"url": "https://edge.example.com", "status-code": 200, "host": "edge.example.com", "technologies": ["Apache"]}
+  {"url": "https://edge.example.com", "status-code": 200, "host": "edge.example.com", "technologies": ["Apache"]},
+  {"url": "https://db.example.com", "status-code": 200, "host": "db.example.com", "technologies": ["PostgreSQL"]},
+  {"url": "https://github.example.com", "status-code": 200, "host": "github.example.com", "technologies": ["GitHub"]}
 ]

@@ -1,4 +1,4 @@
-"""Correlation engine — merge findings and build relationships."""
+"""Correlation engine — merge findings without theme-based path selection."""
 
 from __future__ import annotations
 
@@ -11,16 +11,6 @@ import pandas as pd
 from vayne.models import Asset, CorrelatedFinding, Finding
 
 CVE_RE = re.compile(r"CVE-\d{4}-\d+", re.I)
-
-THEME_KEYWORDS = {
-    "s3": ["s3", "bucket", "public", "aws"],
-    "iam": ["iam", "role", "policy", "credential", "admin"],
-    "apache": ["apache", "httpd", "41773", "42013"],
-    "jenkins": ["jenkins", "hudson"],
-    "github": ["github", "secret", "leak", "token"],
-    "database": ["database", "postgres", "mysql", "rds", "production"],
-    "secrets": ["secret", "secrets manager", "vault"],
-}
 
 
 def correlate_findings(findings: list[Finding]) -> list[CorrelatedFinding]:
@@ -53,33 +43,28 @@ def findings_dataframe(findings: list[Finding]) -> pd.DataFrame:
 
 
 def _bucket_key(f: Finding) -> str:
-    theme = _theme(f)
     cves = CVE_RE.findall(f"{f.title} {f.cve} {f.evidence}")
-    cve = cves[0] if cves else theme
+    cve = cves[0] if cves else f.title.lower()[:48]
     port = f.port or 0
     return f"{f.host.lower()}|{port}|{cve}"
-
-
-def _theme(f: Finding) -> str:
-    text = f"{f.title} {f.description} {f.service} {f.evidence}".lower()
-    for theme, keys in THEME_KEYWORDS.items():
-        if any(k in text for k in keys):
-            return theme
-    return f.title.lower()[:48]
 
 
 def _merge_group(group: list[Finding]) -> CorrelatedFinding:
     primary = max(group, key=lambda x: _sev_rank(x.severity))
     sources = sorted({f.source_tool for f in group})
-    evidence = [f.evidence for f in group if f.evidence][:6]
-    tags = list({_theme(f) for f in group})
+    evidence = []
+    for f in group:
+        if f.evidence:
+            evidence.append(f.evidence)
+        elif f.description:
+            evidence.append(f.description)
+    evidence = evidence[:8]
 
-    confidence = min(99, 50 + len(sources) * 10 + len(evidence) * 3)
-    title = _title(group, primary)
+    confidence = _correlation_confidence(sources, evidence, group)
 
     return CorrelatedFinding(
         id=uuid.uuid4().hex[:12],
-        title=title,
+        title=primary.title,
         host=primary.host,
         service=primary.service,
         port=primary.port,
@@ -91,23 +76,18 @@ def _merge_group(group: list[Finding]) -> CorrelatedFinding:
         confidence=confidence,
         sources=sources,
         findings=group,
-        tags=tags,
     )
 
 
-def _title(group: list[Finding], primary: Finding) -> str:
-    text = " ".join(f.title for f in group).lower()
-    if "apache" in text and ("rce" in text or "41773" in text):
-        return "Apache RCE"
-    if "s3" in text and "public" in text:
-        return "Public S3 Bucket Exposure"
-    if "jenkins" in text:
-        return "Exposed Jenkins"
-    if "github" in text and "secret" in text:
-        return "Leaked GitHub Secret"
-    if "iam" in text:
-        return "IAM Privilege Exposure"
-    return primary.title
+def _correlation_confidence(
+    sources: list[str], evidence: list[str], group: list[Finding]
+) -> int:
+    if not evidence:
+        return 0
+    score = min(40, len(sources) * 12)
+    score += min(30, len(evidence) * 6)
+    score += min(20, sum(1 for f in group if f.cve) * 10)
+    return min(95, score)
 
 
 def _first_cve(group: list[Finding]) -> str:

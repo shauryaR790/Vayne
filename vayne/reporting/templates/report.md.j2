@@ -21,7 +21,7 @@
 - **Status:** {{ f.validation.classification.value }}
 - **Confidence:** {{ f.validation.confidence }}%
 - **Root cause:** {{ f.analyst.root_cause }}
-- **Business impact:** {{ f.analyst.business_impact }}
+- **Impact assessment:** {{ f.analyst.impact_assessment }}
 - **Attack scenario:** {{ f.analyst.attack_scenario }}
 - **Exploitability:** {{ f.analyst.exploitability }}
 
@@ -35,14 +35,39 @@
 
 ## Attack Paths
 
+{% if attack_paths %}
 {% for p in attack_paths %}
 ### {{ p.title }}
 
-{% for n in p.nodes %}→ {{ n.label }} ({{ n.risk_level }})
+{% for n in p.nodes %}→ {{ n.label }} ({{ n.risk_level }}) — findings: {{ n.source_finding_ids | join(', ') }}
 {% endfor %}
 
-- Risk score: {{ p.risk_score }}
-- Blast radius: {{ p.blast_radius }}
-- Exploit time: {{ p.exploit_time }}
+{% for e in p.edges %}
+**Edge** {{ e.source_id }} → {{ e.target_id }}
+- Evidence: {{ e.evidence }}
+- Finding ID: {{ e.source_finding_id }}
+- Tool: {{ e.source_tool }}
+- Validation: {{ e.validation_checks_passed | join(', ') }}
+- Confidence contribution: +{{ e.confidence_contribution }}
+{% endfor %}
+
+- Risk score: {{ p.risk_score }} — {{ p.scoring.risk_score_calculation if p.scoring else '' }}
+- Attacker effort: {{ p.attacker_effort or 'unknown' }} — {{ p.scoring.attacker_effort_calculation if p.scoring else '' }}
+- Path confidence: {{ p.confidence }}% — {{ p.scoring.confidence_calculation if p.scoring else '' }}
+{% if p.termination_message %}
+- **{{ p.termination_message }}**
+{% endif %}
+{% for m in p.missing_evidence %}
+- Missing: {{ m }}
+{% endfor %}
+
+#### Formulas
+- Edge confidence: `{{ p.scoring.edge_confidence_formula if p.scoring else '' }}`
+- Path confidence: `{{ p.scoring.confidence_formula if p.scoring else '' }}`
+- Attacker effort: `{{ p.scoring.attacker_effort_formula if p.scoring else '' }}`
+- Risk score: `{{ p.scoring.risk_score_formula if p.scoring else '' }}`
 
 {% endfor %}
+{% else %}
+**NO ATTACK PATH DISCOVERED** — no evidence-backed graph traversal from entry to a proven terminal node.
+{% endif %}

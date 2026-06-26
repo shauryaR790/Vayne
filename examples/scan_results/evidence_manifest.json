@@ -1,0 +1,30 @@
+{
+  "description": "Evidence manifest for examples/scan_results — every relationship below must appear in scan output.",
+  "minimum_path_confidence": 50,
+  "discovered_hosts": [
+    {"host": "edge.example.com", "ip": "10.0.0.12", "sources": ["nmap", "httpx", "nuclei", "burp"]},
+    {"host": "assets.example.com", "ip": "10.0.0.55", "sources": ["nmap", "httpx", "nuclei", "burp"]},
+    {"host": "db.example.com", "ip": "10.0.0.99", "sources": ["nmap", "httpx"]},
+    {"host": "github.example.com", "sources": ["nuclei", "httpx"]}
+  ],
+  "expected_paths": [
+    {
+      "name": "Apache RCE chain",
+      "hops": ["Internet", "edge.example.com", "http:443", "CVE-2021-41773"],
+      "required_files": ["nmap.xml", "httpx.json", "nuclei.json", "burp.xml"],
+      "required_validation": ["host alive", "port open", "version matches", "CVE applicable", "attack surface reachable"]
+    },
+    {
+      "name": "S3 credential escalation chain",
+      "hops": ["Internet", "assets.example.com", "https:443", "Public S3 Bucket", "Exposed AWS access key", "sts:AssumeRole AdminRole", "db.example.com", "PostgreSQL 14.2"],
+      "required_files": ["nmap.xml", "httpx.json", "nuclei.json", "burp.xml"],
+      "required_validation": ["privilege escalation evidenced", "lateral movement evidenced", "reproducible across tools"]
+    }
+  ],
+  "paths_excluded_when": [
+    "any edge confidence_contribution < 50",
+    "path_confidence < 50",
+    "missing finding ID or evidence on an edge",
+    "target host not present in scan inventory"
+  ]
+}

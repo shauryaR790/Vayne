@@ -40,10 +40,12 @@ def build_stats(
     return InvestigationStats(
         findings_loaded=raw_count,
         findings_correlated=len(correlated),
+        findings_retained=len(correlated) - fp,
         attack_paths=attack_path_count,
         false_positives_removed=fp,
         confirmed=confirmed,
         likely_exploitable=likely,
+        validated=confirmed + likely,
         manual_review=manual,
         analyst_hours_saved=estimate_hours_saved(raw_count, fp, len(correlated)),
         critical_count=critical,

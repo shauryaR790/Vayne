@@ -20,4 +20,14 @@
       </port>
     </ports>
   </host>
+  <host>
+    <address addr="10.0.0.99" addrtype="ipv4"/>
+    <hostnames><hostname name="db.example.com"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="5432">
+        <state state="open"/>
+        <service name="postgresql" product="PostgreSQL" version="14.2"/>
+      </port>
+    </ports>
+  </host>
 </nmaprun>

@@ -13,6 +13,6 @@
     <port>443</port>
     <name>Public S3 bucket</name>
     <severity>Critical</severity>
-    <issueDetail>Bucket allows public write. IAM admin role referenced in policy.</issueDetail>
+    <issueDetail>Bucket ACL public-write confirmed. Bucket policy grants sts:AssumeRole to arn:aws:iam::123456789:role/AdminRole. Exposed AWS access key found in bucket listing. DATABASE_URL=postgres://db.example.com:5432/prod found in exposed .env file in bucket.</issueDetail>
   </issue>
 </issues>

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from vayne.analyst.engine import generate_brief
-from vayne.attack_paths.graph import discover_attack_paths
+from vayne.attack_paths.discovery import discover_attack_paths
 from vayne.correlator.engine import correlate_assets, correlate_findings
 from vayne.exploitability.scorer import score_exploitability
 from vayne.false_positive.classifier import build_stats
@@ -38,12 +38,15 @@ class Orchestrator:
         paths: list[Path],
         on_stage: StageCallback | None = None,
         on_thinking: ThinkingCallback | None = None,
+        proof: bool = False,
     ):
         self.name = name
         self.paths = paths
         self.on_stage = on_stage or (lambda *_: None)
         self.on_thinking = on_thinking or (lambda _: None)
+        self.proof = proof
         self.thinking_log: list[str] = []
+        self.proof_log: list[str] = []
         self._start = 0.0
 
     def _think(self, msg: str) -> None:
@@ -69,20 +72,99 @@ class Orchestrator:
 
         self.on_stage(4, STAGES[3], "Validating each finding")
         investigated: list[InvestigatedFinding] = []
-        validations = []
+        validations: list = []
+        validation_map: dict = {}
 
         for item in correlated:
-            self._think(f"Analyzing {item.title} on {item.host}...")
+            self._think(f"Validating {item.title} on {item.host}...")
             validation = validate_finding(item, assets)
             validations.append(validation)
+            validation_map[item.id] = validation
 
             if validation.classification == Classification.FALSE_POSITIVE:
-                self._think(f"{item.title} — likely false positive (confidence {validation.confidence}%).")
+                self._think(
+                    f"{item.title} — discarded as false positive "
+                    f"(confidence {validation.confidence}%)."
+                )
+            elif not item.evidence:
+                self._think(f"{item.title} — insufficient evidence for confident classification.")
             else:
-                self._think(f"{item.title} — validation confidence increased to {validation.confidence}%.")
+                self._think(
+                    f"{item.title} — {validation.classification.value} "
+                    f"(confidence {validation.confidence}%)."
+                )
+                for line in validation.confidence_breakdown[:6]:
+                    self._think(f"  {line}")
 
-            attack_paths_preview = discover_attack_paths([item])
-            brief = generate_brief(item, validation, attack_paths_preview)
+        fp_count = sum(
+            1 for v in validations if v.classification == Classification.FALSE_POSITIVE
+        )
+        retained = len(correlated) - fp_count
+        self._think(
+            f"{len(raw_findings)} findings received -> "
+            f"{fp_count} discarded -> {retained} retained for graph."
+        )
+
+        self.on_stage(5, STAGES[4], "Discovering attack chains")
+        attack_paths, graph_proof = discover_attack_paths(
+            raw_findings, assets, correlated, validation_map
+        )
+        from vayne.models import DiscoveredAsset
+
+        discovered_assets = [
+            DiscoveredAsset(**a) for a in graph_proof.discovered_assets
+        ]
+
+        validated = sum(
+            1
+            for v in validations
+            if v.classification
+            in (Classification.CONFIRMED, Classification.LIKELY_EXPLOITABLE)
+        )
+        if validated == 0 and attack_paths:
+            attack_paths = []
+            self._think(
+                "Zero validated findings — suppressing attack paths "
+                "(no evidence-backed chains)."
+            )
+        elif validated == 0:
+            self._think(
+                "Zero validated findings — no attack paths can be proven."
+            )
+
+        if self.proof:
+            self.proof_log = graph_proof.log_lines()
+            for line in self.proof_log:
+                self._think(line)
+
+        if attack_paths:
+            pd = graph_proof.path_discovery
+            if pd:
+                self._think(
+                    f"Graph: {len(graph_proof.nodes)} nodes, "
+                    f"{sum(1 for e in graph_proof.edges if e.accepted)} edges. "
+                    f"Running {pd.algorithm}(): {pd.raw_paths_enumerated} paths found, "
+                    f"{pd.paths_accepted} evidence-backed paths retained."
+                )
+            for p in attack_paths:
+                self._think(f"Attack path discovered: {p.title}")
+                self._think(
+                    f"Risk {p.risk_score} | Confidence: {p.confidence}% | "
+                    f"Effort: {p.attacker_effort}"
+                )
+                if p.termination_message:
+                    self._think(p.termination_message)
+        else:
+            self._think("NO ATTACK PATH DISCOVERED - graph traversal found no entry->target chain.")
+
+        for item in correlated:
+            validation = validation_map[item.id]
+            item_paths = [
+                p
+                for p in attack_paths
+                if any(n.id == f"vuln:{item.id}" for n in p.nodes)
+            ]
+            brief = generate_brief(item, validation, item_paths)
             timeline = generate_timeline(item, validation)
             exp_score = score_exploitability(item, validation)
 
@@ -95,16 +177,10 @@ class Orchestrator:
                     exploitability_score=exp_score,
                 )
             )
-            time.sleep(0.08)
-
-        self.on_stage(5, STAGES[4], "Discovering attack chains")
-        attack_paths = discover_attack_paths(correlated)
-        for p in attack_paths:
-            self._think(f"Attack path discovered: {p.title}")
-            self._think(f"Blast radius: {p.blast_radius}")
+            time.sleep(0.05)
 
         self.on_stage(6, STAGES[5], "Scoring exploitability")
-        self._think("Calculating exploitability and business impact...")
+        self._think("Calculating exploitability from validation signals...")
 
         self.on_stage(7, STAGES[6], "Building final report")
         stats = build_stats(len(raw_findings), correlated, validations, len(attack_paths))
@@ -117,9 +193,11 @@ class Orchestrator:
             duration_seconds=duration,
             stats=stats,
             assets=assets,
+            discovered_assets=discovered_assets,
             findings=investigated,
             attack_paths=attack_paths,
             thinking_log=self.thinking_log,
+            proof_log=self.proof_log,
         )
 
         if export_dir:

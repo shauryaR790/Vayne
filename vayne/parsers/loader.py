@@ -25,7 +25,12 @@ def _uid() -> str:
     return uuid.uuid4().hex[:12]
 
 
+SKIP_FILE_NAMES = ("evidence_manifest.json",)
+
+
 def parse_file(path: Path) -> tuple[list[Finding], list[Asset]]:
+    if path.name.lower() in SKIP_FILE_NAMES:
+        return [], []
     name = path.name.lower()
     parser = _resolve_parser(path, name)
     return parser(path)
@@ -37,9 +42,9 @@ def _resolve_parser(path: Path, name: str):
             return fn
     suffix = path.suffix.lower()
     if suffix == ".json":
-        return _auto_json(path)
+        return lambda p: _auto_json(p)
     if suffix == ".xml":
-        return _auto_xml(path)
+        return lambda p: _auto_xml(p)
     raise ValueError(f"Cannot determine parser for: {path}")
 
 

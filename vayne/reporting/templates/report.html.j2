@@ -32,13 +32,14 @@
     <h3>{{ f.correlated.title }} — {{ f.validation.classification.value }}</h3>
     <p>Confidence: {{ f.validation.confidence }}%</p>
     <p><strong>Root cause:</strong> {{ f.analyst.root_cause }}</p>
-    <p><strong>Business impact:</strong> {{ f.analyst.business_impact }}</p>
+    <p><strong>Impact assessment:</strong> {{ f.analyst.impact_assessment }}</p>
     <p><strong>Attack scenario:</strong> {{ f.analyst.attack_scenario }}</p>
     <p><strong>Remediation:</strong> {{ f.analyst.remediation_summary }}</p>
   </div>
   {% endfor %}
 
   <h2>Attack Paths</h2>
+  {% if attack_paths %}
   {% for p in attack_paths %}
   <div class="stat">
     <h3>{{ p.title }}</h3>
@@ -46,7 +47,12 @@
     <p class="path">→ {{ n.label }} ({{ n.risk_level }})</p>
     {% endfor %}
     <p>Risk: {{ p.risk_score }} | Confidence: {{ p.confidence }}%</p>
+    <p>Attacker effort: {{ p.attacker_effort or 'unknown' }}</p>
+    {% if p.termination_message %}<p><strong>{{ p.termination_message }}</strong></p>{% endif %}
   </div>
   {% endfor %}
+  {% else %}
+  <p>NO ATTACK PATH DISCOVERED</p>
+  {% endif %}
 </body>
 </html>

@@ -40,7 +40,7 @@ def parse(path: Path) -> tuple[list[Finding], list[Asset]]:
                 severity="info",
                 title=title,
                 description=f"HTTP {item.get('status-code', '')} — {url}",
-                evidence=str(item.get("header", item))[:500],
+                evidence=f"HTTP {item.get('status-code', 200)} reachable at {url}",
                 confidence=80,
                 source_tool="httpx",
                 timestamp=now(),

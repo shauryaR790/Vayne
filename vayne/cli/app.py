@@ -37,6 +37,13 @@ def analyze(
         Optional[Path], typer.Option("--output", "-o", help="Export report directory")
     ] = None,
     quiet: Annotated[bool, typer.Option("--quiet", "-q")] = False,
+    proof: Annotated[
+        bool,
+        typer.Option(
+            "--proof",
+            help="Print auditable graph: every node, edge, path algorithm, confidence breakdown",
+        ),
+    ] = False,
 ) -> None:
     """Analyze and validate security scan outputs."""
     resolved = [p.resolve() for p in paths]
@@ -48,8 +55,11 @@ def analyze(
     export_dir = output or Path("reports") / inv_name.replace(" ", "_").lower()
 
     if quiet:
-        report = Orchestrator(inv_name, resolved).run(export_dir=export_dir)
+        report = Orchestrator(inv_name, resolved, proof=proof).run(export_dir=export_dir)
         console.print(f"Done — {report.stats.findings_loaded} findings analyzed")
+        if proof and report.proof_log:
+            for line in report.proof_log:
+                console.print(line)
         return
 
     ui = LiveUI()
@@ -58,6 +68,7 @@ def analyze(
         resolved,
         on_stage=ui.on_stage,
         on_thinking=ui.on_thinking,
+        proof=proof,
     )
 
     with Live(ui.render(), console=console, refresh_per_second=10):
