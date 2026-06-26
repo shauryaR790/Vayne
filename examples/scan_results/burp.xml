@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<issues burpVersion="2024.1">
+  <issue>
+    <host>10.0.0.12</host>
+    <port>443</port>
+    <service>https</service>
+    <name>Path traversal vulnerability</name>
+    <severity>High</severity>
+    <issueDetail>Apache path traversal may allow RCE on version 2.4.49</issueDetail>
+  </issue>
+  <issue>
+    <host>10.0.0.44</host>
+    <port>8080</port>
+    <service>http</service>
+    <name>Exposed Jenkins dashboard</name>
+    <severity>Medium</severity>
+    <issueDetail>Authentication required. Exploit unsuccessful during validation.</issueDetail>
+  </issue>
+</issues>

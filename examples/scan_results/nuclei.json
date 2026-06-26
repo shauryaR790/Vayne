@@ -1,0 +1,33 @@
+[
+  {
+    "template-id": "CVE-2021-41773",
+    "host": "10.0.0.12:443",
+    "matched-at": "https://10.0.0.12:443/cgi-bin/.%2e/",
+    "info": {
+      "name": "Apache 2.4.49 Path Traversal",
+      "severity": "critical",
+      "tags": ["apache", "rce", "cve"]
+    }
+  },
+  {
+    "template-id": "jenkins-anonymous-access",
+    "host": "10.0.0.44:8080",
+    "matched-at": "http://10.0.0.44:8080/login",
+    "info": {
+      "name": "Jenkins Anonymous Access",
+      "severity": "high",
+      "tags": ["jenkins", "misconfig"]
+    },
+    "curl-command": "authentication required - login page returned 401"
+  },
+  {
+    "template-id": "ssl-dns-names",
+    "host": "10.0.0.99:443",
+    "matched-at": "https://10.0.0.99/",
+    "info": {
+      "name": "SSL DNS Names",
+      "severity": "info",
+      "tags": ["ssl"]
+    }
+  }
+]

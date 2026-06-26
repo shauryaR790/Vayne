@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<report>
+  <results>
+    <result>
+      <host>10.0.0.12</host>
+      <port>443</port>
+      <severity>9.8</severity>
+      <name>Apache RCE</name>
+      <description>Apache 2.4.49 path traversal confirmed</description>
+      <nvt>
+        <name>Apache HTTP Server Path Traversal</name>
+      </nvt>
+    </result>
+    <result>
+      <host>10.0.0.44</host>
+      <port>8080</port>
+      <severity>5.5</severity>
+      <name>Jenkins Exposure</name>
+      <description>Management UI exposed - authentication required</description>
+      <nvt>
+        <name>Jenkins Anonymous Access</name>
+      </nvt>
+    </result>
+  </results>
+</report>

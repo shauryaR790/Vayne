@@ -1,0 +1,4 @@
+Host,Port,Protocol,Name,Risk,Plugin Output
+10.0.0.12,443,tcp,Apache HTTP Server Path Traversal,Critical,Server version 2.4.49 confirmed vulnerable to CVE-2021-41773
+10.0.0.44,8080,tcp,Jenkins Anonymous Access,High,Login page present - authentication required
+10.0.0.55,22,tcp,SSH Weak Algorithms,Low,Informational SSH configuration finding
