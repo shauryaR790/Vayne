@@ -1,0 +1,68 @@
+{
+  "items": [
+    {
+      "match_key": "remote_rce",
+      "fix": "Restrict external access to exploited service; apply vendor security patch",
+      "difficulty": "medium",
+      "expected_risk_reduction": 2.5,
+      "expected_confidence_reduction": 15,
+      "affected_attack_paths": [
+        "02230ee1",
+        "6884df46",
+        "694d4264",
+        "d3f15429"
+      ]
+    },
+    {
+      "match_key": "samba",
+      "fix": "Apply Samba security patch for username map script RCE; restrict SMB exposure",
+      "difficulty": "medium",
+      "expected_risk_reduction": 2.5,
+      "expected_confidence_reduction": 15,
+      "affected_attack_paths": [
+        "6884df46"
+      ]
+    },
+    {
+      "match_key": "apache",
+      "fix": "Patch Apache/Tomcat components; restrict manager deployment interfaces",
+      "difficulty": "medium",
+      "expected_risk_reduction": 2.0,
+      "expected_confidence_reduction": 10,
+      "affected_attack_paths": [
+        "d3f15429"
+      ]
+    },
+    {
+      "match_key": "tomcat",
+      "fix": "Restrict Tomcat manager interface; apply CVE patch; require authentication",
+      "difficulty": "medium",
+      "expected_risk_reduction": 2.0,
+      "expected_confidence_reduction": 10,
+      "affected_attack_paths": [
+        "d3f15429"
+      ]
+    },
+    {
+      "match_key": "proftpd",
+      "fix": "Upgrade ProFTPD or restrict telnet/IAC exposure; disable if unused",
+      "difficulty": "low",
+      "expected_risk_reduction": 2.0,
+      "expected_confidence_reduction": 12,
+      "affected_attack_paths": [
+        "02230ee1"
+      ]
+    },
+    {
+      "match_key": "vsftpd",
+      "fix": "Upgrade vsftpd to a patched version or disable the vulnerable service",
+      "difficulty": "low",
+      "expected_risk_reduction": 2.5,
+      "expected_confidence_reduction": 15,
+      "affected_attack_paths": [
+        "694d4264"
+      ]
+    }
+  ],
+  "total_items": 6
+}

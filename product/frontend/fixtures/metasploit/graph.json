@@ -1,0 +1,3886 @@
+{
+  "nodes": [
+    {
+      "id": "entry:internet",
+      "label": "internet",
+      "type": "endpoint",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "External attack surface entry point"
+      ],
+      "finding_ids": [],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 0,
+        "x_hint": 0,
+        "y_hint": 0
+      }
+    },
+    {
+      "id": "asset:192.168.56.101",
+      "label": "192.168.56.101",
+      "type": "asset",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Host 192.168.56.101 discovered in scan",
+        "IP 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "asset",
+      "position_hint": {
+        "layer": 1,
+        "index": 1,
+        "x_hint": 120,
+        "y_hint": 40
+      }
+    },
+    {
+      "id": "service:192.168.56.101:21",
+      "label": "service/tcp/21@192.168.56.101",
+      "type": "service",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Nmap reports tcp/21 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 2,
+        "x_hint": 240,
+        "y_hint": 80
+      }
+    },
+    {
+      "id": "service:192.168.56.101:22",
+      "label": "service/tcp/22@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/22 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 3,
+        "x_hint": 240,
+        "y_hint": 120
+      }
+    },
+    {
+      "id": "service:192.168.56.101:23",
+      "label": "service/tcp/23@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/23 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 4,
+        "x_hint": 240,
+        "y_hint": 160
+      }
+    },
+    {
+      "id": "service:192.168.56.101:25",
+      "label": "service/tcp/25@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/25 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 5,
+        "x_hint": 240,
+        "y_hint": 200
+      }
+    },
+    {
+      "id": "service:192.168.56.101:53",
+      "label": "service/tcp/53@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/53 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 6,
+        "x_hint": 240,
+        "y_hint": 240
+      }
+    },
+    {
+      "id": "service:192.168.56.101:80",
+      "label": "service/tcp/80@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/80 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 7,
+        "x_hint": 240,
+        "y_hint": 280
+      }
+    },
+    {
+      "id": "service:192.168.56.101:111",
+      "label": "service/tcp/111@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/111 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 8,
+        "x_hint": 240,
+        "y_hint": 320
+      }
+    },
+    {
+      "id": "service:192.168.56.101:139",
+      "label": "service/tcp/139@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/139 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 9,
+        "x_hint": 240,
+        "y_hint": 360
+      }
+    },
+    {
+      "id": "service:192.168.56.101:445",
+      "label": "service/tcp/445@192.168.56.101",
+      "type": "service",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Nmap reports tcp/445 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 10,
+        "x_hint": 240,
+        "y_hint": 400
+      }
+    },
+    {
+      "id": "service:192.168.56.101:512",
+      "label": "service/tcp/512@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/512 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 11,
+        "x_hint": 240,
+        "y_hint": 440
+      }
+    },
+    {
+      "id": "service:192.168.56.101:513",
+      "label": "service/tcp/513@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/513 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 12,
+        "x_hint": 240,
+        "y_hint": 480
+      }
+    },
+    {
+      "id": "service:192.168.56.101:514",
+      "label": "service/tcp/514@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/514 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 13,
+        "x_hint": 240,
+        "y_hint": 520
+      }
+    },
+    {
+      "id": "service:192.168.56.101:1099",
+      "label": "service/tcp/1099@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/1099 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 14,
+        "x_hint": 240,
+        "y_hint": 560
+      }
+    },
+    {
+      "id": "service:192.168.56.101:1524",
+      "label": "service/tcp/1524@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/1524 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 15,
+        "x_hint": 240,
+        "y_hint": 600
+      }
+    },
+    {
+      "id": "service:192.168.56.101:2049",
+      "label": "service/tcp/2049@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/2049 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 16,
+        "x_hint": 240,
+        "y_hint": 640
+      }
+    },
+    {
+      "id": "service:192.168.56.101:2121",
+      "label": "service/tcp/2121@192.168.56.101",
+      "type": "service",
+      "confidence": 83,
+      "risk": 6.5,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Nmap reports tcp/2121 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 17,
+        "x_hint": 240,
+        "y_hint": 680
+      }
+    },
+    {
+      "id": "service:192.168.56.101:3306",
+      "label": "service/tcp/3306@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/3306 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 18,
+        "x_hint": 240,
+        "y_hint": 720
+      }
+    },
+    {
+      "id": "service:192.168.56.101:5432",
+      "label": "service/tcp/5432@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/5432 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 19,
+        "x_hint": 240,
+        "y_hint": 760
+      }
+    },
+    {
+      "id": "service:192.168.56.101:5900",
+      "label": "service/tcp/5900@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/5900 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 20,
+        "x_hint": 240,
+        "y_hint": 800
+      }
+    },
+    {
+      "id": "service:192.168.56.101:6000",
+      "label": "service/tcp/6000@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/6000 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 21,
+        "x_hint": 240,
+        "y_hint": 840
+      }
+    },
+    {
+      "id": "service:192.168.56.101:6667",
+      "label": "service/tcp/6667@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/6667 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 22,
+        "x_hint": 240,
+        "y_hint": 880
+      }
+    },
+    {
+      "id": "service:192.168.56.101:8009",
+      "label": "service/tcp/8009@192.168.56.101",
+      "type": "service",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap reports tcp/8009 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 23,
+        "x_hint": 240,
+        "y_hint": 920
+      }
+    },
+    {
+      "id": "service:192.168.56.101:8180",
+      "label": "service/tcp/8180@192.168.56.101",
+      "type": "service",
+      "confidence": 92,
+      "risk": 7.2,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Nmap reports tcp/8180 open on 192.168.56.101"
+      ],
+      "finding_ids": [],
+      "group": "service",
+      "position_hint": {
+        "layer": 2,
+        "index": 24,
+        "x_hint": 240,
+        "y_hint": 960
+      }
+    },
+    {
+      "id": "software:192.168.56.101:samba:samba:3.0.20-Debian",
+      "label": "samba/samba:3.0.20-Debian",
+      "type": "software",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Nmap service fingerprint: samba/samba:3.0.20-Debian"
+      ],
+      "finding_ids": [],
+      "group": "software",
+      "position_hint": {
+        "layer": 3,
+        "index": 25,
+        "x_hint": 360,
+        "y_hint": 1000
+      }
+    },
+    {
+      "id": "cve_cand:192.168.56.101:CVE-2007-2447",
+      "label": "CANDIDATE CVE-2007-2447",
+      "type": "vulnerability",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Exploit intelligence: samba/samba:3.0.20-Debian may be affected by CVE-2007-2447 (Metasploit: exploit/multi/samba/usermap_script). Metasploitable ships 3.0.20 with vulnerable username map script."
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2007-2447"
+      ],
+      "group": "vulnerability",
+      "position_hint": {
+        "layer": 4,
+        "index": 26,
+        "x_hint": 480,
+        "y_hint": 1040
+      }
+    },
+    {
+      "id": "cve_verified:192.168.56.101:CVE-2007-2447",
+      "label": "VERIFIED CVE-2007-2447",
+      "type": "vulnerability",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Verified applicability: CVE-2007-2447 on samba/samba:3.0.20-Debian (ports [445], maturity weaponized)"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2007-2447"
+      ],
+      "group": "vulnerability",
+      "position_hint": {
+        "layer": 4,
+        "index": 27,
+        "x_hint": 480,
+        "y_hint": 1080
+      }
+    },
+    {
+      "id": "exploit:192.168.56.101:CVE-2007-2447",
+      "label": "Samba username map script Command Execution (exploit)",
+      "type": "endpoint",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Public exploit available: Samba username map script Command Execution; Metasploit exploit/multi/samba/usermap_script; PoC=yes"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2007-2447"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 28,
+        "x_hint": 0,
+        "y_hint": 1120
+      }
+    },
+    {
+      "id": "access:192.168.56.101:CVE-2007-2447",
+      "label": "remote shell access via Samba",
+      "type": "endpoint",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Evidence-backed access outcome: remote shell access via Samba"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2007-2447"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 29,
+        "x_hint": 0,
+        "y_hint": 1160
+      }
+    },
+    {
+      "id": "software:192.168.56.101:proftpd:proftpd:1.3.1",
+      "label": "proftpd/proftpd:1.3.1",
+      "type": "software",
+      "confidence": 83,
+      "risk": 6.5,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Nmap service fingerprint: proftpd/proftpd:1.3.1"
+      ],
+      "finding_ids": [],
+      "group": "software",
+      "position_hint": {
+        "layer": 3,
+        "index": 30,
+        "x_hint": 360,
+        "y_hint": 1200
+      }
+    },
+    {
+      "id": "cve_cand:192.168.56.101:CVE-2010-4221",
+      "label": "CANDIDATE CVE-2010-4221",
+      "type": "vulnerability",
+      "confidence": 83,
+      "risk": 6.5,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Exploit intelligence: proftpd/proftpd:1.3.1 may be affected by CVE-2010-4221 (Metasploit: exploit/linux/ftp/proftpd_telnet_iac). Version match on FTP port; runtime telnet IAC not confirmed from scan."
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2010-4221"
+      ],
+      "group": "vulnerability",
+      "position_hint": {
+        "layer": 4,
+        "index": 31,
+        "x_hint": 480,
+        "y_hint": 1240
+      }
+    },
+    {
+      "id": "cve_verified:192.168.56.101:CVE-2010-4221",
+      "label": "VERIFIED CVE-2010-4221",
+      "type": "vulnerability",
+      "confidence": 83,
+      "risk": 6.5,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Verified applicability: CVE-2010-4221 on proftpd/proftpd:1.3.1 (ports [2121], maturity poc)"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2010-4221"
+      ],
+      "group": "vulnerability",
+      "position_hint": {
+        "layer": 4,
+        "index": 32,
+        "x_hint": 480,
+        "y_hint": 1280
+      }
+    },
+    {
+      "id": "exploit:192.168.56.101:CVE-2010-4221",
+      "label": "ProFTPD telnet IAC Buffer Overflow (exploit)",
+      "type": "endpoint",
+      "confidence": 83,
+      "risk": 6.5,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Public exploit available: ProFTPD telnet IAC Buffer Overflow; Metasploit exploit/linux/ftp/proftpd_telnet_iac; PoC=yes"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2010-4221"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 33,
+        "x_hint": 0,
+        "y_hint": 1320
+      }
+    },
+    {
+      "id": "access:192.168.56.101:CVE-2010-4221",
+      "label": "remote code execution",
+      "type": "endpoint",
+      "confidence": 83,
+      "risk": 6.5,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Evidence-backed access outcome: remote code execution"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2010-4221"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 34,
+        "x_hint": 0,
+        "y_hint": 1360
+      }
+    },
+    {
+      "id": "software:192.168.56.101:vsftpd:vsftpd:2.3.4",
+      "label": "vsftpd/vsftpd:2.3.4",
+      "type": "software",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Nmap service fingerprint: vsftpd/vsftpd:2.3.4"
+      ],
+      "finding_ids": [],
+      "group": "software",
+      "position_hint": {
+        "layer": 3,
+        "index": 35,
+        "x_hint": 360,
+        "y_hint": 1400
+      }
+    },
+    {
+      "id": "cve_cand:192.168.56.101:CVE-2011-2523",
+      "label": "CANDIDATE CVE-2011-2523",
+      "type": "vulnerability",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Exploit intelligence: vsftpd/vsftpd:2.3.4 may be affected by CVE-2011-2523 (Metasploit: exploit/unix/ftp/vsftpd_234_backdoor). Trojanized 2.3.4 build; exact version fingerprint is primary evidence."
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2011-2523"
+      ],
+      "group": "vulnerability",
+      "position_hint": {
+        "layer": 4,
+        "index": 36,
+        "x_hint": 480,
+        "y_hint": 1440
+      }
+    },
+    {
+      "id": "cve_verified:192.168.56.101:CVE-2011-2523",
+      "label": "VERIFIED CVE-2011-2523",
+      "type": "vulnerability",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Verified applicability: CVE-2011-2523 on vsftpd/vsftpd:2.3.4 (ports [21], maturity weaponized)"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2011-2523"
+      ],
+      "group": "vulnerability",
+      "position_hint": {
+        "layer": 4,
+        "index": 37,
+        "x_hint": 480,
+        "y_hint": 1480
+      }
+    },
+    {
+      "id": "exploit:192.168.56.101:CVE-2011-2523",
+      "label": "vsFTPd 2.3.4 Backdoor Command Execution (exploit)",
+      "type": "endpoint",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Public exploit available: vsFTPd 2.3.4 Backdoor Command Execution; Metasploit exploit/unix/ftp/vsftpd_234_backdoor; PoC=yes"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2011-2523"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 38,
+        "x_hint": 0,
+        "y_hint": 1520
+      }
+    },
+    {
+      "id": "access:192.168.56.101:CVE-2011-2523",
+      "label": "remote shell access (vsftpd backdoor)",
+      "type": "endpoint",
+      "confidence": 100,
+      "risk": 8.6,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Evidence-backed access outcome: remote shell access (vsftpd backdoor)"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2011-2523"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 39,
+        "x_hint": 0,
+        "y_hint": 1560
+      }
+    },
+    {
+      "id": "software:192.168.56.101:apache:httpd:2.2.8",
+      "label": "apache/httpd:2.2.8",
+      "type": "software",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap service fingerprint: apache/httpd:2.2.8"
+      ],
+      "finding_ids": [],
+      "group": "software",
+      "position_hint": {
+        "layer": 3,
+        "index": 40,
+        "x_hint": 360,
+        "y_hint": 1600
+      }
+    },
+    {
+      "id": "cve_cand:192.168.56.101:CVE-2012-1823",
+      "label": "CANDIDATE CVE-2012-1823",
+      "type": "vulnerability",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Exploit intelligence: apache/httpd:2.2.8 may be affected by CVE-2012-1823 (Metasploit: exploit/multi/http/php_cgi_arg_injection)."
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2012-1823"
+      ],
+      "group": "vulnerability",
+      "position_hint": {
+        "layer": 4,
+        "index": 41,
+        "x_hint": 480,
+        "y_hint": 1640
+      }
+    },
+    {
+      "id": "prereq:192.168.56.101:CVE-2012-1823:cgi_enabled",
+      "label": "PHP/CGI execution path exposed",
+      "type": "endpoint",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "PHP/CGI execution path exposed \u2014 NOT observed in scan"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2012-1823"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 42,
+        "x_hint": 0,
+        "y_hint": 1680
+      }
+    },
+    {
+      "id": "software:192.168.56.101:unrealircd:unrealircd",
+      "label": "unrealircd/unrealircd",
+      "type": "software",
+      "confidence": 0,
+      "risk": 0.0,
+      "criticality": "",
+      "blast_radius": 0,
+      "category": "",
+      "mitre": [],
+      "evidence": [
+        "Nmap service fingerprint: unrealircd/unrealircd"
+      ],
+      "finding_ids": [],
+      "group": "software",
+      "position_hint": {
+        "layer": 3,
+        "index": 43,
+        "x_hint": 360,
+        "y_hint": 1720
+      }
+    },
+    {
+      "id": "software:192.168.56.101:apache:tomcat:1.1",
+      "label": "apache/tomcat:1.1",
+      "type": "software",
+      "confidence": 92,
+      "risk": 7.2,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Nmap service fingerprint: apache/tomcat:1.1"
+      ],
+      "finding_ids": [],
+      "group": "software",
+      "position_hint": {
+        "layer": 3,
+        "index": 44,
+        "x_hint": 360,
+        "y_hint": 1760
+      }
+    },
+    {
+      "id": "cve_cand:192.168.56.101:CVE-2009-3548",
+      "label": "CANDIDATE CVE-2009-3548",
+      "type": "vulnerability",
+      "confidence": 92,
+      "risk": 7.2,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Exploit intelligence: apache/tomcat:1.1 may be affected by CVE-2009-3548 (Metasploit: exploit/multi/http/tomcat_mgr_deploy)."
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2009-3548"
+      ],
+      "group": "vulnerability",
+      "position_hint": {
+        "layer": 4,
+        "index": 45,
+        "x_hint": 480,
+        "y_hint": 1800
+      }
+    },
+    {
+      "id": "prereq:192.168.56.101:CVE-2009-3548:manager_exposed",
+      "label": "Tomcat manager interface exposed",
+      "type": "endpoint",
+      "confidence": 92,
+      "risk": 7.2,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Tomcat manager interface exposed \u2014 verified (apache tomcat)"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2009-3548"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 46,
+        "x_hint": 0,
+        "y_hint": 1840
+      }
+    },
+    {
+      "id": "cve_verified:192.168.56.101:CVE-2009-3548",
+      "label": "VERIFIED CVE-2009-3548",
+      "type": "vulnerability",
+      "confidence": 92,
+      "risk": 7.2,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Verified applicability: CVE-2009-3548 on apache/tomcat:1.1 (ports [8180], maturity functional)"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2009-3548"
+      ],
+      "group": "vulnerability",
+      "position_hint": {
+        "layer": 4,
+        "index": 47,
+        "x_hint": 480,
+        "y_hint": 1880
+      }
+    },
+    {
+      "id": "exploit:192.168.56.101:CVE-2009-3548",
+      "label": "Apache Tomcat Manager Application Deploy (exploit)",
+      "type": "endpoint",
+      "confidence": 92,
+      "risk": 7.2,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Public exploit available: Apache Tomcat Manager Application Deploy; Metasploit exploit/multi/http/tomcat_mgr_deploy; PoC=yes"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2009-3548"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 48,
+        "x_hint": 0,
+        "y_hint": 1920
+      }
+    },
+    {
+      "id": "access:192.168.56.101:CVE-2009-3548",
+      "label": "remote code execution via Tomcat manager",
+      "type": "endpoint",
+      "confidence": 92,
+      "risk": 7.2,
+      "criticality": "unknown",
+      "blast_radius": 47,
+      "category": "remote_rce",
+      "mitre": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "evidence": [
+        "Evidence-backed access outcome: remote code execution via Tomcat manager"
+      ],
+      "finding_ids": [
+        "exploit_intel:CVE-2009-3548"
+      ],
+      "group": "endpoint",
+      "position_hint": {
+        "layer": 0,
+        "index": 49,
+        "x_hint": 0,
+        "y_hint": 1960
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "entry:internet",
+      "target": "asset:192.168.56.101",
+      "confidence": 72,
+      "relationship": "exposed_to",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.72,
+            "evidence": [
+              "source_tool=scan",
+              "artifact=scan_inventory"
+            ],
+            "contribution": 72.0
+          }
+        ],
+        "raw_score": 72.0,
+        "normalized_score": 72,
+        "explanation": [
+          "+72 scan inventory edge"
+        ]
+      },
+      "category": "scan_inventory",
+      "evidence": "Host 192.168.56.101 in scan scope",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:21",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/21 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:22",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/22 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:23",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/23 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:25",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/25 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:53",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/53 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:80",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/80 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:111",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/111 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:139",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/139 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:445",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/445 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:512",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/512 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:513",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/513 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:514",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/514 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:1099",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/1099 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:1524",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/1524 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:2049",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/2049 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:2121",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/2121 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:3306",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/3306 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:5432",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/5432 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:5900",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/5900 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:6000",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/6000 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:6667",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/6667 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:8009",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/8009 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "asset:192.168.56.101",
+      "target": "service:192.168.56.101:8180",
+      "confidence": 76,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.76,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=open_port"
+            ],
+            "contribution": 76.0
+          }
+        ],
+        "raw_score": 76.0,
+        "normalized_score": 76,
+        "explanation": [
+          "+76 nmap open port confirmed"
+        ]
+      },
+      "category": "open_port",
+      "evidence": "Nmap reports tcp/8180 open on 192.168.56.101",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "service:192.168.56.101:445",
+      "target": "software:192.168.56.101:samba:samba:3.0.20-Debian",
+      "confidence": 84,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.84,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=service_fingerprint"
+            ],
+            "contribution": 84.0
+          }
+        ],
+        "raw_score": 84.0,
+        "normalized_score": 84,
+        "explanation": [
+          "+84 nmap service fingerprint with version"
+        ]
+      },
+      "category": "service_fingerprint",
+      "evidence": "Nmap service fingerprint: samba/samba:3.0.20-Debian",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "software:192.168.56.101:samba:samba:3.0.20-Debian",
+      "target": "cve_cand:192.168.56.101:CVE-2007-2447",
+      "confidence": 96,
+      "relationship": "version_may_affect",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.76,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=1.00",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 76.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 88.0,
+            "evidence": [
+              "tier=weaponized",
+              "maturity=weaponized",
+              "verification_mode=port_version"
+            ],
+            "contribution": 88.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.1464,
+            "evidence": [
+              "per-exploit credibility modifier (port_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 100.88
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 96.0,
+            "evidence": [
+              "tier=weaponized ceiling"
+            ],
+            "contribution": 96.0
+          }
+        ],
+        "raw_score": 100.8823,
+        "normalized_score": 96,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=1.00",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.762 -> 76%",
+          "exploit_intel_boost=1.15 verified_maturity=weaponized -> 96%"
+        ]
+      },
+      "category": "cve_candidate",
+      "evidence": "Exploit intelligence: samba/samba:3.0.20-Debian may be affected by CVE-2007-2447 (Metasploit: exploit/multi/samba/usermap_script). Metasploitable ships 3.0.20 with vulnerable username map script.",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "cve_cand:192.168.56.101:CVE-2007-2447",
+      "target": "cve_verified:192.168.56.101:CVE-2007-2447",
+      "confidence": 96,
+      "relationship": "confirms_applicability",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.76,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=1.00",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 76.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 88.0,
+            "evidence": [
+              "tier=weaponized",
+              "maturity=weaponized",
+              "verification_mode=port_version"
+            ],
+            "contribution": 88.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.1464,
+            "evidence": [
+              "per-exploit credibility modifier (port_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 100.88
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 96.0,
+            "evidence": [
+              "tier=weaponized ceiling"
+            ],
+            "contribution": 96.0
+          }
+        ],
+        "raw_score": 100.8823,
+        "normalized_score": 96,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=1.00",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.762 -> 76%",
+          "exploit_intel_boost=1.15 verified_maturity=weaponized -> 96%"
+        ]
+      },
+      "category": "cve_verified",
+      "evidence": "Verified applicability: CVE-2007-2447 on samba/samba:3.0.20-Debian (ports [445], maturity weaponized)",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "cve_verified:192.168.56.101:CVE-2007-2447",
+      "target": "exploit:192.168.56.101:CVE-2007-2447",
+      "confidence": 96,
+      "relationship": "enables",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.76,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=1.00",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 76.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 88.0,
+            "evidence": [
+              "tier=weaponized",
+              "maturity=weaponized",
+              "verification_mode=port_version"
+            ],
+            "contribution": 88.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.1464,
+            "evidence": [
+              "per-exploit credibility modifier (port_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 100.88
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 96.0,
+            "evidence": [
+              "tier=weaponized ceiling"
+            ],
+            "contribution": 96.0
+          }
+        ],
+        "raw_score": 100.8823,
+        "normalized_score": 96,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=1.00",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.762 -> 76%",
+          "exploit_intel_boost=1.15 verified_maturity=weaponized -> 96%"
+        ]
+      },
+      "category": "cve_enrichment",
+      "evidence": "Public exploit available: Samba username map script Command Execution; Metasploit exploit/multi/samba/usermap_script; PoC=yes",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "exploit:192.168.56.101:CVE-2007-2447",
+      "target": "access:192.168.56.101:CVE-2007-2447",
+      "confidence": 96,
+      "relationship": "yields_access",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.76,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=1.00",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 76.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 88.0,
+            "evidence": [
+              "tier=weaponized",
+              "maturity=weaponized",
+              "verification_mode=port_version"
+            ],
+            "contribution": 88.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.1464,
+            "evidence": [
+              "per-exploit credibility modifier (port_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 100.88
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 96.0,
+            "evidence": [
+              "tier=weaponized ceiling"
+            ],
+            "contribution": 96.0
+          }
+        ],
+        "raw_score": 100.8823,
+        "normalized_score": 96,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=1.00",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.762 -> 76%",
+          "exploit_intel_boost=1.15 verified_maturity=weaponized -> 96%"
+        ]
+      },
+      "category": "access_outcome",
+      "evidence": "Evidence-backed access outcome: remote shell access via Samba",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "service:192.168.56.101:2121",
+      "target": "software:192.168.56.101:proftpd:proftpd:1.3.1",
+      "confidence": 84,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.84,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=service_fingerprint"
+            ],
+            "contribution": 84.0
+          }
+        ],
+        "raw_score": 84.0,
+        "normalized_score": 84,
+        "explanation": [
+          "+84 nmap service fingerprint with version"
+        ]
+      },
+      "category": "service_fingerprint",
+      "evidence": "Nmap service fingerprint: proftpd/proftpd:1.3.1",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "software:192.168.56.101:proftpd:proftpd:1.3.1",
+      "target": "cve_cand:192.168.56.101:CVE-2010-4221",
+      "confidence": 78,
+      "relationship": "version_may_affect",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.67,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=0.88",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 67.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 72.0,
+            "evidence": [
+              "tier=default",
+              "maturity=poc",
+              "verification_mode=port_version"
+            ],
+            "contribution": 72.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.0918,
+            "evidence": [
+              "per-exploit credibility modifier (port_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 78.61
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 88.0,
+            "evidence": [
+              "tier=default ceiling"
+            ],
+            "contribution": 78.0
+          }
+        ],
+        "raw_score": 78.6096,
+        "normalized_score": 78,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=0.88",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.671 -> 67%",
+          "exploit_intel_boost=1.09 verified_maturity=poc -> 78%"
+        ]
+      },
+      "category": "cve_candidate",
+      "evidence": "Exploit intelligence: proftpd/proftpd:1.3.1 may be affected by CVE-2010-4221 (Metasploit: exploit/linux/ftp/proftpd_telnet_iac). Version match on FTP port; runtime telnet IAC not confirmed from scan.",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "cve_cand:192.168.56.101:CVE-2010-4221",
+      "target": "cve_verified:192.168.56.101:CVE-2010-4221",
+      "confidence": 78,
+      "relationship": "confirms_applicability",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.67,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=0.88",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 67.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 72.0,
+            "evidence": [
+              "tier=default",
+              "maturity=poc",
+              "verification_mode=port_version"
+            ],
+            "contribution": 72.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.0918,
+            "evidence": [
+              "per-exploit credibility modifier (port_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 78.61
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 88.0,
+            "evidence": [
+              "tier=default ceiling"
+            ],
+            "contribution": 78.0
+          }
+        ],
+        "raw_score": 78.6096,
+        "normalized_score": 78,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=0.88",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.671 -> 67%",
+          "exploit_intel_boost=1.09 verified_maturity=poc -> 78%"
+        ]
+      },
+      "category": "cve_verified",
+      "evidence": "Verified applicability: CVE-2010-4221 on proftpd/proftpd:1.3.1 (ports [2121], maturity poc)",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "cve_verified:192.168.56.101:CVE-2010-4221",
+      "target": "exploit:192.168.56.101:CVE-2010-4221",
+      "confidence": 78,
+      "relationship": "enables",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.67,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=0.88",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 67.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 72.0,
+            "evidence": [
+              "tier=default",
+              "maturity=poc",
+              "verification_mode=port_version"
+            ],
+            "contribution": 72.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.0918,
+            "evidence": [
+              "per-exploit credibility modifier (port_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 78.61
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 88.0,
+            "evidence": [
+              "tier=default ceiling"
+            ],
+            "contribution": 78.0
+          }
+        ],
+        "raw_score": 78.6096,
+        "normalized_score": 78,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=0.88",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.671 -> 67%",
+          "exploit_intel_boost=1.09 verified_maturity=poc -> 78%"
+        ]
+      },
+      "category": "cve_enrichment",
+      "evidence": "Public exploit available: ProFTPD telnet IAC Buffer Overflow; Metasploit exploit/linux/ftp/proftpd_telnet_iac; PoC=yes",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "exploit:192.168.56.101:CVE-2010-4221",
+      "target": "access:192.168.56.101:CVE-2010-4221",
+      "confidence": 78,
+      "relationship": "yields_access",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.67,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=0.88",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 67.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 72.0,
+            "evidence": [
+              "tier=default",
+              "maturity=poc",
+              "verification_mode=port_version"
+            ],
+            "contribution": 72.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.0918,
+            "evidence": [
+              "per-exploit credibility modifier (port_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 78.61
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 88.0,
+            "evidence": [
+              "tier=default ceiling"
+            ],
+            "contribution": 78.0
+          }
+        ],
+        "raw_score": 78.6096,
+        "normalized_score": 78,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=0.88",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.671 -> 67%",
+          "exploit_intel_boost=1.09 verified_maturity=poc -> 78%"
+        ]
+      },
+      "category": "access_outcome",
+      "evidence": "Evidence-backed access outcome: remote code execution",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "service:192.168.56.101:21",
+      "target": "software:192.168.56.101:vsftpd:vsftpd:2.3.4",
+      "confidence": 84,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.84,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=service_fingerprint"
+            ],
+            "contribution": 84.0
+          }
+        ],
+        "raw_score": 84.0,
+        "normalized_score": 84,
+        "explanation": [
+          "+84 nmap service fingerprint with version"
+        ]
+      },
+      "category": "service_fingerprint",
+      "evidence": "Nmap service fingerprint: vsftpd/vsftpd:2.3.4",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "software:192.168.56.101:vsftpd:vsftpd:2.3.4",
+      "target": "cve_cand:192.168.56.101:CVE-2011-2523",
+      "confidence": 98,
+      "relationship": "version_may_affect",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.76,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=1.00",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 76.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 92.0,
+            "evidence": [
+              "tier=weaponized_exact",
+              "maturity=weaponized",
+              "verification_mode=exact_version"
+            ],
+            "contribution": 92.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.2556,
+            "evidence": [
+              "per-exploit credibility modifier (exact_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 115.51
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 98.0,
+            "evidence": [
+              "tier=weaponized_exact ceiling"
+            ],
+            "contribution": 98.0
+          }
+        ],
+        "raw_score": 115.5124,
+        "normalized_score": 98,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=1.00",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.762 -> 76%",
+          "exploit_intel_boost=1.26 verified_maturity=weaponized -> 98%"
+        ]
+      },
+      "category": "cve_candidate",
+      "evidence": "Exploit intelligence: vsftpd/vsftpd:2.3.4 may be affected by CVE-2011-2523 (Metasploit: exploit/unix/ftp/vsftpd_234_backdoor). Trojanized 2.3.4 build; exact version fingerprint is primary evidence.",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "cve_cand:192.168.56.101:CVE-2011-2523",
+      "target": "cve_verified:192.168.56.101:CVE-2011-2523",
+      "confidence": 98,
+      "relationship": "confirms_applicability",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.76,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=1.00",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 76.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 92.0,
+            "evidence": [
+              "tier=weaponized_exact",
+              "maturity=weaponized",
+              "verification_mode=exact_version"
+            ],
+            "contribution": 92.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.2556,
+            "evidence": [
+              "per-exploit credibility modifier (exact_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 115.51
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 98.0,
+            "evidence": [
+              "tier=weaponized_exact ceiling"
+            ],
+            "contribution": 98.0
+          }
+        ],
+        "raw_score": 115.5124,
+        "normalized_score": 98,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=1.00",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.762 -> 76%",
+          "exploit_intel_boost=1.26 verified_maturity=weaponized -> 98%"
+        ]
+      },
+      "category": "cve_verified",
+      "evidence": "Verified applicability: CVE-2011-2523 on vsftpd/vsftpd:2.3.4 (ports [21], maturity weaponized)",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "cve_verified:192.168.56.101:CVE-2011-2523",
+      "target": "exploit:192.168.56.101:CVE-2011-2523",
+      "confidence": 98,
+      "relationship": "enables",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.76,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=1.00",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 76.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 92.0,
+            "evidence": [
+              "tier=weaponized_exact",
+              "maturity=weaponized",
+              "verification_mode=exact_version"
+            ],
+            "contribution": 92.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.2556,
+            "evidence": [
+              "per-exploit credibility modifier (exact_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 115.51
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 98.0,
+            "evidence": [
+              "tier=weaponized_exact ceiling"
+            ],
+            "contribution": 98.0
+          }
+        ],
+        "raw_score": 115.5124,
+        "normalized_score": 98,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=1.00",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.762 -> 76%",
+          "exploit_intel_boost=1.26 verified_maturity=weaponized -> 98%"
+        ]
+      },
+      "category": "cve_enrichment",
+      "evidence": "Public exploit available: vsFTPd 2.3.4 Backdoor Command Execution; Metasploit exploit/unix/ftp/vsftpd_234_backdoor; PoC=yes",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "exploit:192.168.56.101:CVE-2011-2523",
+      "target": "access:192.168.56.101:CVE-2011-2523",
+      "confidence": 98,
+      "relationship": "yields_access",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.76,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=1.00",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 76.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 92.0,
+            "evidence": [
+              "tier=weaponized_exact",
+              "maturity=weaponized",
+              "verification_mode=exact_version"
+            ],
+            "contribution": 92.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.2556,
+            "evidence": [
+              "per-exploit credibility modifier (exact_version)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 115.51
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 98.0,
+            "evidence": [
+              "tier=weaponized_exact ceiling"
+            ],
+            "contribution": 98.0
+          }
+        ],
+        "raw_score": 115.5124,
+        "normalized_score": 98,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=1.00",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.762 -> 76%",
+          "exploit_intel_boost=1.26 verified_maturity=weaponized -> 98%"
+        ]
+      },
+      "category": "access_outcome",
+      "evidence": "Evidence-backed access outcome: remote shell access (vsftpd backdoor)",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "service:192.168.56.101:80",
+      "target": "software:192.168.56.101:apache:httpd:2.2.8",
+      "confidence": 84,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.84,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=service_fingerprint"
+            ],
+            "contribution": 84.0
+          }
+        ],
+        "raw_score": 84.0,
+        "normalized_score": 84,
+        "explanation": [
+          "+84 nmap service fingerprint with version"
+        ]
+      },
+      "category": "service_fingerprint",
+      "evidence": "Nmap service fingerprint: apache/httpd:2.2.8",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "cve_cand:192.168.56.101:CVE-2012-1823",
+      "target": "prereq:192.168.56.101:CVE-2012-1823:cgi_enabled",
+      "confidence": 35,
+      "relationship": "requires",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.35,
+            "evidence": [
+              "source_tool=exploit_intel",
+              "artifact=cve_prerequisite"
+            ],
+            "contribution": 35.0
+          }
+        ],
+        "raw_score": 35.0,
+        "normalized_score": 35,
+        "explanation": [
+          "confidence_model=35%"
+        ]
+      },
+      "category": "cve_prerequisite",
+      "evidence": "PHP/CGI execution path exposed \u2014 NOT observed in scan",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "service:192.168.56.101:6667",
+      "target": "software:192.168.56.101:unrealircd:unrealircd",
+      "confidence": 84,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.84,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=service_fingerprint"
+            ],
+            "contribution": 84.0
+          }
+        ],
+        "raw_score": 84.0,
+        "normalized_score": 84,
+        "explanation": [
+          "+84 nmap service fingerprint with version"
+        ]
+      },
+      "category": "service_fingerprint",
+      "evidence": "Nmap service fingerprint: unrealircd/unrealircd",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "service:192.168.56.101:8180",
+      "target": "software:192.168.56.101:apache:tomcat:1.1",
+      "confidence": 84,
+      "relationship": "runs",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.84,
+            "evidence": [
+              "source_tool=nmap",
+              "artifact=service_fingerprint"
+            ],
+            "contribution": 84.0
+          }
+        ],
+        "raw_score": 84.0,
+        "normalized_score": 84,
+        "explanation": [
+          "+84 nmap service fingerprint with version"
+        ]
+      },
+      "category": "service_fingerprint",
+      "evidence": "Nmap service fingerprint: apache/tomcat:1.1",
+      "evidence_tier": "TIER1"
+    },
+    {
+      "source": "software:192.168.56.101:apache:tomcat:1.1",
+      "target": "cve_cand:192.168.56.101:CVE-2009-3548",
+      "confidence": 89,
+      "relationship": "version_may_affect",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.75,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=0.98",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 75.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 82.0,
+            "evidence": [
+              "tier=functional",
+              "maturity=functional",
+              "verification_mode=prerequisites"
+            ],
+            "contribution": 82.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.0918,
+            "evidence": [
+              "per-exploit credibility modifier (prerequisites)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 89.53
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 94.0,
+            "evidence": [
+              "tier=functional ceiling"
+            ],
+            "contribution": 89.0
+          }
+        ],
+        "raw_score": 89.5276,
+        "normalized_score": 89,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=0.98",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.747 -> 75%",
+          "exploit_intel_boost=1.09 verified_maturity=functional -> 89%"
+        ]
+      },
+      "category": "cve_candidate",
+      "evidence": "Exploit intelligence: apache/tomcat:1.1 may be affected by CVE-2009-3548 (Metasploit: exploit/multi/http/tomcat_mgr_deploy).",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "cve_cand:192.168.56.101:CVE-2009-3548",
+      "target": "prereq:192.168.56.101:CVE-2009-3548:manager_exposed",
+      "confidence": 89,
+      "relationship": "requires",
+      "proof": {
+        "formula": "edge_confidence = evidence-derived (see breakdown)",
+        "factors": [
+          {
+            "name": "edge_evidence_model",
+            "weight": 0.89,
+            "evidence": [
+              "source_tool=exploit_intel",
+              "artifact=cve_prerequisite"
+            ],
+            "contribution": 89.0
+          }
+        ],
+        "raw_score": 89.0,
+        "normalized_score": 89,
+        "explanation": [
+          "confidence_model=89%"
+        ]
+      },
+      "category": "cve_prerequisite",
+      "evidence": "Tomcat manager interface exposed \u2014 verified (apache tomcat)",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "prereq:192.168.56.101:CVE-2009-3548:manager_exposed",
+      "target": "cve_verified:192.168.56.101:CVE-2009-3548",
+      "confidence": 89,
+      "relationship": "confirms_applicability",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.75,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=0.98",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 75.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 82.0,
+            "evidence": [
+              "tier=functional",
+              "maturity=functional",
+              "verification_mode=prerequisites"
+            ],
+            "contribution": 82.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.0918,
+            "evidence": [
+              "per-exploit credibility modifier (prerequisites)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 89.53
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 94.0,
+            "evidence": [
+              "tier=functional ceiling"
+            ],
+            "contribution": 89.0
+          }
+        ],
+        "raw_score": 89.5276,
+        "normalized_score": 89,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=0.98",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.747 -> 75%",
+          "exploit_intel_boost=1.09 verified_maturity=functional -> 89%"
+        ]
+      },
+      "category": "cve_verified",
+      "evidence": "Verified applicability: CVE-2009-3548 on apache/tomcat:1.1 (ports [8180], maturity functional)",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "cve_verified:192.168.56.101:CVE-2009-3548",
+      "target": "exploit:192.168.56.101:CVE-2009-3548",
+      "confidence": 89,
+      "relationship": "enables",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.75,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=0.98",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 75.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 82.0,
+            "evidence": [
+              "tier=functional",
+              "maturity=functional",
+              "verification_mode=prerequisites"
+            ],
+            "contribution": 82.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.0918,
+            "evidence": [
+              "per-exploit credibility modifier (prerequisites)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 89.53
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 94.0,
+            "evidence": [
+              "tier=functional ceiling"
+            ],
+            "contribution": 89.0
+          }
+        ],
+        "raw_score": 89.5276,
+        "normalized_score": 89,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=0.98",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.747 -> 75%",
+          "exploit_intel_boost=1.09 verified_maturity=functional -> 89%"
+        ]
+      },
+      "category": "cve_enrichment",
+      "evidence": "Public exploit available: Apache Tomcat Manager Application Deploy; Metasploit exploit/multi/http/tomcat_mgr_deploy; PoC=yes",
+      "evidence_tier": "TIER2"
+    },
+    {
+      "source": "exploit:192.168.56.101:CVE-2009-3548",
+      "target": "access:192.168.56.101:CVE-2009-3548",
+      "confidence": 89,
+      "relationship": "yields_access",
+      "proof": {
+        "formula": "verified_exploit_confidence = clamp(min(maturity_cap, max(base_multiplicative, maturity_floor) \u00d7 credibility_boost), low=verified_min)",
+        "factors": [
+          {
+            "name": "base_multiplicative_model",
+            "weight": 0.75,
+            "evidence": [
+              "scanner_reliability=0.95 (exploit_intel)",
+              "corroboration=0.88 (1 source(s))",
+              "exploit_maturity=0.98",
+              "applicability=0.97",
+              "environmental=0.94"
+            ],
+            "contribution": 75.0
+          },
+          {
+            "name": "maturity_floor",
+            "weight": 82.0,
+            "evidence": [
+              "tier=functional",
+              "maturity=functional",
+              "verification_mode=prerequisites"
+            ],
+            "contribution": 82.0
+          },
+          {
+            "name": "credibility_boost",
+            "weight": 1.0918,
+            "evidence": [
+              "per-exploit credibility modifier (prerequisites)",
+              "version + port both confirmed",
+              "anonymous FTP access observed"
+            ],
+            "contribution": 89.53
+          },
+          {
+            "name": "maturity_cap",
+            "weight": 94.0,
+            "evidence": [
+              "tier=functional ceiling"
+            ],
+            "contribution": 89.0
+          }
+        ],
+        "raw_score": 89.5276,
+        "normalized_score": 89,
+        "explanation": [
+          "scanner_reliability=0.95 (exploit_intel)",
+          "corroboration=0.88 (1 source(s))",
+          "exploit_maturity=0.98",
+          "applicability=0.97",
+          "environmental=0.94",
+          "product=0.747 -> 75%",
+          "exploit_intel_boost=1.09 verified_maturity=functional -> 89%"
+        ]
+      },
+      "category": "access_outcome",
+      "evidence": "Evidence-backed access outcome: remote code execution via Tomcat manager",
+      "evidence_tier": "TIER2"
+    }
+  ],
+  "attack_paths": [
+    {
+      "id": "6884df46",
+      "attack_category": "remote_rce",
+      "confidence": 100,
+      "risk": 8.6,
+      "mitre_tactics": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "mitre_techniques": [
+        "T1190 Exploit Public-Facing Application",
+        "T1059 Command and Scripting Interpreter"
+      ],
+      "confidence_proof": {
+        "formula": "path_confidence = round(100 \u00d7 (w_infra \u00d7 infra_mean + w_exploit \u00d7 exploit_mean) \u00d7 verified_boost \u00d7 tier_factor)",
+        "factors": [
+          {
+            "name": "infra_confidence",
+            "weight": 0.7733,
+            "evidence": [
+              "3 infrastructure edges"
+            ],
+            "contribution": 77.3
+          },
+          {
+            "name": "exploit_confidence",
+            "weight": 0.96,
+            "evidence": [
+              "4 exploit-chain edges"
+            ],
+            "contribution": 96.0
+          },
+          {
+            "name": "verified_exploit",
+            "weight": 1.12,
+            "evidence": [
+              "weaponized",
+              "exact_version"
+            ],
+            "contribution": 102.9
+          },
+          {
+            "name": "tier_factor",
+            "weight": 1.0,
+            "evidence": [
+              "mixed-tier"
+            ],
+            "contribution": 102.9
+          },
+          {
+            "name": "corroboration",
+            "weight": 2.0,
+            "evidence": [
+              "\u22652 independent tools corroborate this path"
+            ],
+            "contribution": 1.0
+          }
+        ],
+        "raw_score": 102.9205,
+        "normalized_score": 100,
+        "explanation": [
+          "path_confidence = round(100 \u00d7 (w_infra \u00d7 infra_mean + w_exploit \u00d7 exploit_mean) \u00d7 verified_boost \u00d7 tier_factor)",
+          "infra_mean=0.77 (3 edges)",
+          "exploit_mean=0.96 (4 edges)",
+          "verified_boost=1.12",
+          "tier_factor=1.00",
+          "path_confidence=99%"
+        ]
+      },
+      "risk_proof": {
+        "formula": "risk = min(10, cvss_base \u00d7 maturity_factor \u00d7 access_factor \u00d7 auth_factor \u00d7 evidence_factor \u00d7 blast_factor \u00d7 privilege_factor \u00d7 business_criticality \u00d7 data_sensitivity \u00d7 identity_impact \u00d7 lateral_movement \u00d7 persistence)",
+        "factors": [
+          {
+            "name": "cvss_base",
+            "weight": 8.5,
+            "evidence": [
+              "max CVSS along path = 9.3",
+              "verified RCE outcome"
+            ],
+            "contribution": 8.5
+          },
+          {
+            "name": "exploit_maturity",
+            "weight": 1.0,
+            "evidence": [
+              "maturity=weaponized"
+            ],
+            "contribution": 8.5
+          },
+          {
+            "name": "access_vector",
+            "weight": 1.05,
+            "evidence": [
+              "remote access"
+            ],
+            "contribution": 8.925
+          },
+          {
+            "name": "authentication",
+            "weight": 1.0,
+            "evidence": [
+              "no auth required",
+              "public PoC"
+            ],
+            "contribution": 8.925
+          },
+          {
+            "name": "evidence_strength",
+            "weight": 0.9664,
+            "evidence": [
+              "path confidence=88%"
+            ],
+            "contribution": 8.6251
+          },
+          {
+            "name": "blast_radius",
+            "weight": 0.996,
+            "evidence": [
+              "terminal blast radius=0 assets"
+            ],
+            "contribution": 8.5906
+          },
+          {
+            "name": "privilege_gain",
+            "weight": 1.0,
+            "evidence": [
+              "terminal criticality=unknown"
+            ],
+            "contribution": 8.5906
+          },
+          {
+            "name": "business_criticality",
+            "weight": 1.0,
+            "evidence": [
+              "no high-value asset on path"
+            ],
+            "contribution": 8.5906
+          },
+          {
+            "name": "data_sensitivity",
+            "weight": 1.0,
+            "evidence": [
+              "no sensitive data on path"
+            ],
+            "contribution": 8.5906
+          },
+          {
+            "name": "identity_impact",
+            "weight": 1.0,
+            "evidence": [
+              "no identity escalation on path"
+            ],
+            "contribution": 8.5906
+          },
+          {
+            "name": "lateral_movement",
+            "weight": 1.0,
+            "evidence": [
+              "no lateral movement on path"
+            ],
+            "contribution": 8.5906
+          },
+          {
+            "name": "persistence",
+            "weight": 1.0,
+            "evidence": [
+              "no persistence on path"
+            ],
+            "contribution": 8.5906
+          }
+        ],
+        "raw_score": 8.5906,
+        "normalized_score": 8.6,
+        "explanation": [
+          "cvss_base=8.50 (cvss=9.3), maturity=weaponized (1.00), access=remote (1.05), auth=none (1.00), evidence=88% (0.97), blast=0 (1.00), privilege=1.00 (unknown); risk = 8.50 \u00d7 1.00 \u00d7 1.05 \u00d7 1.00 \u00d7 0.97 \u00d7 1.00 \u00d7 1.00 = 8.6"
+        ]
+      },
+      "blast_radius": 47
+    },
+    {
+      "id": "694d4264",
+      "attack_category": "remote_rce",
+      "confidence": 100,
+      "risk": 8.6,
+      "mitre_tactics": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "mitre_techniques": [
+        "T1190 Exploit Public-Facing Application",
+        "T1059 Command and Scripting Interpreter"
+      ],
+      "confidence_proof": {
+        "formula": "path_confidence = round(100 \u00d7 (w_infra \u00d7 infra_mean + w_exploit \u00d7 exploit_mean) \u00d7 verified_boost \u00d7 tier_factor)",
+        "factors": [
+          {
+            "name": "infra_confidence",
+            "weight": 0.7733,
+            "evidence": [
+              "3 infrastructure edges"
+            ],
+            "contribution": 77.3
+          },
+          {
+            "name": "exploit_confidence",
+            "weight": 0.98,
+            "evidence": [
+              "4 exploit-chain edges"
+            ],
+            "contribution": 98.0
+          },
+          {
+            "name": "verified_exploit",
+            "weight": 1.12,
+            "evidence": [
+              "weaponized",
+              "exact_version"
+            ],
+            "contribution": 104.7
+          },
+          {
+            "name": "tier_factor",
+            "weight": 1.0,
+            "evidence": [
+              "mixed-tier"
+            ],
+            "contribution": 104.7
+          },
+          {
+            "name": "corroboration",
+            "weight": 2.0,
+            "evidence": [
+              "\u22652 independent tools corroborate this path"
+            ],
+            "contribution": 1.0
+          }
+        ],
+        "raw_score": 104.6677,
+        "normalized_score": 100,
+        "explanation": [
+          "path_confidence = round(100 \u00d7 (w_infra \u00d7 infra_mean + w_exploit \u00d7 exploit_mean) \u00d7 verified_boost \u00d7 tier_factor)",
+          "infra_mean=0.77 (3 edges)",
+          "exploit_mean=0.98 (4 edges)",
+          "verified_boost=1.12",
+          "tier_factor=1.00",
+          "path_confidence=99%"
+        ]
+      },
+      "risk_proof": {
+        "formula": "risk = min(10, cvss_base \u00d7 maturity_factor \u00d7 access_factor \u00d7 auth_factor \u00d7 evidence_factor \u00d7 blast_factor \u00d7 privilege_factor \u00d7 business_criticality \u00d7 data_sensitivity \u00d7 identity_impact \u00d7 lateral_movement \u00d7 persistence)",
+        "factors": [
+          {
+            "name": "cvss_base",
+            "weight": 8.5,
+            "evidence": [
+              "max CVSS along path = 9.8",
+              "verified RCE outcome"
+            ],
+            "contribution": 8.5
+          },
+          {
+            "name": "exploit_maturity",
+            "weight": 1.0,
+            "evidence": [
+              "maturity=weaponized"
+            ],
+            "contribution": 8.5
+          },
+          {
+            "name": "access_vector",
+            "weight": 1.05,
+            "evidence": [
+              "remote access"
+            ],
+            "contribution": 8.925
+          },
+          {
+            "name": "authentication",
+            "weight": 1.0,
+            "evidence": [
+              "no auth required",
+              "public PoC"
+            ],
+            "contribution": 8.925
+          },
+          {
+            "name": "evidence_strength",
+            "weight": 0.9692,
+            "evidence": [
+              "path confidence=89%"
+            ],
+            "contribution": 8.6501
+          },
+          {
+            "name": "blast_radius",
+            "weight": 0.996,
+            "evidence": [
+              "terminal blast radius=0 assets"
+            ],
+            "contribution": 8.6155
+          },
+          {
+            "name": "privilege_gain",
+            "weight": 1.0,
+            "evidence": [
+              "terminal criticality=unknown"
+            ],
+            "contribution": 8.6155
+          },
+          {
+            "name": "business_criticality",
+            "weight": 1.0,
+            "evidence": [
+              "no high-value asset on path"
+            ],
+            "contribution": 8.6155
+          },
+          {
+            "name": "data_sensitivity",
+            "weight": 1.0,
+            "evidence": [
+              "no sensitive data on path"
+            ],
+            "contribution": 8.6155
+          },
+          {
+            "name": "identity_impact",
+            "weight": 1.0,
+            "evidence": [
+              "no identity escalation on path"
+            ],
+            "contribution": 8.6155
+          },
+          {
+            "name": "lateral_movement",
+            "weight": 1.0,
+            "evidence": [
+              "no lateral movement on path"
+            ],
+            "contribution": 8.6155
+          },
+          {
+            "name": "persistence",
+            "weight": 1.0,
+            "evidence": [
+              "no persistence on path"
+            ],
+            "contribution": 8.6155
+          }
+        ],
+        "raw_score": 8.6155,
+        "normalized_score": 8.6,
+        "explanation": [
+          "cvss_base=8.50 (cvss=9.8), maturity=weaponized (1.00), access=remote (1.05), auth=none (1.00), evidence=89% (0.97), blast=0 (1.00), privilege=1.00 (unknown); risk = 8.50 \u00d7 1.00 \u00d7 1.05 \u00d7 1.00 \u00d7 0.97 \u00d7 1.00 \u00d7 1.00 = 8.6"
+        ]
+      },
+      "blast_radius": 47
+    },
+    {
+      "id": "d3f15429",
+      "attack_category": "remote_rce",
+      "confidence": 92,
+      "risk": 7.2,
+      "mitre_tactics": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "mitre_techniques": [
+        "T1190 Exploit Public-Facing Application",
+        "T1059 Command and Scripting Interpreter"
+      ],
+      "confidence_proof": {
+        "formula": "path_confidence = round(100 \u00d7 (w_infra \u00d7 infra_mean + w_exploit \u00d7 exploit_mean) \u00d7 verified_boost \u00d7 tier_factor)",
+        "factors": [
+          {
+            "name": "infra_confidence",
+            "weight": 0.7733,
+            "evidence": [
+              "3 infrastructure edges"
+            ],
+            "contribution": 77.3
+          },
+          {
+            "name": "exploit_confidence",
+            "weight": 0.89,
+            "evidence": [
+              "5 exploit-chain edges"
+            ],
+            "contribution": 89.0
+          },
+          {
+            "name": "verified_exploit",
+            "weight": 1.04,
+            "evidence": [
+              "verified",
+              "exact_version"
+            ],
+            "contribution": 89.9
+          },
+          {
+            "name": "tier_factor",
+            "weight": 1.0,
+            "evidence": [
+              "mixed-tier"
+            ],
+            "contribution": 89.9
+          },
+          {
+            "name": "corroboration",
+            "weight": 2.0,
+            "evidence": [
+              "\u22652 independent tools corroborate this path"
+            ],
+            "contribution": 2.0
+          }
+        ],
+        "raw_score": 89.8907,
+        "normalized_score": 92,
+        "explanation": [
+          "path_confidence = round(100 \u00d7 (w_infra \u00d7 infra_mean + w_exploit \u00d7 exploit_mean) \u00d7 verified_boost \u00d7 tier_factor)",
+          "infra_mean=0.77 (3 edges)",
+          "exploit_mean=0.89 (5 edges)",
+          "verified_boost=1.04",
+          "tier_factor=1.00",
+          "path_confidence=90%"
+        ]
+      },
+      "risk_proof": {
+        "formula": "risk = min(10, cvss_base \u00d7 maturity_factor \u00d7 access_factor \u00d7 auth_factor \u00d7 evidence_factor \u00d7 blast_factor \u00d7 privilege_factor \u00d7 business_criticality \u00d7 data_sensitivity \u00d7 identity_impact \u00d7 lateral_movement \u00d7 persistence)",
+        "factors": [
+          {
+            "name": "cvss_base",
+            "weight": 8.5,
+            "evidence": [
+              "max CVSS along path = 9.0",
+              "verified RCE outcome"
+            ],
+            "contribution": 8.5
+          },
+          {
+            "name": "exploit_maturity",
+            "weight": 0.92,
+            "evidence": [
+              "maturity=functional"
+            ],
+            "contribution": 7.82
+          },
+          {
+            "name": "access_vector",
+            "weight": 1.05,
+            "evidence": [
+              "remote access"
+            ],
+            "contribution": 8.211
+          },
+          {
+            "name": "authentication",
+            "weight": 0.92,
+            "evidence": [
+              "auth required",
+              "public PoC"
+            ],
+            "contribution": 7.5541
+          },
+          {
+            "name": "evidence_strength",
+            "weight": 0.9552,
+            "evidence": [
+              "path confidence=84%"
+            ],
+            "contribution": 7.2157
+          },
+          {
+            "name": "blast_radius",
+            "weight": 0.996,
+            "evidence": [
+              "terminal blast radius=0 assets"
+            ],
+            "contribution": 7.1868
+          },
+          {
+            "name": "privilege_gain",
+            "weight": 1.0,
+            "evidence": [
+              "terminal criticality=unknown"
+            ],
+            "contribution": 7.1868
+          },
+          {
+            "name": "business_criticality",
+            "weight": 1.0,
+            "evidence": [
+              "no high-value asset on path"
+            ],
+            "contribution": 7.1868
+          },
+          {
+            "name": "data_sensitivity",
+            "weight": 1.0,
+            "evidence": [
+              "no sensitive data on path"
+            ],
+            "contribution": 7.1868
+          },
+          {
+            "name": "identity_impact",
+            "weight": 1.0,
+            "evidence": [
+              "no identity escalation on path"
+            ],
+            "contribution": 7.1868
+          },
+          {
+            "name": "lateral_movement",
+            "weight": 1.0,
+            "evidence": [
+              "no lateral movement on path"
+            ],
+            "contribution": 7.1868
+          },
+          {
+            "name": "persistence",
+            "weight": 1.0,
+            "evidence": [
+              "no persistence on path"
+            ],
+            "contribution": 7.1868
+          }
+        ],
+        "raw_score": 7.1868,
+        "normalized_score": 7.2,
+        "explanation": [
+          "cvss_base=8.50 (cvss=9.0), maturity=functional (0.92), access=remote (1.05), auth=required (0.92), evidence=84% (0.96), blast=0 (1.00), privilege=1.00 (unknown); risk = 8.50 \u00d7 0.92 \u00d7 1.05 \u00d7 0.92 \u00d7 0.96 \u00d7 1.00 \u00d7 1.00 = 7.2"
+        ]
+      },
+      "blast_radius": 47
+    },
+    {
+      "id": "02230ee1",
+      "attack_category": "remote_rce",
+      "confidence": 83,
+      "risk": 6.5,
+      "mitre_tactics": [
+        "TA0001 Initial Access",
+        "TA0002 Execution"
+      ],
+      "mitre_techniques": [
+        "T1190 Exploit Public-Facing Application",
+        "T1059 Command and Scripting Interpreter"
+      ],
+      "confidence_proof": {
+        "formula": "path_confidence = round(100 \u00d7 (w_infra \u00d7 infra_mean + w_exploit \u00d7 exploit_mean) \u00d7 verified_boost \u00d7 tier_factor)",
+        "factors": [
+          {
+            "name": "infra_confidence",
+            "weight": 0.7733,
+            "evidence": [
+              "3 infrastructure edges"
+            ],
+            "contribution": 77.3
+          },
+          {
+            "name": "exploit_confidence",
+            "weight": 0.78,
+            "evidence": [
+              "4 exploit-chain edges"
+            ],
+            "contribution": 78.0
+          },
+          {
+            "name": "verified_exploit",
+            "weight": 1.04,
+            "evidence": [
+              "verified",
+              "exact_version"
+            ],
+            "contribution": 81.0
+          },
+          {
+            "name": "tier_factor",
+            "weight": 1.0,
+            "evidence": [
+              "mixed-tier"
+            ],
+            "contribution": 81.0
+          },
+          {
+            "name": "corroboration",
+            "weight": 2.0,
+            "evidence": [
+              "\u22652 independent tools corroborate this path"
+            ],
+            "contribution": 2.0
+          }
+        ],
+        "raw_score": 80.9675,
+        "normalized_score": 83,
+        "explanation": [
+          "path_confidence = round(100 \u00d7 (w_infra \u00d7 infra_mean + w_exploit \u00d7 exploit_mean) \u00d7 verified_boost \u00d7 tier_factor)",
+          "infra_mean=0.77 (3 edges)",
+          "exploit_mean=0.78 (4 edges)",
+          "verified_boost=1.04",
+          "tier_factor=1.00",
+          "path_confidence=81%"
+        ]
+      },
+      "risk_proof": {
+        "formula": "risk = min(10, cvss_base \u00d7 maturity_factor \u00d7 access_factor \u00d7 auth_factor \u00d7 evidence_factor \u00d7 blast_factor \u00d7 privilege_factor \u00d7 business_criticality \u00d7 data_sensitivity \u00d7 identity_impact \u00d7 lateral_movement \u00d7 persistence)",
+        "factors": [
+          {
+            "name": "cvss_base",
+            "weight": 8.5,
+            "evidence": [
+              "max CVSS along path = 9.0",
+              "verified RCE outcome"
+            ],
+            "contribution": 8.5
+          },
+          {
+            "name": "exploit_maturity",
+            "weight": 0.78,
+            "evidence": [
+              "maturity=poc"
+            ],
+            "contribution": 6.63
+          },
+          {
+            "name": "access_vector",
+            "weight": 1.05,
+            "evidence": [
+              "remote access"
+            ],
+            "contribution": 6.9615
+          },
+          {
+            "name": "authentication",
+            "weight": 1.0,
+            "evidence": [
+              "no auth required",
+              "public PoC"
+            ],
+            "contribution": 6.9615
+          },
+          {
+            "name": "evidence_strength",
+            "weight": 0.9356,
+            "evidence": [
+              "path confidence=77%"
+            ],
+            "contribution": 6.5132
+          },
+          {
+            "name": "blast_radius",
+            "weight": 0.996,
+            "evidence": [
+              "terminal blast radius=0 assets"
+            ],
+            "contribution": 6.4871
+          },
+          {
+            "name": "privilege_gain",
+            "weight": 1.0,
+            "evidence": [
+              "terminal criticality=unknown"
+            ],
+            "contribution": 6.4871
+          },
+          {
+            "name": "business_criticality",
+            "weight": 1.0,
+            "evidence": [
+              "no high-value asset on path"
+            ],
+            "contribution": 6.4871
+          },
+          {
+            "name": "data_sensitivity",
+            "weight": 1.0,
+            "evidence": [
+              "no sensitive data on path"
+            ],
+            "contribution": 6.4871
+          },
+          {
+            "name": "identity_impact",
+            "weight": 1.0,
+            "evidence": [
+              "no identity escalation on path"
+            ],
+            "contribution": 6.4871
+          },
+          {
+            "name": "lateral_movement",
+            "weight": 1.0,
+            "evidence": [
+              "no lateral movement on path"
+            ],
+            "contribution": 6.4871
+          },
+          {
+            "name": "persistence",
+            "weight": 1.0,
+            "evidence": [
+              "no persistence on path"
+            ],
+            "contribution": 6.4871
+          }
+        ],
+        "raw_score": 6.4871,
+        "normalized_score": 6.5,
+        "explanation": [
+          "cvss_base=8.50 (cvss=9.0), maturity=poc (0.78), access=remote (1.05), auth=none (1.00), evidence=77% (0.94), blast=0 (1.00), privilege=1.00 (unknown); risk = 8.50 \u00d7 0.78 \u00d7 1.05 \u00d7 1.00 \u00d7 0.94 \u00d7 1.00 \u00d7 1.00 = 6.5"
+        ]
+      },
+      "blast_radius": 47
+    }
+  ],
+  "statistics": {
+    "connected_components": 2,
+    "average_degree": 1.92,
+    "reachable_nodes": 48,
+    "candidate_attack_paths": 4
+  }
+}

@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --vercel-bg: #000000;
+  --vercel-panel: #0a0a0a;
+  --vercel-border: #27272a;
+  --vercel-hover: #18181b;
+  --vercel-border-hover: #3f3f46;
+  --accent-success: #00c16a;
+  --accent-warning: #ffb224;
+  --accent-critical: #ff4d4d;
+  --accent-info: #3b82f6;
+  --accent-finding: #8b5cf6;
+}
+
+html,
+body {
+  background: var(--vercel-bg);
+  color: #fafafa;
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgb(39, 39, 42);
+}
+
+*,
+*::before,
+*::after {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+select option {
+  background: #000000;
+  color: #fafafa;
+}
+
+@layer components {
+  .vx-card-title {
+    @apply text-card-title font-semibold uppercase tracking-[0.12em] text-vercel-muted text-center w-full;
+  }
+
+  .vx-page-title {
+    @apply text-title font-bold text-white tracking-tight uppercase text-center;
+  }
+
+  .vx-section-title {
+    @apply text-section font-bold text-white tracking-tight uppercase text-center;
+  }
+
+  .vx-metric-primary {
+    @apply text-metric font-bold text-white tabular-nums;
+  }
+
+  .vx-panel {
+    @apply border border-vercel-border bg-vercel-panel transition-[background-color,border-color] duration-150 ease-in-out;
+  }
+
+  .vx-panel-hover {
+    @apply vx-panel hover:bg-vercel-hover hover:border-vercel-border-hover;
+  }
+
+  .vx-panel-hero {
+    @apply border border-vercel-border bg-vercel-panel;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .vx-label {
+    @apply text-metadata text-vercel-muted font-semibold uppercase tracking-[0.08em];
+  }
+
+  .vx-badge {
+    @apply inline-flex items-center px-2 py-0.5 text-metadata font-bold border rounded-sm uppercase tracking-wide;
+  }
+
+  .vx-badge-success {
+    @apply vx-badge text-vercel-success border-vercel-success/30 bg-vercel-success/5;
+  }
+
+  .vx-badge-danger {
+    @apply vx-badge text-vercel-danger border-vercel-danger/30 bg-vercel-danger/5;
+  }
+
+  .vx-badge-warning {
+    @apply vx-badge text-vercel-warning border-vercel-warning/30 bg-vercel-warning/5;
+  }
+
+  .vx-badge-info {
+    @apply vx-badge text-vercel-info border-vercel-info/30 bg-vercel-info/5;
+  }
+
+  .vx-badge-finding {
+    @apply vx-badge text-vercel-finding border-vercel-finding/30 bg-vercel-finding/5;
+  }
+
+  .vx-badge-neutral {
+    @apply vx-badge text-vercel-muted border-vercel-border;
+  }
+
+  .vx-status-pill {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 text-metadata font-semibold uppercase tracking-wide rounded-full border;
+  }
+
+  .vx-btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-body font-bold border border-vercel-border
+      bg-vercel-bg transition-[background-color,border-color,transform] duration-150 ease-in-out
+      hover:bg-vercel-hover hover:border-vercel-border-hover active:scale-[0.98];
+  }
+
+  .vx-btn-primary {
+    @apply vx-btn bg-white text-black border-white hover:bg-zinc-200 hover:border-zinc-200;
+  }
+
+  .vx-tab {
+    @apply px-4 py-2 text-body font-semibold text-vercel-muted border-b-2 border-transparent
+      transition-colors duration-nav ease-in-out hover:text-white;
+  }
+
+  .vx-tab-active {
+    @apply vx-tab text-white border-vercel-info font-bold;
+  }
+
+  .vx-workstation {
+    @apply grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-8;
+  }
+
+  .vx-workstation-main {
+    @apply min-w-0 space-y-6;
+  }
+
+  .vx-workstation-side {
+    @apply space-y-6 xl:sticky xl:top-6 xl:self-start;
+  }
+
+  .vx-side-stack {
+    @apply space-y-8 text-center;
+  }
+
+  .vx-side-stack .vx-panel > div:first-child {
+    @apply text-center;
+  }
+
+  .vx-row-item {
+    @apply flex items-center gap-3 px-4 py-3 border border-vercel-border vx-panel-hover transition-colors duration-nav;
+  }
+
+  .vx-nav-active {
+    @apply relative bg-vercel-hover text-white;
+  }
+
+  .vx-nav-active::before {
+    content: "";
+    @apply absolute left-0 top-1 bottom-1 w-0.5 bg-vercel-info rounded-r;
+  }
+
+  .vx-confidence-bar {
+    @apply h-1 rounded-full bg-vercel-border overflow-hidden;
+  }
+
+  .vx-confidence-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+  }
+
+  .vx-page-enter {
+    @apply opacity-0 translate-y-2;
+  }
+
+  .vx-graph-bg {
+    background-color: #000;
+    background-image:
+      radial-gradient(circle at center, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 24px 24px, 48px 48px, 48px 48px;
+    background-position: 0 0, 0 0, 0 0;
+  }
+}
+
+.react-flow__node {
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.react-flow__controls,
+.react-flow__minimap,
+.react-flow__panel.react-flow__attribution {
+  display: none !important;
+}
+
+.react-flow__edge-path {
+  transition: opacity 0.35s ease, stroke 0.2s ease;
+}
+
+.react-flow__edge-text {
+  font-weight: 600;
+  font-size: 10px;
+}

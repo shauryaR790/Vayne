@@ -1,0 +1,721 @@
+{
+  "validated": [
+    {
+      "id": "9a138e321229",
+      "title": "X11",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Open X11 on port 6000"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "ace960adb0b9",
+      "title": "ajp-methods",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Failed to get a valid response for the OPTION request"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "58964e591fab",
+      "title": "ajp13 Apache Jserv",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Apache Jserv"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "a502c9ace06b",
+      "title": "bindshell Metasploitable root shell",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Metasploitable root shell"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "84cad5b32697",
+      "title": "dns-nsid",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  bind.version: 9.4.2"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "d9177674766a",
+      "title": "domain ISC BIND 9.4.2",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "ISC BIND 9.4.2"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "c6d8e0bdb0a7",
+      "title": "exec netkit-rsh rexecd",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "netkit-rsh rexecd"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "dde6bc358803",
+      "title": "ftp ProFTPD 1.3.1",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "ProFTPD 1.3.1"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "67d682bd5eb9",
+      "title": "ftp vsftpd 2.3.4",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "vsftpd 2.3.4"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "f1ea5f4c6f0c",
+      "title": "ftp-anon",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Anonymous FTP login allowed (FTP code 230)"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "374430877771",
+      "title": "ftp-syst",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  STAT: \nFTP server status:\n     Connected to 192.168.56.1\n     Logged in as ftp\n     TYPE: ASCII\n     No session bandwidth limit\n     Session timeout in seconds is 300\n     Control connection is plain text\n     Data connections will be plain text\n     vsFTPd 2.3.4 - secure, fast, stable\nEnd of status"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "19626a606a89",
+      "title": "http Apache Tomcat/Coyote JSP engine 1.1",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Apache Tomcat/Coyote JSP engine 1.1"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "e6d250b375ad",
+      "title": "http Apache httpd 2.2.8",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Apache httpd 2.2.8"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "ecabb3b1011f",
+      "title": "http-favicon",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Apache Tomcat"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "04b56a6f9847",
+      "title": "http-methods",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  Supported Methods: GET HEAD POST OPTIONS"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "95141601e624",
+      "title": "http-methods",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  Supported Methods: GET HEAD POST OPTIONS"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "9671635b7394",
+      "title": "http-server-header",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Apache/2.2.8 (Ubuntu) DAV/2"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "8dae2cbec62e",
+      "title": "http-server-header",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Apache-Coyote/1.1"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "e38baa657024",
+      "title": "http-title",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Metasploitable2 - Linux"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "6b3fd27bfac5",
+      "title": "http-title",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Apache Tomcat/5.5"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "1965ac567e5a",
+      "title": "irc UnrealIRCd",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "UnrealIRCd"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "d5508346d7ce",
+      "title": "java-rmi GNU Classpath grmiregistry",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "GNU Classpath grmiregistry"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "05238363c1d3",
+      "title": "mysql MySQL 5.0.51a-3ubuntu5",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "MySQL 5.0.51a-3ubuntu5"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "5b960fd63054",
+      "title": "mysql-info",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  Protocol: 10\n  Version: 5.0.51a-3ubuntu5\n  Thread ID: 8\n  Capabilities flags: 43564\n  Some Capabilities: SwitchToSSLAfterHandshake, Support41Auth, LongColumnFlag, SupportsTransactions, SupportsCompression, Speaks41ProtocolNew, ConnectWithDatabase\n  Status: Autocommit\n  Salt: xW-x8KR<qEFnw-u,t'a7"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "432ceb6809cc",
+      "title": "netbios-ssn Samba smbd 3.0.20-Debian",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Samba smbd 3.0.20-Debian"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "ed3b7a4d8de6",
+      "title": "netbios-ssn Samba smbd 3.X - 4.X",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Samba smbd 3.X - 4.X"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "3ade7a2b4b25",
+      "title": "nfs 2-4",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "2-4"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "88bbd9b493af",
+      "title": "postgresql PostgreSQL DB 8.3.0 - 8.3.7",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "PostgreSQL DB 8.3.0 - 8.3.7"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "e7b3db67d8fc",
+      "title": "rpcbind 2",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "2"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "2cc979738e20",
+      "title": "rpcinfo",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  program version    port/proto  service\n  100000  2            111/tcp   rpcbind\n  100000  2            111/udp   rpcbind\n  100003  2,3,4       2049/tcp   nfs\n  100003  2,3,4       2049/udp   nfs\n  100005  1,2,3      41163/udp   mountd\n  100005  1,2,3      47306/tcp   mountd\n  100021  1,3,4      33154/tcp   nlockmgr\n  100021  1,3,4      39426/udp   nlockmgr\n  100024  1          32973/udp   status\n  100024  1          36352/tcp   status\n"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "94fe538e90cf",
+      "title": "shell Netkit rshd",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Netkit rshd"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "1bb0a0641ce7",
+      "title": "smtp Postfix smtpd",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Postfix smtpd"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "bcb0606806ee",
+      "title": "smtp-commands",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "metasploitable.localdomain, PIPELINING, SIZE 10240000, VRFY, ETRN, STARTTLS, ENHANCEDSTATUSCODES, 8BITMIME, DSN"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "47763583b850",
+      "title": "ssh OpenSSH 4.7p1 Debian 8ubuntu1",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "OpenSSH 4.7p1 Debian 8ubuntu1"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "4b7344fa40bb",
+      "title": "ssh-hostkey",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  1024 60:0f:cf:e1:c0:5f:6a:74:d6:90:24:fa:c4:d5:6c:cd (DSA)\n  2048 56:56:24:0f:21:1d:de:a7:2b:ae:61:b1:24:3d:e8:f3 (RSA)"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "dadbc9571ee5",
+      "title": "ssl-cert",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Subject: commonName=ubuntu804-base.localdomain/organizationName=OCOSA/stateOrProvinceName=There is no such thing outside US/countryName=XX\nIssuer: commonName=ubuntu804-base.localdomain/organizationName=OCOSA/stateOrProvinceName=There is no such thing outside US/countryName=XX\nPublic Key type: rsa\nPublic Key bits: 1024\nSignature Algorithm: sha1WithRSAEncryption\nNot valid before: 2010-03-17T14:07:45\nNot valid after:  2010-04-16T14:07:45\nMD5:     dcd9 ad90 6c8f 2f73 74af 383b 2540 8828\nSHA-1:   ed0"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "e60f2ffb9c53",
+      "title": "ssl-cert",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Subject: commonName=ubuntu804-base.localdomain/organizationName=OCOSA/stateOrProvinceName=There is no such thing outside US/countryName=XX\nIssuer: commonName=ubuntu804-base.localdomain/organizationName=OCOSA/stateOrProvinceName=There is no such thing outside US/countryName=XX\nPublic Key type: rsa\nPublic Key bits: 1024\nSignature Algorithm: sha1WithRSAEncryption\nNot valid before: 2010-03-17T14:07:45\nNot valid after:  2010-04-16T14:07:45\nMD5:     dcd9 ad90 6c8f 2f73 74af 383b 2540 8828\nSHA-1:   ed0"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "588f6ec41989",
+      "title": "ssl-date",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  ERROR: Unable to obtain data from the target\n"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "7fa665fd2544",
+      "title": "ssl-date",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "2026-06-27T06:31:50+00:00; -2s from scanner time."
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "a720a8a7bfc3",
+      "title": "ssl-date",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  ERROR: Unable to obtain data from the target\n"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "382ed646fd14",
+      "title": "ssl-date",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  ERROR: Unable to obtain data from the target\n"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "12a9ce8e05e7",
+      "title": "ssl-date",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "2026-06-27T06:31:51+00:00; -1s from scanner time."
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "fe18346e5241",
+      "title": "sslv2",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "\n  SSLv2 supported\n  ciphers: \n    SSL2_RC2_128_CBC_EXPORT40_WITH_MD5\n    SSL2_RC4_128_WITH_MD5\n    SSL2_RC2_128_CBC_WITH_MD5\n    SSL2_DES_192_EDE3_CBC_WITH_MD5\n    SSL2_RC4_128_EXPORT40_WITH_MD5\n    SSL2_DES_64_CBC_WITH_MD5"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "06628e828364",
+      "title": "telnet Linux telnetd",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "Linux telnetd"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "a135544e5139",
+      "title": "vnc VNC",
+      "host": "192.168.56.101",
+      "classification": "OBSERVED",
+      "confidence": 85,
+      "evidence": [
+        "VNC"
+      ],
+      "reasoning": [
+        "model=observation_confidence",
+        "base=68 + fingerprint=True + version=True + port=True -> 85%"
+      ],
+      "cve": ""
+    }
+  ],
+  "rejected": [
+    {
+      "id": "0a6f15025440",
+      "title": "login",
+      "host": "192.168.56.101",
+      "classification": "FALSE POSITIVE",
+      "confidence": 21,
+      "evidence": [
+        "Open login on port 513"
+      ],
+      "reasoning": [
+        "confidence = round(100 \u00d7 scanner_reliability \u00d7 corroboration \u00d7 exploit_maturity \u00d7 applicability \u00d7 environmental_evidence)",
+        "scanner_reliability=0.92 (nmap)",
+        "corroboration=0.88 (1 source(s))",
+        "exploit_maturity=0.50",
+        "applicability=0.62",
+        "environmental=0.84",
+        "product=0.211 -> 21%"
+      ],
+      "cve": ""
+    },
+    {
+      "id": "594446fd6f20",
+      "title": "vnc-info",
+      "host": "192.168.56.101",
+      "classification": "FALSE POSITIVE",
+      "confidence": 21,
+      "evidence": [
+        "\n  Protocol version: 3.3\n  Security types: \n    VNC Authentication (2)"
+      ],
+      "reasoning": [
+        "confidence = round(100 \u00d7 scanner_reliability \u00d7 corroboration \u00d7 exploit_maturity \u00d7 applicability \u00d7 environmental_evidence)",
+        "scanner_reliability=0.92 (nmap)",
+        "corroboration=0.88 (1 source(s))",
+        "exploit_maturity=0.50",
+        "applicability=0.62",
+        "environmental=0.84",
+        "product=0.211 -> 21%"
+      ],
+      "cve": ""
+    }
+  ]
+}

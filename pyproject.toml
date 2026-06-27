@@ -38,7 +38,7 @@ include = ["vayne*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "product"]
 
 [tool.ruff]
 line-length = 100

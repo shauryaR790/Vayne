@@ -7,6 +7,9 @@ dist/
 build/
 .venv/
 reports/
+product/storage/
+product/.vayne-next/
+product/frontend/.next/
 tests/_output/
 venv/
 .env
