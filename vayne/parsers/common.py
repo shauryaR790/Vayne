@@ -58,5 +58,7 @@ def merge_asset(assets: dict[str, Asset], host: str, **kwargs) -> None:
         a.services.append(service)
     if tech and tech not in a.technologies:
         a.technologies.append(tech)
+    if port and tech:
+        a.port_technologies[port] = tech
     if tag and tag not in a.tags:
         a.tags.append(tag)

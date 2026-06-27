@@ -1,4 +1,9 @@
-"""Auditable proof log for graph construction and path discovery."""
+"""Auditable proof log for graph construction and path discovery.
+
+(Previously `vayne/attack_paths/proof.py`; moved into the `proof` package in
+Phase G so acceptance/rejection/revival/alternatives proofs can live alongside
+it. Re-exported from `vayne.attack_paths.proof` for backward compatibility.)
+"""
 
 from __future__ import annotations
 
@@ -24,8 +29,12 @@ class ProofEdge(BaseModel):
     artifact_type: str = ""
     confidence: int = 0
     validation_checks: list[str] = Field(default_factory=list)
+    evidence_tier: str = "TIER1"
+    evidence_type: str = ""
+    evidence_source: str = ""
     accepted: bool = True
     reject_reason: str = ""
+    confidence_proof: dict = Field(default_factory=dict)
 
 
 class PathDiscoveryProof(BaseModel):
@@ -38,8 +47,24 @@ class PathDiscoveryProof(BaseModel):
     paths_no_validated_finding: int = 0
     paths_rejected: int = 0
     paths_accepted: int = 0
+    paths_hypothetical: int = 0
     rejected_path_reasons: list[str] = Field(default_factory=list)
+    accepted_path_explanations: list[str] = Field(default_factory=list)
     sample_raw_paths: list[str] = Field(default_factory=list)
+    false_positives_eliminated: int = 0
+    analyst_minutes_saved: float = 0.0
+    confidence_distribution: dict[str, int] = Field(default_factory=dict)
+    unknowns_requiring_investigation: int = 0
+    max_blast_radius: int = 0
+    # Phase D search telemetry (additive; not rendered in log_lines so existing
+    # proof output is unchanged). Populated when beam search is used.
+    search_states_expanded: int = 0
+    search_branches_pruned: int = 0
+    search_prune_reasons: dict[str, int] = Field(default_factory=dict)
+    # Phase G: structured rejection proofs (additive; not rendered in log_lines).
+    rejected_path_proofs: list[dict] = Field(default_factory=list)
+    # Phase H: attack category classifications (additive section in log_lines).
+    path_classifications: list[dict] = Field(default_factory=list)
 
 
 class GraphStatistics(BaseModel):
@@ -75,14 +100,15 @@ class GraphProof(BaseModel):
             if not e.accepted:
                 continue
             lines.append(f"EDGE {e.source} -> {e.target} [{e.relationship}]")
-            lines.append(f"  DISCOVERED FROM ({e.source_tool}, finding {e.finding_id}):")
+            lines.append(f"  Evidence: {e.evidence[:160]}")
+            lines.append(f"  Tool: {e.source_tool}")
+            lines.append(f"  Artifact: {e.artifact_type or 'n/a'}")
+            lines.append(f"  Tier: {e.evidence_tier}")
+            lines.append(f"  Confidence: {e.confidence}%")
+            lines.append(f"  Validation: {', '.join(e.validation_checks)}")
+            lines.append(f"  DISCOVERED FROM (finding {e.finding_id}):")
             for d in e.discovered_from:
                 lines.append(f"    - {d}")
-            if e.artifact_type:
-                lines.append(f"  artifact_type: {e.artifact_type}")
-            lines.append(f"  evidence: {e.evidence[:160]}")
-            lines.append(f"  confidence: {e.confidence}%")
-            lines.append(f"  validation: {', '.join(e.validation_checks)}")
         for e in self.rejected_edges:
             lines.append(f"REJECTED EDGE {e.source} -> {e.target}: {e.reject_reason}")
         if self.path_discovery:
@@ -92,20 +118,46 @@ class GraphProof(BaseModel):
                 "=== PATH DISCOVERY ===",
                 f"Algorithm: {pd.algorithm}",
                 f"Entry nodes: {', '.join(pd.entry_nodes)}",
-                f"Terminal nodes: {', '.join(pd.terminal_nodes)}",
-                f"Running {pd.algorithm}()...",
-                f"Found: {pd.raw_paths_enumerated} possible paths",
-                f"Filtered (invalid edges): {pd.paths_invalid_edges}",
-                f"Filtered (low confidence): {pd.paths_low_confidence}",
-                f"Filtered (no validated finding): {pd.paths_no_validated_finding}",
+                f"Terminal nodes: {', '.join(pd.terminal_nodes) or 'none (high-value targets required)'}",
                 f"Paths explored: {pd.raw_paths_enumerated}",
                 f"Paths rejected: {pd.paths_rejected}",
-                f"Valid attack paths: {pd.paths_accepted}",
+                f"Paths surviving: {pd.paths_accepted}",
+                f"Hypothetical paths: {pd.paths_hypothetical}",
+                f"False positives eliminated: {pd.false_positives_eliminated}",
+                f"Manual analyst minutes saved: {pd.analyst_minutes_saved}",
+                f"Unknowns requiring investigation: {pd.unknowns_requiring_investigation}",
+                f"Max blast radius (single node): {pd.max_blast_radius}",
             ])
+            if pd.confidence_distribution:
+                dist = ", ".join(f"{k}={v}" for k, v in pd.confidence_distribution.items())
+                lines.append(f"Confidence distribution: {dist}")
             for reason in pd.rejected_path_reasons[:12]:
-                lines.append(f"  REJECTED PATH: {reason}")
+                lines.append(f"  {reason}")
+            for expl in pd.accepted_path_explanations[:5]:
+                for line in expl.split("\n"):
+                    lines.append(f"  {line}")
             for p in pd.sample_raw_paths[:5]:
                 lines.append(f"  sample path: {p}")
+            if pd.path_classifications:
+                lines.extend(["", "=== ATTACK CATEGORY CLASSIFICATION ==="])
+                for pc in pd.path_classifications[:8]:
+                    lines.append(f"ATTACK CATEGORY: {pc.get('attack_category', 'unknown').upper()}")
+                    proof = pc.get("proof") or {}
+                    for expl in proof.get("explanation", [])[:4]:
+                        lines.append(f"  WHY THIS CATEGORY: {expl}")
+                    for cap in proof.get("matched_capabilities", [])[:6]:
+                        lines.append(f"  MATCHED CAPABILITY: {cap}")
+                    for node in proof.get("matched_nodes", [])[:6]:
+                        lines.append(f"  MATCHED NODE: {node}")
+                    for rule in proof.get("matched_rules", [])[:4]:
+                        lines.append(f"  MATCHED RULE: {rule}")
+                    for edge in proof.get("matched_edges", [])[:4]:
+                        lines.append(f"  MATCHED EDGE: {edge}")
+                    for tac in pc.get("mitre_tactics", [])[:6]:
+                        lines.append(f"  MITRE TACTIC: {tac}")
+                    for tech in pc.get("mitre_techniques", [])[:6]:
+                        lines.append(f"  MITRE TECHNIQUE: {tech}")
+                    lines.append("")
         if self.graph_statistics:
             gs = self.graph_statistics
             lines.extend([
@@ -129,5 +181,6 @@ class GraphProof(BaseModel):
                 f"Paths explored: {pd.raw_paths_enumerated}",
                 f"Paths rejected: {pd.paths_rejected}",
                 f"Valid attack paths: {pd.paths_accepted}",
+                f"Analyst minutes saved: {pd.analyst_minutes_saved}",
             ])
         return lines

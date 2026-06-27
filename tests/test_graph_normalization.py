@@ -4,12 +4,14 @@ from pathlib import Path
 
 from vayne.attack_paths.discovery import discover_attack_paths
 from vayne.correlator.engine import correlate_assets, correlate_findings
-from vayne.models import Classification
+from vayne.models import Classification, NodeType
 from vayne.parsers.loader import load_scan_files
 from vayne.validator.engine import validate_finding
 
 EXAMPLES = Path(__file__).parent.parent / "examples" / "scan_results"
 PRIMITIVE_LABELS = {"443", "5432", "2.4.49", "unknown"}
+# Node types are the full typed contract (Step A) plus Phase C intel domains.
+ALLOWED_NODE_TYPES = {nt.value for nt in NodeType}
 
 
 def test_no_primitive_node_labels():
@@ -22,10 +24,7 @@ def test_no_primitive_node_labels():
     for n in proof.nodes:
         assert n.label.lower() not in PRIMITIVE_LABELS
         assert "unknown" not in n.id.lower()
-        assert n.node_type in {
-            "asset", "service", "software", "endpoint",
-            "vulnerability", "credential", "identity", "database",
-        }
+        assert n.node_type in ALLOWED_NODE_TYPES
 
 
 def test_vulnerability_not_terminal():

@@ -14,11 +14,14 @@ UNKNOWN = "UNKNOWN — insufficient evidence"
 class Classification(str, Enum):
     CONFIRMED = "CONFIRMED"
     LIKELY_EXPLOITABLE = "LIKELY EXPLOITABLE"
+    OBSERVED = "OBSERVED"
+    UNCONFIRMED_EXPLOITABILITY = "UNCONFIRMED EXPLOITABILITY"
     MANUAL_REVIEW = "MANUAL REVIEW"
     FALSE_POSITIVE = "FALSE POSITIVE"
 
 
 class NodeType(str, Enum):
+    # Core infrastructure (original)
     ENDPOINT = "endpoint"
     ASSET = "asset"
     SERVICE = "service"
@@ -29,6 +32,80 @@ class NodeType(str, Enum):
     BUCKET = "bucket"
     DATABASE = "database"
     DATA = "data"
+    # Identity & access (Phase 2)
+    ROLE = "role"
+    ADMIN = "admin"
+    DOMAIN = "domain"
+    IAM_ROLE = "iam_role"
+    SERVICE_ACCOUNT = "service_account"
+    SESSION = "session"
+    # Secrets & credentials (Phase 2)
+    SECRET = "secret"
+    API_KEY = "api_key"
+    JWT = "jwt"
+    SSH_KEY = "ssh_key"
+    # Data & storage (Phase 2)
+    STORAGE = "storage"
+    RDS = "rds"
+    REDIS = "redis"
+    MESSAGE_QUEUE = "message_queue"
+    NETWORK_SHARE = "network_share"
+    # Cloud & orchestration (Phase 2)
+    CLOUD_RESOURCE = "cloud_resource"
+    KUBERNETES = "kubernetes"
+    CONTAINER = "container"
+    POD = "pod"
+    INTERNAL_SERVICE = "internal_service"
+    VPN = "vpn"
+    # Supply chain & comms (Phase 2)
+    GITHUB_REPO = "github_repo"
+    CI_CD = "ci_cd"
+    PIPELINE = "pipeline"
+    WEBHOOK = "webhook"
+    EMAIL = "email"
+
+
+class GraphNode(BaseModel):
+    """Typed attack-graph node.
+
+    Every graph node carries this minimum evidence-first contract. Stored on the
+    networkx graph as a flat attribute dict (see node_factory.build_node_attrs);
+    specialized attributes (cvss, applicability_status, is_entry, ...) are added
+    as extra keys alongside these.
+    """
+
+    label: str
+    node_type: str
+    evidence: list[str] = Field(default_factory=list)
+    finding_ids: list[str] = Field(default_factory=list)
+    confidence: int = 0
+    blast_radius: int = 0
+    capability: str = ""
+    criticality: str = ""
+    criticality_weight: float = 0.0
+    source_tool: str = ""
+    validation_status: str = "observed"
+    evidence_tier: str = "TIER1"
+
+
+class EvidenceTier(str, Enum):
+    TIER1 = "TIER1"
+    TIER2 = "TIER2"
+    TIER3 = "TIER3"
+
+
+class AttackCapability(str, Enum):
+    INITIAL_ACCESS = "initial_access"
+    # EXECUTION is the canonical post-access stage; CODE_EXECUTION is the
+    # original alias kept for backward compatibility (treated as equivalent).
+    EXECUTION = "execution"
+    CODE_EXECUTION = "code_execution"
+    CREDENTIAL_ACCESS = "credential_access"
+    PRIVILEGE_ESCALATION = "privilege_escalation"
+    LATERAL_MOVEMENT = "lateral_movement"
+    PERSISTENCE = "persistence"
+    DATA_ACCESS = "data_access"
+    DOMAIN_COMPROMISE = "domain_compromise"
 
 
 class Finding(BaseModel):
@@ -51,6 +128,7 @@ class Asset(BaseModel):
     host: str
     ip: str = ""
     technologies: list[str] = Field(default_factory=list)
+    port_technologies: dict[int, str] = Field(default_factory=dict)
     ports: list[int] = Field(default_factory=list)
     services: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
@@ -107,6 +185,8 @@ class ValidationResult(BaseModel):
     confidence_breakdown: list[str] = Field(default_factory=list)
     reasoning: list[str] = Field(default_factory=list)
     classification: Classification = Classification.MANUAL_REVIEW
+    observation_status: str = "unknown"
+    exploitability_status: str = "unknown"
 
 
 class AttackPathEdge(BaseModel):
@@ -122,9 +202,13 @@ class AttackPathEdge(BaseModel):
     source_tool: str = ""
     discovered_from: list[str] = Field(default_factory=list)
     artifact_type: str = ""
+    evidence_tier: str = "TIER1"
+    evidence_type: str = ""
+    evidence_source: str = ""
     validation_checks_passed: list[str] = Field(default_factory=list)
     exploitability: str = ""
     privilege_gained: str = ""
+    confidence_proof: dict = Field(default_factory=dict)
 
 
 class AttackPathNode(BaseModel):
@@ -133,6 +217,8 @@ class AttackPathNode(BaseModel):
     node_type: NodeType
     evidence: list[str] = Field(default_factory=list)
     source_finding_ids: list[str] = Field(default_factory=list)
+    evidence_tier: str = "TIER1"
+    capability: str = ""
     risk_level: str = ""
 
 
@@ -159,7 +245,31 @@ class AttackPath(BaseModel):
     hop_count: int = 0
     termination_message: str = ""
     missing_evidence: list[str] = Field(default_factory=list)
+    is_hypothetical: bool = False
+    path_explanation: list[str] = Field(default_factory=list)
+    confidence_explanation: list[str] = Field(default_factory=list)
+    expected_impact: str = ""
+    rejection_context: list[str] = Field(default_factory=list)
+    capability_chain: list[str] = Field(default_factory=list)
+    blast_radius: int = 1
+    terminal_criticality: str = ""
     scoring: PathScoringBreakdown | None = None
+    confidence_proof: dict = Field(default_factory=dict)
+    # Phase F+G proofs (additive; all default empty so existing output is a superset).
+    risk_proof: dict = Field(default_factory=dict)
+    accepted_proof: dict = Field(default_factory=dict)
+    rejected_proof: dict = Field(default_factory=dict)
+    effort_proof: dict = Field(default_factory=dict)
+    blast_proof: dict = Field(default_factory=dict)
+    alternatives: list[dict] = Field(default_factory=list)
+    revival_options: list[dict] = Field(default_factory=list)
+    # Phase H — deterministic attack category + MITRE (additive).
+    attack_category: str = ""
+    attack_category_proof: dict = Field(default_factory=dict)
+    mitre_tactics: list[str] = Field(default_factory=list)
+    mitre_techniques: list[str] = Field(default_factory=list)
+    # Phase I — deterministic attack story (populated at export; default empty).
+    attack_story: dict = Field(default_factory=dict)
 
 
 class AnalystBrief(BaseModel):
@@ -196,13 +306,21 @@ class InvestigationStats(BaseModel):
     findings_correlated: int = 0
     findings_retained: int = 0
     attack_paths: int = 0
+    hypothetical_paths: int = 0
+    paths_explored: int = 0
+    paths_rejected: int = 0
     false_positives_removed: int = 0
     confirmed: int = 0
     likely_exploitable: int = 0
+    observed: int = 0
+    unconfirmed_exploitability: int = 0
     validated: int = 0
     manual_review: int = 0
     analyst_hours_saved: float = 0.0
+    analyst_minutes_saved: float = 0.0
     critical_count: int = 0
+    unknowns_requiring_investigation: int = 0
+    confidence_distribution: dict[str, int] = Field(default_factory=dict)
 
 
 class InvestigationReport(BaseModel):
@@ -216,6 +334,11 @@ class InvestigationReport(BaseModel):
     attack_paths: list[AttackPath] = Field(default_factory=list)
     thinking_log: list[str] = Field(default_factory=list)
     proof_log: list[str] = Field(default_factory=list)
+    # Phase I production layer (additive).
+    attack_surface_score: int = 0
+    attack_surface_classification: str = ""
+    attack_surface_proof: dict = Field(default_factory=dict)
+    graph_proof: dict = Field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(mode="json")

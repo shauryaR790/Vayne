@@ -33,6 +33,11 @@ def generate_brief(
     exploit_label = f"{score}/10"
     if effort:
         exploit_label += f" — attacker effort: {effort}"
+    elif validation.classification in (
+        Classification.OBSERVED,
+        Classification.UNCONFIRMED_EXPLOITABILITY,
+    ):
+        exploit_label += " — unconfirmed"
     elif validation.classification == Classification.FALSE_POSITIVE:
         exploit_label += " — unlikely"
     else:
@@ -61,6 +66,16 @@ def _root_from_evidence(evidence: list[str]) -> str:
 def _impact_from_evidence(evidence: list[str], validation: ValidationResult) -> str:
     if validation.classification == Classification.FALSE_POSITIVE:
         return "Likely false positive per validation checks."
+    if validation.classification == Classification.OBSERVED:
+        return (
+            "Confirmed scan observation — service or asset exists in evidence. "
+            "Exploitability not assessed."
+        )
+    if validation.classification == Classification.UNCONFIRMED_EXPLOITABILITY:
+        return (
+            "Observation confirmed in scan output. "
+            "Exploit prerequisites or CVE applicability not verified."
+        )
     if not evidence:
         return UNKNOWN
     if validation.reachable and validation.prerequisites_met:

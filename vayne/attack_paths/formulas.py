@@ -22,9 +22,8 @@ ATTACKER_EFFORT_FORMULA = (
 )
 
 RISK_SCORE_FORMULA = (
-    "max_from_confidence = path_confidence / 10; "
-    "severity_factor = min(1.0, mean(edge_score) / 5); "
-    "risk_score = min(10, max_from_confidence * severity_factor)"
+    "risk = min(10, cvss_base × maturity_factor × access_factor × auth_factor "
+    "× evidence_factor × blast_factor × privilege_factor)"
 )
 
 

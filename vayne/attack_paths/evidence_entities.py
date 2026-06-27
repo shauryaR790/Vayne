@@ -207,6 +207,7 @@ def extract_entities(cf: CorrelatedFinding, asset: Asset | None) -> list[Evidenc
 
 def privilege_edge_evidence(evidence: list[str]) -> str | None:
     for ev in evidence:
-        if "sts:assumeRole" in ev.replace(" ", "").lower() or "assume role" in ev.lower():
+        normalized = ev.replace(" ", "").lower()
+        if "sts:assumerole" in normalized or "assume role" in ev.lower():
             return ev[:200].strip()
     return None

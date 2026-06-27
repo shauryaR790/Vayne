@@ -12,8 +12,8 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
-
 from vayne.models import Classification, InvestigationReport
+from vayne.validator.engine import format_analyst_status
 
 console = Console()
 
@@ -121,6 +121,8 @@ def print_final_report(report: InvestigationReport) -> None:
         ("Duration", f"{report.duration_seconds:.0f}s"),
         ("Findings", str(s.findings_loaded)),
         ("Validated", str(s.validated)),
+        ("Observed", str(s.observed)),
+        ("Unconfirmed Exploitability", str(s.unconfirmed_exploitability)),
         ("False Positives", str(s.false_positives_removed)),
         ("Retained", str(s.findings_retained)),
         ("Attack Paths", str(s.attack_paths)),
@@ -141,7 +143,11 @@ def print_final_report(report: InvestigationReport) -> None:
         console.print(Rule(style="dim"))
         sev = f.correlated.severity.upper()
         console.print(f"[bold]{sev}[/bold] — {f.correlated.title}")
-        console.print(f"Status: [bold]{f.validation.classification.value}[/bold]")
+        console.print(f"Status: [bold]{format_analyst_status(f.validation)}[/bold]")
+        console.print(
+            f"Observation: [bold]{f.validation.observation_status}[/bold] | "
+            f"Exploitability: [bold]{f.validation.exploitability_status}[/bold]"
+        )
         console.print(f"Confidence: [bold]{f.validation.confidence}%[/bold]")
         if f.validation.confidence_breakdown:
             console.print("[dim]Confidence breakdown:[/dim]")

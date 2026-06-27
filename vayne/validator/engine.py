@@ -1,9 +1,11 @@
-"""Validation engine — evidence-based checks only."""
+"""Validation engine — separates observation truth from exploitability truth."""
 
 from __future__ import annotations
 
 import re
 
+from vayne.attack_paths.confidence_model import FORMULA, compute_confidence
+from vayne.attack_paths.graph_filters import is_inventory_finding
 from vayne.models import Asset, Classification, CorrelatedFinding, ValidationResult
 
 AUTH_MARKERS = ("login", "401", "403", "authentication", "unauthorized", "sign in")
@@ -13,19 +15,18 @@ FINGERPRINT = re.compile(
     r"(apache|nginx|postgres|httpd|openssh|mysql)/[\d.]+", re.I
 )
 
-CHECK_WEIGHTS = {
-    "host_alive": 20,
-    "port_open": 15,
-    "service_exists": 15,
-    "service_fingerprinted": 10,
-    "version_matches": 15,
-    "cve_applicable": 15,
-    "prerequisites_met": 10,
-    "reachable": 10,
-    "reproducible": 10,
-    "privilege_escalation_possible": 8,
-    "lateral_movement_possible": 8,
-}
+NOISE_TITLE_MARKERS = (
+    "dns wildcard",
+    "self-signed certificate",
+    "content-security-policy",
+    "x-frame-options",
+    "httponly",
+    "server header disclosure",
+    "robots.txt",
+    "email address in page",
+    ".git/config",
+    "admin panel detected",
+)
 
 
 def validate_finding(
@@ -110,10 +111,30 @@ def validate_finding(
         "lateral_movement_possible": lateral_movement_possible,
     }
     confidence, breakdown = _confidence_from_checks(
-        checks, len(finding.evidence), len(finding.sources)
+        checks, finding, vuln_type, auth_required, prerequisites_met, cve_applicable, reproducible
     )
 
-    classification = _classify(confidence, auth_required, prerequisites_met, reproducible, checks)
+    classification, observation_status, exploitability_status = _classify(
+        confidence,
+        auth_required,
+        prerequisites_met,
+        reproducible,
+        checks,
+        finding,
+        vuln_type,
+    )
+
+    if classification == Classification.OBSERVED:
+        obs_conf, obs_breakdown = observation_confidence_from_checks(
+            checks, finding, reproducible=reproducible
+        )
+        confidence = obs_conf
+        breakdown = obs_breakdown
+
+    if classification == Classification.OBSERVED:
+        reasoning.append("observation confirmed — not a false positive")
+    elif classification == Classification.UNCONFIRMED_EXPLOITABILITY:
+        reasoning.append("observation confirmed — exploitability unverified")
 
     return ValidationResult(
         host_alive=host_alive,
@@ -132,6 +153,8 @@ def validate_finding(
         confidence_breakdown=breakdown,
         reasoning=reasoning,
         classification=classification,
+        observation_status=observation_status,
+        exploitability_status=exploitability_status,
     )
 
 
@@ -164,7 +187,7 @@ def _asset_for(host: str, assets: list[Asset]) -> Asset | None:
 def _service_fingerprinted(f: CorrelatedFinding, asset: Asset | None) -> bool:
     if any(FINGERPRINT.search(e) for e in f.evidence):
         return True
-    if any(f.source_tool == "nmap" for f in f.findings):
+    if any(fi.source_tool == "nmap" for fi in f.findings):
         return True
     return bool(asset and asset.technologies)
 
@@ -202,7 +225,7 @@ def _prerequisites(
 
 
 def _privilege_escalation(text: str, f: CorrelatedFinding, vuln_type: str) -> bool:
-    if vuln_type != "iam":
+    if vuln_type not in ("iam", "s3"):
         return False
     markers = ("assume", "sts:", "adminrole", "arn:aws:iam::")
     return any(m in text for m in markers) and bool(f.evidence)
@@ -221,23 +244,34 @@ def _lateral_movement(text: str, f: CorrelatedFinding, vuln_type: str) -> bool:
     return any(m in text for m in markers) and bool(f.evidence)
 
 
-def _confidence_from_checks(
-    checks: dict[str, bool], evidence_count: int, source_count: int
-) -> tuple[int, list[str]]:
-    if evidence_count == 0:
-        return 0, []
-    breakdown: list[str] = []
-    for key, passed in checks.items():
-        if passed:
-            pts = CHECK_WEIGHTS.get(key, 5)
-            label = key.replace("_", " ")
-            breakdown.append(f"+{pts} {label}")
-    passed = sum(1 for v in checks.values() if v)
-    total = len(checks)
-    base = int((passed / total) * 70) if total else 0
-    base += min(20, evidence_count * 4)
-    base += min(10, source_count * 5)
-    return min(100, base), breakdown
+def _observation_confirmed(checks: dict[str, bool]) -> bool:
+    return bool(
+        checks.get("host_alive")
+        and (
+            checks.get("service_fingerprinted")
+            or checks.get("port_open")
+            or checks.get("service_exists")
+        )
+    )
+
+
+def _is_noise_finding(
+    finding: CorrelatedFinding,
+    checks: dict[str, bool],
+    confidence: int,
+    auth: bool,
+    prereq: bool,
+) -> bool:
+    if not finding.evidence:
+        return True
+    title = finding.title.lower()
+    if any(marker in title for marker in NOISE_TITLE_MARKERS):
+        return True
+    if auth and not prereq and confidence < 45:
+        return True
+    if confidence < 25 and not _observation_confirmed(checks):
+        return True
+    return False
 
 
 def _classify(
@@ -246,18 +280,122 @@ def _classify(
     prereq: bool,
     repro: bool,
     checks: dict[str, bool],
-) -> Classification:
-    if confidence < 35:
-        return Classification.FALSE_POSITIVE
-    if auth and not prereq:
-        return Classification.FALSE_POSITIVE
+    finding: CorrelatedFinding,
+    vuln_type: str,
+) -> tuple[Classification, str, str]:
+    if _is_noise_finding(finding, checks, confidence, auth, prereq):
+        return Classification.FALSE_POSITIVE, "rejected", "rejected"
+
+    obs_confirmed = _observation_confirmed(checks)
+    obs_status = "confirmed" if obs_confirmed else "uncertain"
+
+    if is_inventory_finding(finding) and obs_confirmed:
+        return Classification.OBSERVED, obs_status, "not_applicable"
+
     critical_passed = sum(
         1 for k in ("reachable", "prerequisites_met", "service_exists") if checks.get(k)
     )
-    if confidence >= 80 and critical_passed >= 3 and repro:
-        return Classification.CONFIRMED
-    if confidence >= 60 and prereq and checks.get("reachable"):
-        return Classification.LIKELY_EXPLOITABLE
+
+    if checks.get("cve_applicable") and prereq and repro and confidence >= 80 and critical_passed >= 3:
+        return Classification.CONFIRMED, obs_status, "confirmed"
+
+    if confidence >= 50 and prereq and checks.get("reachable"):
+        return Classification.LIKELY_EXPLOITABLE, obs_status, "likely"
+
+    if finding.cve and not checks.get("cve_applicable"):
+        return (
+            Classification.UNCONFIRMED_EXPLOITABILITY,
+            obs_status,
+            "unconfirmed",
+        )
+
+    if vuln_type in ("cve", "s3", "iam", "credential") and obs_confirmed:
+        if not prereq or not checks.get("cve_applicable"):
+            return (
+                Classification.UNCONFIRMED_EXPLOITABILITY,
+                obs_status,
+                "unconfirmed",
+            )
+
+    if obs_confirmed and checks.get("service_fingerprinted"):
+        return Classification.OBSERVED, obs_status, "not_applicable"
+
+    if obs_confirmed and checks.get("version_matches"):
+        return Classification.OBSERVED, obs_status, "not_applicable"
+
+    if obs_confirmed:
+        return Classification.OBSERVED, obs_status, "not_applicable"
+
     if confidence < 50:
-        return Classification.MANUAL_REVIEW
-    return Classification.MANUAL_REVIEW
+        return Classification.MANUAL_REVIEW, obs_status, "unconfirmed"
+
+    return Classification.MANUAL_REVIEW, obs_status, "unconfirmed"
+
+
+def _confidence_from_checks(
+    checks: dict[str, bool],
+    finding: CorrelatedFinding,
+    vuln_type: str,
+    auth_required: bool,
+    prerequisites_met: bool,
+    cve_applicable: bool,
+    reproducible: bool,
+) -> tuple[int, list[str]]:
+    if not finding.evidence:
+        return 0, []
+
+    primary_tool = finding.sources[0] if finding.sources else "scan"
+    maturity = "functional" if cve_applicable else "unknown"
+    if vuln_type == "s3" and checks.get("prerequisites_met"):
+        maturity = "poc"
+
+    confidence, breakdown = compute_confidence(
+        source_tool=primary_tool,
+        source_count=len(finding.sources),
+        exploit_maturity=maturity,
+        version_match_only=bool(finding.cve) and not cve_applicable,
+        prerequisites_met=prerequisites_met,
+        cve_verified=cve_applicable,
+        candidate_only=bool(finding.cve) and not cve_applicable,
+        host_alive=checks.get("host_alive", False),
+        port_open=checks.get("port_open", False),
+        reachable=checks.get("reachable", False),
+        reproducible=reproducible,
+        fingerprinted=checks.get("service_fingerprinted", False),
+    )
+    breakdown = [FORMULA] + breakdown
+    return confidence, breakdown
+
+
+def observation_confidence_from_checks(
+    checks: dict[str, bool],
+    finding: CorrelatedFinding,
+    *,
+    reproducible: bool,
+) -> tuple[int, list[str]]:
+    from vayne.attack_paths.confidence_model import compute_observation_confidence
+
+    confidence, breakdown = compute_observation_confidence(
+        service_fingerprinted=checks.get("service_fingerprinted", False),
+        version_matches=checks.get("version_matches", False),
+        port_open=checks.get("port_open", False),
+        host_alive=checks.get("host_alive", False),
+        source_count=len(finding.sources),
+        reproducible=reproducible,
+    )
+    return confidence, breakdown
+
+
+def format_analyst_status(validation: ValidationResult) -> str:
+    """Human-readable status for analyst UI."""
+    if validation.classification == Classification.FALSE_POSITIVE:
+        return "FALSE POSITIVE"
+    if validation.classification == Classification.OBSERVED:
+        return "OBSERVED · exploitability not assessed"
+    if validation.classification == Classification.UNCONFIRMED_EXPLOITABILITY:
+        return "OBSERVED · UNCONFIRMED EXPLOITABILITY"
+    if validation.classification == Classification.CONFIRMED:
+        return "CONFIRMED · exploitability verified"
+    if validation.classification == Classification.LIKELY_EXPLOITABLE:
+        return "OBSERVED · LIKELY EXPLOITABLE"
+    return validation.classification.value

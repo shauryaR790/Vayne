@@ -33,11 +33,18 @@ def parse_software(text: str) -> SoftwareFingerprint | None:
         return None
 
     patterns: list[tuple[re.Pattern[str], str, str]] = [
+        (re.compile(r"(?i)^vsftpd\s+([\d.]+)$"), "vsftpd", "vsftpd"),
+        (re.compile(r"(?i)^proftpd\s+([\d.]+)$"), "proftpd", "proftpd"),
+        (re.compile(r"(?i)^unrealircd(?:\s+([\d.]+))?$"), "unrealircd", "unrealircd"),
+        (re.compile(r"(?i)^samba\s+smbd(?:\s+([\d.\-\w]+))?$"), "samba", "samba"),
+        (re.compile(r"(?i)^distcc(?:d)?$"), "distcc", "distcc"),
+        (re.compile(r"(?i)^apache\s+tomcat.*?(?:\s+([\d.]+))?$"), "apache", "tomcat"),
         (re.compile(r"(?i)^apache\s+httpd\s+([\d.]+)$"), "apache", "httpd"),
         (re.compile(r"(?i)^apache\s+([\d.]+)$"), "apache", "httpd"),
         (re.compile(r"(?i)^postgresql\s+([\d.]+)$"), "postgresql", "postgresql"),
         (re.compile(r"(?i)^openssh\s+([\d.]+)$"), "openssh", "openssh"),
         (re.compile(r"(?i)^nginx\s+([\d.]+)$"), "nginx", "nginx"),
+        (re.compile(r"(?i)^mysql\s+([\d.]+)$"), "mysql", "mysql"),
         (re.compile(r"(?i)^amazons3$"), "amazon", "s3"),
     ]
     for pattern, vendor, product in patterns:
