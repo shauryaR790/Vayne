@@ -1,5 +1,5 @@
-import { UploadWorkbench } from "@/components/landing/UploadWorkbench";
+import { redirect } from "next/navigation";
 
-export default function UploadPage() {
-  return <UploadWorkbench />;
+export default function UploadRedirect() {
+  redirect("/");
 }

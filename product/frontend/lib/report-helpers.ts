@@ -120,30 +120,30 @@ export function proofTimelineSteps(report: InvestigationReport) {
     {
       id: "discovery",
       title: "Discovery",
-      detail: `${(gp?.nodes as unknown[])?.length ?? 0} nodes discovered`,
+      detail: `${(gp?.nodes as unknown[])?.length ?? graphNodeCount(gp)} nodes discovered from source evidence`,
       data: gp?.nodes,
     },
     {
       id: "fingerprint",
       title: "Fingerprinting",
-      detail: `${countSoftware(report)} software fingerprints`,
+      detail: `${countSoftware(report)} software fingerprints across ${countServices(report)} services`,
       data: report.assets,
     },
     {
       id: "vulnerability",
       title: "Vulnerability Mapping",
-      detail: `${stats.observed} observed findings`,
-      data: null,
+      detail: `${stats.observed} observed · ${stats.likely_exploitable} likely exploitable · ${stats.confirmed} confirmed`,
+      data: stats,
     },
     {
       id: "exploit",
       title: "Exploit Intelligence",
-      detail: `${stats.likely_exploitable + stats.confirmed} mapped exploits`,
+      detail: `${stats.likely_exploitable + stats.confirmed} exploits mapped to fingerprinted services`,
       data: null,
     },
     {
       id: "enumeration",
-      title: "Path Generation",
+      title: "Attack Path Generation",
       detail: `${discovery.paths_explored ?? stats.paths_explored ?? stats.attack_paths} paths explored`,
       data: discovery,
     },
@@ -156,14 +156,19 @@ export function proofTimelineSteps(report: InvestigationReport) {
     {
       id: "confidence",
       title: "Confidence",
-      detail: JSON.stringify(stats.confidence_distribution || {}),
+      detail: `Distribution: ${JSON.stringify(stats.confidence_distribution || {})}`,
       data: report.attack_surface_proof,
     },
     {
       id: "verdict",
       title: "Final Verdict",
-      detail: `${report.attack_surface_classification} · ${report.attack_surface_score}/100`,
+      detail: `${report.attack_surface_classification} · score ${report.attack_surface_score}/100`,
       data: report.attack_surface_proof,
     },
   ];
+}
+
+function graphNodeCount(gp: Record<string, unknown>): number {
+  const nodes = gp?.nodes;
+  return Array.isArray(nodes) ? nodes.length : 0;
 }

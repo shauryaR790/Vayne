@@ -1,23 +1,23 @@
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
 const { execSync } = require("child_process");
 
-const frontendRoot = path.join(__dirname, "..");
+const { frontendRoot, externalCacheRoot, localNextDir } = require("./paths");
+
 const DEV_PORT = process.env.PORT || "3000";
 
 const dirsToRemove = [
-  path.join(frontendRoot, ".next"),
+  localNextDir,
   path.join(frontendRoot, "node_modules", ".cache"),
   path.join(frontendRoot, "node_modules", ".cache", "vayne-next"),
   path.join(frontendRoot, "..", ".vayne-next"),
-  path.join(os.homedir(), "AppData", "Local", "vayne-next-cache"),
+  externalCacheRoot,
 ];
 
 function rmPath(target) {
   if (!fs.existsSync(target)) return;
   try {
-    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 8, retryDelay: 400 });
   } catch {
     execSync(
       `powershell -NoProfile -Command "Remove-Item -LiteralPath '${target.replace(/'/g, "''")}' -Recurse -Force -ErrorAction SilentlyContinue"`,

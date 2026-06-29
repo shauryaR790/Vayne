@@ -2,159 +2,161 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
-  IconFindings,
-  IconGraph,
-  IconOverview,
-  IconPaths,
-  IconProof,
-  IconReports,
-  IconSettings,
-  IconUpload,
-} from "@/components/ui/icons";
+  Bell,
+  BookOpen,
+  FileText,
+  Info,
+  LayoutGrid,
+  Map,
+  MoreHorizontal,
+  Radar,
+  Search,
+  Server,
+  Workflow,
+} from "lucide-react";
 
-const ANALYSIS_NAV = [
-  { href: "", label: "Overview", icon: IconOverview },
-  { href: "/paths", label: "Attack Paths", icon: IconPaths },
-  { href: "/graph", label: "Graph", icon: IconGraph },
-];
+import { cn } from "@/lib/utils";
 
-const INTEL_NAV = [
-  { href: "/findings", label: "Findings", icon: IconFindings },
-  { href: "/reports", label: "Reports", icon: IconReports },
-  { href: "/proof", label: "Proof", icon: IconProof },
-];
-
-function NavSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="py-2">
-      <p className="px-3 py-2 vx-card-title !text-left">{title}</p>
-      <div className="space-y-0.5">{children}</div>
-    </div>
-  );
-}
-
-function NavLink({
-  href,
-  label,
-  icon: Icon,
-  active,
-}: {
-  href: string;
+type NavItem = {
+  id: string;
   label: string;
-  icon: typeof IconOverview;
-  active: boolean;
-}) {
+  href: string;
+  icon: LucideIcon;
+};
+
+const primaryNav: NavItem[] = [
+  { id: "home", label: "Home", href: "/", icon: Radar },
+  { id: "investigations", label: "Investigations", href: "/investigations", icon: LayoutGrid },
+  { id: "reports", label: "Reports", href: "/investigations", icon: FileText },
+];
+
+const intelligenceNav: NavItem[] = [
+  { id: "playbooks", label: "Playbooks", href: "/playbooks", icon: BookOpen },
+  { id: "methodology", label: "Methodology", href: "/methodology", icon: Workflow },
+  { id: "research", label: "Research", href: "/research", icon: Search },
+  { id: "roadmap", label: "Roadmap", href: "/roadmap", icon: Map },
+];
+
+const systemNav: NavItem[] = [
+  { id: "system", label: "System", href: "/system", icon: Server },
+  { id: "about", label: "About", href: "/about", icon: Info },
+];
+
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const Icon = item.icon;
+
   return (
     <Link
-      href={href}
-      className={`relative flex items-center gap-3 rounded-md mx-2 px-3 py-2 text-body font-semibold transition-all duration-nav ${
+      href={item.href}
+      className={cn(
+        "group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors",
         active
-          ? "vx-nav-active pl-4 text-white"
-          : "text-vercel-muted hover:bg-vercel-hover hover:text-white"
-      }`}
+          ? "bg-white/10 text-white"
+          : "text-white/55 hover:bg-white/[0.06] hover:text-white/90",
+      )}
     >
-      <Icon className={`shrink-0 w-4 h-4 ${active ? "text-vercel-info" : "opacity-70"}`} />
-      {label}
+      <Icon
+        className={cn(
+          "size-4 shrink-0 stroke-[1.5]",
+          active ? "text-white" : "text-white/45 group-hover:text-white/70",
+        )}
+        aria-hidden
+      />
+      <span className="truncate">{item.label}</span>
     </Link>
   );
 }
 
-export function Sidebar({
-  investigationId,
-  investigationName,
-  status,
-  durationSeconds,
-}: {
-  investigationId: string;
-  investigationName?: string;
-  status?: string;
-  durationSeconds?: number;
-}) {
+function NavSection({ items, isActive }: { items: NavItem[]; isActive: (id: string, href: string) => boolean }) {
+  return (
+    <div className="flex flex-col gap-0.5 px-2">
+      {items.map((item) => (
+        <NavLink key={item.id} item={item} active={isActive(item.id, item.href)} />
+      ))}
+    </div>
+  );
+}
+
+function NavDivider() {
+  return <div className="mx-3 my-2 border-t border-white/10" aria-hidden />;
+}
+
+export function Sidebar({ activeNav }: { activeNav?: string }) {
   const pathname = usePathname();
-  const base = `/investigation/${investigationId}`;
 
-  function isActive(href: string) {
-    if (href === "") return pathname === base;
-    return pathname.startsWith(`${base}${href}`);
-  }
-
-  const statusPill =
-    status === "complete"
-      ? "vx-status-pill text-vercel-success border-vercel-success/30 bg-vercel-success/5"
-      : status === "failed"
-        ? "vx-status-pill text-vercel-danger border-vercel-danger/30 bg-vercel-danger/5"
-        : "vx-status-pill text-vercel-warning border-vercel-warning/30 bg-vercel-warning/5";
+  const isActive = (id: string, href: string) => {
+    if (activeNav) return activeNav === id;
+    if (href === "/") return pathname === "/" || pathname === "/analyze";
+    if (href === "/investigations")
+      return pathname === "/investigations" || pathname.startsWith("/investigation/");
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
-    <aside className="sticky top-0 h-screen w-sidebar shrink-0 border-r border-vercel-border bg-vercel-bg flex flex-col overflow-y-auto">
-      <div className="p-4 border-b border-vercel-border space-y-3">
-        <Link
-          href="/upload"
-          className="text-body font-bold text-white hover:text-vercel-muted transition-colors duration-nav"
+    <aside className="sticky top-0 z-20 hidden h-screen w-[240px] shrink-0 flex-col border-r border-white/10 bg-black lg:flex">
+      {/* Search — Vercel-style */}
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-2 text-left transition-colors hover:border-white/20 hover:bg-white/[0.06]"
         >
-          VAYNE
-        </Link>
-        <div>
-          <p className="vx-card-title !text-left">Investigation</p>
-          <p className="text-body font-bold text-white truncate mt-2">
-            {investigationName || "Investigation"}
-          </p>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            {status && <span className={statusPill}>{status}</span>}
-            {durationSeconds != null && (
-              <span className="text-metadata text-vercel-muted">{durationSeconds.toFixed(1)}s</span>
-            )}
-          </div>
-          <p className="text-metadata font-mono text-vercel-muted truncate mt-2">{investigationId}</p>
-        </div>
+          <Search className="size-3.5 shrink-0 text-white/40" strokeWidth={1.5} aria-hidden />
+          <span className="flex-1 text-[13px] text-white/40">Find…</span>
+          <kbd className="rounded border border-white/15 px-1.5 py-0.5 font-mono text-[10px] text-white/35">
+            F
+          </kbd>
+        </button>
       </div>
 
-      <nav className="flex-1 py-2">
-        <NavSection title="Analysis">
-          {ANALYSIS_NAV.map((item) => (
-            <NavLink
-              key={item.href}
-              href={`${base}${item.href}`}
-              label={item.label}
-              icon={item.icon}
-              active={isActive(item.href)}
-            />
-          ))}
-        </NavSection>
+      {/* Brand */}
+      <Link
+        href="/"
+        className="mx-3 mt-3 flex items-center gap-2.5 rounded-md px-2.5 py-2 transition-colors hover:bg-white/[0.06]"
+      >
+        <span className="flex size-5 items-center justify-center rounded bg-white text-[9px] font-black text-black">
+          V
+        </span>
+        <span className="text-[13px] font-semibold tracking-wide text-white">VAYNE</span>
+      </Link>
 
-        <div className="mx-4 my-2 border-t border-vercel-border" />
+      {/* Navigation */}
+      <nav className="mt-2 flex flex-1 flex-col overflow-y-auto pb-3">
+        <NavSection items={primaryNav} isActive={isActive} />
 
-        <NavSection title="Intelligence">
-          {INTEL_NAV.map((item) => (
-            <NavLink
-              key={item.href}
-              href={`${base}${item.href}`}
-              label={item.label}
-              icon={item.icon}
-              active={isActive(item.href)}
-            />
-          ))}
-        </NavSection>
+        <NavDivider />
+
+        <NavSection items={intelligenceNav} isActive={isActive} />
+
+        <NavDivider />
+
+        <NavSection items={systemNav} isActive={isActive} />
       </nav>
 
-      <div className="p-3 border-t border-vercel-border space-y-1">
-        <p className="px-3 py-1 vx-card-title !text-left">System</p>
-        <Link
-          href="/upload"
-          className="flex items-center gap-3 mx-2 px-3 py-2 text-body font-semibold text-vercel-muted hover:bg-vercel-hover hover:text-white rounded-md transition-all duration-nav"
-        >
-          <IconUpload className="shrink-0 w-4 h-4" />
-          New Upload
-        </Link>
-        <Link
-          href="/upload"
-          className="flex items-center gap-3 mx-2 px-3 py-2 text-body font-semibold text-vercel-muted hover:bg-vercel-hover hover:text-white rounded-md transition-all duration-nav"
-        >
-          <IconSettings className="shrink-0 w-4 h-4" />
-          Settings
-        </Link>
+      {/* User footer — Vercel-style */}
+      <div className="border-t border-white/10 p-3">
+        <div className="flex items-center gap-2 rounded-md px-1 py-1">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] font-bold text-emerald-400">
+            S
+          </div>
+          <span className="min-w-0 flex-1 truncate text-[13px] text-white/80">operator</span>
+          <button
+            type="button"
+            className="rounded p-1 text-white/40 transition-colors hover:bg-white/10 hover:text-white/70"
+            aria-label="Menu"
+          >
+            <MoreHorizontal className="size-4" strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            className="relative rounded p-1 text-white/40 transition-colors hover:bg-white/10 hover:text-white/70"
+            aria-label="Notifications"
+          >
+            <Bell className="size-4" strokeWidth={1.5} />
+            <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-sky-400" />
+          </button>
+        </div>
       </div>
     </aside>
   );

@@ -40,6 +40,17 @@ class InvestigationSummary(BaseModel):
     critical_count: int
 
 
+class InvestigationListItem(InvestigationSummary):
+    target: str = ""
+    duration_seconds: float = 0.0
+    findings_retained: int = 0
+    avg_confidence: int | None = None
+
+
+class InvestigationListResponse(BaseModel):
+    investigations: list[InvestigationListItem] = Field(default_factory=list)
+
+
 class InvestigationDetail(BaseModel):
     summary: InvestigationSummary
     attack_surface: AttackSurfaceSummary

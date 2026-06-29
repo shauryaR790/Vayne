@@ -3,18 +3,29 @@
 from __future__ import annotations
 
 import os
+import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load repo-root .env so VAYNE_LLM_API_KEY persists across uvicorn restarts.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(_REPO_ROOT / ".env")
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from product.backend.db.session import init_db
-from product.backend.routes import attack_paths, investigations, proof, upload
+from product.backend.routes import analyst_chat, attack_paths, investigations, proof, upload
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    from product.backend.services.analyst_llm import warmup_analyst_llm
+
+    asyncio.create_task(warmup_analyst_llm())
     yield
 
 
@@ -41,6 +52,7 @@ app.include_router(upload.router)
 app.include_router(investigations.router)
 app.include_router(attack_paths.router)
 app.include_router(proof.router)
+app.include_router(analyst_chat.router)
 
 
 @app.get("/health")

@@ -47,6 +47,13 @@ export interface InvestigationSummary {
   critical_count: number;
 }
 
+export interface InvestigationListItem extends InvestigationSummary {
+  target: string;
+  duration_seconds: number;
+  findings_retained: number;
+  avg_confidence: number | null;
+}
+
 export interface InvestigationDetail {
   summary: InvestigationSummary;
   attack_surface: { score: number; classification: string };

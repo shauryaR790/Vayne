@@ -3,188 +3,135 @@
 @tailwind utilities;
 
 :root {
-  --vercel-bg: #000000;
-  --vercel-panel: #0a0a0a;
-  --vercel-border: #27272a;
-  --vercel-hover: #18181b;
-  --vercel-border-hover: #3f3f46;
-  --accent-success: #00c16a;
-  --accent-warning: #ffb224;
-  --accent-critical: #ff4d4d;
-  --accent-info: #3b82f6;
-  --accent-finding: #8b5cf6;
+  color-scheme: dark;
+  --color-background: #000000;
+  --color-surface: #181818;
+  --color-foreground: #ffffff;
+  --color-border: rgba(255, 255, 255, 0.2);
 }
 
 html,
 body {
-  background: var(--vercel-bg);
-  color: #fafafa;
-  font-family: var(--font-inter), Inter, system-ui, sans-serif;
-  font-size: 14px;
-  font-weight: 600;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-::selection {
-  background: rgb(39, 39, 42);
+* {
+  border-color: var(--color-border);
 }
 
-*,
-*::before,
-*::after {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 *::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+::selection {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 select option {
-  background: #000000;
-  color: #fafafa;
+  background: var(--color-surface);
+  color: #ffffff;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+.text-brutal {
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: unset;
+  text-rendering: geometricPrecision;
 }
 
 @layer components {
-  .vx-card-title {
-    @apply text-card-title font-semibold uppercase tracking-[0.12em] text-vercel-muted text-center w-full;
-  }
-
   .vx-page-title {
-    @apply text-title font-bold text-white tracking-tight uppercase text-center;
+    @apply text-brutal text-2xl font-black uppercase tracking-[0.06em] sm:text-3xl lg:text-4xl;
   }
 
   .vx-section-title {
-    @apply text-section font-bold text-white tracking-tight uppercase text-center;
-  }
-
-  .vx-metric-primary {
-    @apply text-metric font-bold text-white tabular-nums;
+    @apply text-[12px] font-bold uppercase tracking-[0.15em];
   }
 
   .vx-panel {
-    @apply border border-vercel-border bg-vercel-panel transition-[background-color,border-color] duration-150 ease-in-out;
-  }
-
-  .vx-panel-hover {
-    @apply vx-panel hover:bg-vercel-hover hover:border-vercel-border-hover;
-  }
-
-  .vx-panel-hero {
-    @apply border border-vercel-border bg-vercel-panel;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 32px rgba(0, 0, 0, 0.4);
+    @apply border border-white bg-surface;
   }
 
   .vx-label {
-    @apply text-metadata text-vercel-muted font-semibold uppercase tracking-[0.08em];
+    @apply text-[12px] font-bold uppercase tracking-[0.18em] text-white/45;
   }
 
-  .vx-badge {
-    @apply inline-flex items-center px-2 py-0.5 text-metadata font-bold border rounded-sm uppercase tracking-wide;
-  }
-
-  .vx-badge-success {
-    @apply vx-badge text-vercel-success border-vercel-success/30 bg-vercel-success/5;
-  }
-
-  .vx-badge-danger {
-    @apply vx-badge text-vercel-danger border-vercel-danger/30 bg-vercel-danger/5;
-  }
-
-  .vx-badge-warning {
-    @apply vx-badge text-vercel-warning border-vercel-warning/30 bg-vercel-warning/5;
-  }
-
-  .vx-badge-info {
-    @apply vx-badge text-vercel-info border-vercel-info/30 bg-vercel-info/5;
-  }
-
-  .vx-badge-finding {
-    @apply vx-badge text-vercel-finding border-vercel-finding/30 bg-vercel-finding/5;
-  }
-
-  .vx-badge-neutral {
-    @apply vx-badge text-vercel-muted border-vercel-border;
-  }
-
-  .vx-status-pill {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 text-metadata font-semibold uppercase tracking-wide rounded-full border;
-  }
-
-  .vx-btn {
-    @apply inline-flex items-center justify-center px-4 py-2 text-body font-bold border border-vercel-border
-      bg-vercel-bg transition-[background-color,border-color,transform] duration-150 ease-in-out
-      hover:bg-vercel-hover hover:border-vercel-border-hover active:scale-[0.98];
-  }
-
-  .vx-btn-primary {
-    @apply vx-btn bg-white text-black border-white hover:bg-zinc-200 hover:border-zinc-200;
-  }
-
-  .vx-tab {
-    @apply px-4 py-2 text-body font-semibold text-vercel-muted border-b-2 border-transparent
-      transition-colors duration-nav ease-in-out hover:text-white;
-  }
-
-  .vx-tab-active {
-    @apply vx-tab text-white border-vercel-info font-bold;
-  }
-
-  .vx-workstation {
-    @apply grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-8;
-  }
-
-  .vx-workstation-main {
-    @apply min-w-0 space-y-6;
-  }
-
-  .vx-workstation-side {
-    @apply space-y-6 xl:sticky xl:top-6 xl:self-start;
-  }
-
-  .vx-side-stack {
-    @apply space-y-8 text-center;
-  }
-
-  .vx-side-stack .vx-panel > div:first-child {
-    @apply text-center;
-  }
-
-  .vx-row-item {
-    @apply flex items-center gap-3 px-4 py-3 border border-vercel-border vx-panel-hover transition-colors duration-nav;
-  }
-
-  .vx-nav-active {
-    @apply relative bg-vercel-hover text-white;
-  }
-
-  .vx-nav-active::before {
-    content: "";
-    @apply absolute left-0 top-1 bottom-1 w-0.5 bg-vercel-info rounded-r;
-  }
-
-  .vx-confidence-bar {
-    @apply h-1 rounded-full bg-vercel-border overflow-hidden;
-  }
-
-  .vx-confidence-fill {
-    @apply h-full rounded-full transition-all duration-500 ease-out;
-  }
-
-  .vx-page-enter {
-    @apply opacity-0 translate-y-2;
-  }
-
-  .vx-graph-bg {
+  .vx-page-grid-bg {
     background-color: #000;
     background-image:
-      radial-gradient(circle at center, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-    background-size: 24px 24px, 48px 48px, 48px 48px;
-    background-position: 0 0, 0 0, 0 0;
+      linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    -webkit-mask-image: radial-gradient(
+      ellipse 100% 85% at 50% 40%,
+      rgba(0, 0, 0, 0.85) 0%,
+      rgba(0, 0, 0, 0.4) 45%,
+      rgba(0, 0, 0, 0) 72%
+    );
+    mask-image: radial-gradient(
+      ellipse 100% 85% at 50% 40%,
+      rgba(0, 0, 0, 0.85) 0%,
+      rgba(0, 0, 0, 0.4) 45%,
+      rgba(0, 0, 0, 0) 72%
+    );
+  }
+
+  .vx-no-scrollbar,
+  .vx-no-scrollbar * {
+    scrollbar-width: none;
+  }
+
+  .vx-no-scrollbar *::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 }
 
@@ -205,4 +152,68 @@ select option {
 .react-flow__edge-text {
   font-weight: 600;
   font-size: 10px;
+}
+
+@keyframes vx-edge-pulse {
+  0% {
+    stroke-dashoffset: 24;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes vx-marquee-forward {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes vx-marquee-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes vx-hazard-scroll {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28px 0;
+  }
+}
+
+.vx-marquee-forward {
+  animation: vx-marquee-forward 70s linear infinite;
+}
+
+.vx-marquee-reverse {
+  animation: vx-marquee-reverse 32s linear infinite;
+}
+
+.vx-hazard-stripe {
+  background: repeating-linear-gradient(
+    -45deg,
+    #ffffff 0,
+    #ffffff 8px,
+    #000000 8px,
+    #000000 16px
+  );
+  background-size: 22.63px 22.63px;
+  animation: vx-hazard-scroll 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vx-marquee-forward,
+  .vx-marquee-reverse,
+  .vx-hazard-stripe {
+    animation: none;
+  }
 }

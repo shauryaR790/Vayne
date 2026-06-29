@@ -4,6 +4,7 @@ import type {
   FindingsData,
   GraphData,
   InvestigationDetail,
+  InvestigationListItem,
   InvestigationReport,
   PathDetail,
   RemediationData,
@@ -78,6 +79,11 @@ export async function analyzeFiles(files: FileList | File[], name: string) {
 
 export async function getInvestigation(id: string): Promise<InvestigationDetail> {
   return fetchJson(`/api/investigation/${id}`);
+}
+
+export async function listInvestigations(): Promise<InvestigationListItem[]> {
+  const data = await fetchJson<{ investigations: InvestigationListItem[] }>("/api/investigations");
+  return data.investigations;
 }
 
 export async function getReport(id: string): Promise<InvestigationReport> {

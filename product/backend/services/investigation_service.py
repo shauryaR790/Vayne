@@ -146,6 +146,41 @@ class InvestigationService:
     def get_investigation(self, inv_id: str) -> InvestigationORM | None:
         return self.db.get(InvestigationORM, inv_id)
 
+    def list_investigations(self, limit: int = 100) -> list[dict]:
+        rows = (
+            self.db.query(InvestigationORM)
+            .order_by(InvestigationORM.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+        items: list[dict] = []
+        for inv in rows:
+            report = self.get_report_view(inv.id) or {}
+            stats = report.get("stats") or {}
+            paths = self.get_attack_paths_export(inv.id)
+            avg_conf = None
+            if paths:
+                scores = [int(p.get("confidence", {}).get("score", 0)) for p in paths if p.get("confidence")]
+                if scores:
+                    avg_conf = round(sum(scores) / len(scores))
+            items.append(
+                {
+                    "id": inv.id,
+                    "name": inv.name,
+                    "created_at": inv.created_at,
+                    "status": inv.status,
+                    "attack_surface_score": inv.attack_surface_score,
+                    "attack_surface_classification": inv.attack_surface_classification,
+                    "path_count": inv.path_count,
+                    "critical_count": inv.critical_count,
+                    "target": str(report.get("target") or inv.name),
+                    "duration_seconds": float(report.get("duration_seconds") or 0),
+                    "findings_retained": int(stats.get("findings_retained") or 0),
+                    "avg_confidence": avg_conf,
+                }
+            )
+        return items
+
     def get_attack_path(self, path_id: str) -> AttackPathORM | None:
         return self.db.get(AttackPathORM, path_id)
 

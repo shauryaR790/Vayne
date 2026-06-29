@@ -1,22 +1,16 @@
-import { Inter } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  weight: ["600", "700"],
-});
-
 export const metadata = {
-  title: "VAYNE — Analyst Workstation",
-  description: "Attack path reasoning engine",
+  title: "VAYNE — Attack Investigation Engine",
+  description: "Upload evidence. Get the complete investigation.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${GeistMono.variable}`}>
-      <body className="min-h-screen bg-vercel-bg font-sans antialiased text-vercel-text">
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className="min-h-screen bg-black font-sans antialiased text-white">
         {children}
       </body>
     </html>

@@ -1,20 +1,20 @@
 import type { GraphEdge, GraphNode } from "@/lib/types";
 
 export const LAYOUT = {
-  marginLeft: 80,
-  marginRight: 80,
-  marginTop: 80,
-  marginBottom: 80,
-  columnWidth: 300,
-  minVerticalGap: 120,
-  preferredVerticalGap: 140,
-  nodeWidth: 220,
-  nodeHeight: 64,
-  pillHeight: 36,
+  marginLeft: 60,
+  marginRight: 60,
+  marginTop: 60,
+  marginBottom: 60,
+  columnWidth: 280,
+  minVerticalGap: 100,
+  preferredVerticalGap: 120,
+  nodeWidth: 200,
+  nodeHeight: 90,
+  pillHeight: 70,
   secondaryWidth: 150,
-  secondaryHeight: 34,
-  secondaryGap: 36,
-  chainGap: 180,
+  secondaryHeight: 56,
+  secondaryGap: 40,
+  chainGap: 160,
 } as const;
 
 const COLUMN_BY_TYPE: Record<string, number> = {
@@ -81,11 +81,12 @@ function isSecondaryEvidence(node: GraphNode): boolean {
   return normalizeType(node) === "endpoint" && !isPrimaryEntry(node);
 }
 
+import { nodeSizeForType } from "@/lib/graph-node-styles";
+
 function nodeDimensions(node: GraphNode, secondary: boolean): { width: number; height: number } {
   if (secondary) return { width: LAYOUT.secondaryWidth, height: LAYOUT.secondaryHeight };
   const t = normalizeType(node);
-  if (t === "endpoint") return { width: 160, height: LAYOUT.pillHeight };
-  return { width: LAYOUT.nodeWidth, height: LAYOUT.nodeHeight };
+  return nodeSizeForType(t, false);
 }
 
 function columnX(column: number): number {

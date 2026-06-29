@@ -12,6 +12,19 @@ filesystem      →  product/storage/{investigation_id}/*.json
 VAYNE Core        →  unchanged (vayne/orchestrator/pipeline.py)
 ```
 
+## Analyst LLM (OpenAI)
+
+Requires `VAYNE_LLM_API_KEY`. Defaults:
+
+```bash
+VAYNE_LLM_PROVIDER=openai
+VAYNE_LLM_API_KEY=sk-...
+VAYNE_LLM_MODEL=gpt-4.1-mini
+VAYNE_LLM_TEMPERATURE=0.7
+VAYNE_LLM_MAX_OUTPUT_TOKENS=800
+VAYNE_LLM_MAX_CONTEXT_CHARS=10000
+```
+
 ## Quick start (backend)
 
 ```bash
@@ -51,7 +64,9 @@ Open http://localhost:3000 — upload `examples/metasploit.xml`, click **Analyze
 | GET | `/api/investigation/{id}` | Summary + attack paths |
 | GET | `/api/investigation/{id}/graph` | Graph nodes/edges |
 | GET | `/api/path/{id}` | Path proofs + story |
-| GET | `/api/investigation/{id}/proof` | proof.txt |
+| GET | `/api/analyst/status` | OpenAI analyst connectivity |
+| GET | `/api/investigation/{id}/brief` | Investigation brief (SSE stream, cached) |
+| POST | `/api/investigation/{id}/chat` | Ask VAYNE analyst (SSE stream) |
 
 ## Tests
 

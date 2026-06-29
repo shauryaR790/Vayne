@@ -1,71 +1,111 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { nodeTypeColor, formatGraphNodeLabel } from "@/lib/format";
+import { formatGraphNodeLabel } from "@/lib/format";
+import { glowForType, nodeSizeForType } from "@/lib/graph-node-styles";
 
 function GraphNodeComponent({ data, selected }: NodeProps) {
   const type = String(data.type || "unknown");
   const label = String(data.label || data.id || "");
   const secondary = Boolean(data.secondary);
+  const rejected = type.toLowerCase().includes("reject");
   const { primary, secondary: sublabel } = formatGraphNodeLabel(label);
-  const accent = nodeTypeColor(type);
+  const glow = glowForType(type, secondary);
+  const size = nodeSizeForType(type, secondary);
   const isPill = type === "endpoint" && !secondary;
-  const maxW = secondary ? 150 : isPill ? 160 : 220;
-  const opacity = secondary ? 0.55 : 1;
+  const [hovered, setHovered] = useState(false);
+  const active = selected || hovered;
+  const scale = active ? 1.04 : 1;
+
+  const boxShadow = active
+    ? `0 0 24px ${glow.color}88, 0 0 8px ${glow.color}44, inset 0 0 12px ${glow.color}22`
+    : `0 0 12px ${glow.color}44, inset 0 0 6px ${glow.color}11`;
 
   return (
     <div
-      className="graph-node-inner font-mono relative"
+      className="graph-node-inner font-mono relative transition-transform duration-200"
       data-wave={data.animationWave ?? 0}
       data-index={data.animationIndex ?? 0}
-      style={{ maxWidth: maxW, opacity }}
+      style={{
+        width: size.width,
+        opacity: secondary ? 0.65 : 1,
+        transform: `scale(${scale})`,
+        transformOrigin: "center center",
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <Handle
         type="target"
         position={Position.Left}
-        style={{ width: 5, height: 5, background: accent, border: "none", opacity: 0.4 }}
+        style={{
+          width: 6,
+          height: 6,
+          background: glow.color,
+          border: "none",
+          boxShadow: `0 0 6px ${glow.color}`,
+        }}
       />
-      <div style={{ maxWidth: maxW }}>
+      <div
+        style={{
+          width: size.width,
+          minHeight: size.height,
+          background: "#050505",
+          border: `1px solid ${glow.color}${secondary ? "66" : active ? "cc" : "99"}`,
+          borderRadius: isPill || secondary ? 999 : 4,
+          padding: secondary ? "8px 12px" : "10px 14px",
+          boxShadow,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
         <div
+          className="uppercase tracking-wider text-center"
           style={{
-            background: "#0a0a0a",
-            border: `1px solid ${accent}${secondary ? "66" : ""}`,
-            borderRadius: isPill || secondary ? 999 : 6,
-            padding: secondary ? "3px 8px" : isPill ? "4px 10px" : "6px 10px",
-            boxShadow: selected ? `0 0 0 1px ${accent}88` : undefined,
-            transform: secondary ? "scale(0.92)" : undefined,
-            transformOrigin: "center left",
+            fontSize: secondary ? 9 : 10,
+            color: glow.color,
+            fontWeight: 700,
+            letterSpacing: "0.14em",
+            marginBottom: 4,
           }}
         >
-          <div
-            className="uppercase tracking-wider mb-0.5 text-center"
-            style={{
-              fontSize: secondary ? 8 : 9,
-              color: accent,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-            }}
-          >
-            {secondary ? "evidence" : type}
-          </div>
-          <div
-            className="text-white font-semibold text-center"
-            style={{ fontSize: secondary ? 10 : 11, lineHeight: 1.3 }}
-          >
-            {primary}
-          </div>
-          {sublabel && !isPill && !secondary ? (
-            <div className="text-vercel-muted mt-0.5 truncate text-center" style={{ fontSize: 10 }}>
-              {sublabel}
-            </div>
-          ) : null}
+          {secondary ? "evidence" : rejected ? "rejected" : type}
         </div>
+        <div
+          className="text-white font-bold text-center leading-tight"
+          style={{ fontSize: secondary ? 11 : 13 }}
+        >
+          {primary}
+        </div>
+        {sublabel && !isPill && !secondary ? (
+          <div
+            className="mt-1 truncate text-center text-white/45"
+            style={{ fontSize: 10 }}
+          >
+            {sublabel}
+          </div>
+        ) : null}
+        {data.confidence != null && !secondary ? (
+          <div
+            className="mt-1.5 text-center font-bold tabular-nums"
+            style={{ fontSize: 9, color: `${glow.color}cc` }}
+          >
+            {Math.round(Number(data.confidence))}% CONF
+          </div>
+        ) : null}
       </div>
       <Handle
         type="source"
         position={Position.Right}
-        style={{ width: 5, height: 5, background: accent, border: "none", opacity: 0.4 }}
+        style={{
+          width: 6,
+          height: 6,
+          background: glow.color,
+          border: "none",
+          boxShadow: `0 0 6px ${glow.color}`,
+        }}
       />
     </div>
   );

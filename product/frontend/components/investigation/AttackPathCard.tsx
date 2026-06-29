@@ -1,75 +1,98 @@
-import Link from "next/link";
+"use client";
+
 import type { AttackPathSummary } from "@/lib/types";
 import { formatCategory } from "@/lib/format";
 import { PathChain } from "./PathChain";
 import type { PathDetail } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import { SectionLabel } from "@/components/shared/workspace-card";
+import { HoverCard } from "@/components/shared/hover-card";
 
 export function DeploymentPathCard({
   path,
   index,
-  investigationId,
   fullPath,
+  onAsk,
 }: {
   path: AttackPathSummary;
   index: number;
   investigationId: string;
   fullPath?: PathDetail | null;
+  onAsk?: (q: string) => void;
 }) {
   return (
-    <Link
-      href={`/investigation/${investigationId}/paths/${path.id}`}
-      className="block vx-panel-hover border border-vercel-border"
-    >
-      <div className="px-4 py-3 border-b border-vercel-border flex items-center justify-between gap-4">
+    <HoverCard as="article" className="flex h-full flex-col" lift>
+      <div className="relative flex items-center justify-between gap-4 border-b border-white/15 px-5 py-4">
         <div className="min-w-0">
-          <p className="text-body font-medium text-white">
+          <p className="text-[13px] font-black uppercase tracking-wide text-white">
             Attack Path #{index + 1}
           </p>
-          <p className="text-label text-vercel-muted font-mono truncate">
-            {path.stable_id}
-          </p>
+          <p className="mt-1 truncate font-mono text-[11px] text-white/50">{path.stable_id}</p>
         </div>
-        <span className="vx-badge-success shrink-0">VERIFIED</span>
+        <Badge variant="success">Verified</Badge>
       </div>
 
-      <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-4 gap-4 border-b border-vercel-border text-body">
+      <div className="relative grid grid-cols-2 gap-4 border-b border-white/15 px-5 py-4 text-[12px]">
         <div>
-          <p className="vx-label">Category</p>
-          <p className="text-white mt-1">{formatCategory(path.category)}</p>
+          <SectionLabel>Category</SectionLabel>
+          <p className="mt-1 font-medium uppercase text-white">{formatCategory(path.category)}</p>
         </div>
         <div>
-          <p className="vx-label">Confidence</p>
-          <p className="text-vercel-success mt-1 tabular-nums">{path.confidence}%</p>
+          <SectionLabel>Confidence</SectionLabel>
+          <p className="mt-1 font-black tabular-nums text-white">{path.confidence}%</p>
         </div>
         <div>
-          <p className="vx-label">Risk</p>
-          <p className="text-white mt-1 tabular-nums">{path.risk.toFixed(1)}</p>
+          <SectionLabel>Risk</SectionLabel>
+          <p className="mt-1 font-black tabular-nums text-white">{path.risk.toFixed(1)}</p>
         </div>
         <div>
-          <p className="vx-label">Blast Radius</p>
-          <p className="text-white mt-1 tabular-nums">{path.blast_radius}</p>
+          <SectionLabel>Blast Radius</SectionLabel>
+          <p className="mt-1 font-black tabular-nums text-white">{path.blast_radius}</p>
         </div>
       </div>
 
-      <div className="px-4 py-4 flex flex-col md:flex-row gap-6">
+      <div className="relative flex flex-1 flex-col gap-4 px-5 py-4">
         {fullPath ? (
           <div className="shrink-0">
             <PathChain path={fullPath} />
           </div>
         ) : null}
-        <p className="text-body text-vercel-muted line-clamp-3 flex-1">{path.title}</p>
+        <p className="line-clamp-3 text-[13px] leading-relaxed text-white/70">{path.title}</p>
+
+        {path.mitre_tactics?.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {path.mitre_tactics.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() =>
+                  onAsk?.(
+                    `Explain MITRE tactic ${t.split(" ")[0]} in attack path #${index + 1} (${path.title}).`,
+                  )
+                }
+                className="border border-white/30 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-white/60 transition-colors hover:bg-white hover:text-black"
+              >
+                {t.split(" ")[0]}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {path.mitre_tactics?.length > 0 && (
-        <div className="px-4 pb-3 flex flex-wrap gap-2">
-          {path.mitre_tactics.map((t) => (
-            <span key={t} className="vx-badge-neutral font-mono text-label">
-              {t.split(" ")[0]}
-            </span>
-          ))}
-        </div>
-      )}
-    </Link>
+      <div className="relative mt-auto border-t border-white/15 px-5 py-3">
+        <button
+          type="button"
+          onClick={() =>
+            onAsk?.(
+              `Explain validated attack path #${index + 1}: ${path.title}. Walk me through the exploit chain, confidence, and blast radius.`,
+            )
+          }
+          className="border border-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:bg-white hover:text-black"
+        >
+          Ask VAYNE
+        </button>
+      </div>
+    </HoverCard>
   );
 }
 
@@ -78,6 +101,7 @@ export function AttackPathCard(props: {
   path: AttackPathSummary;
   index: number;
   investigationId: string;
+  onAsk?: (q: string) => void;
 }) {
   return <DeploymentPathCard {...props} />;
 }

@@ -16,6 +16,8 @@ from product.backend.schemas.investigation import (
     FindingsResponse,
     GraphResponse,
     InvestigationDetail,
+    InvestigationListResponse,
+    InvestigationListItem,
     InvestigationReportView,
     InvestigationStats,
     InvestigationSummary,
@@ -28,6 +30,13 @@ router = APIRouter(prefix="/api", tags=["investigations"])
 
 def _svc(db: Session) -> InvestigationService:
     return InvestigationService(db, get_storage_root())
+
+
+@router.get("/investigations", response_model=InvestigationListResponse)
+def list_investigations(db: Session = Depends(get_db)) -> InvestigationListResponse:
+    svc = _svc(db)
+    items = [InvestigationListItem(**row) for row in svc.list_investigations()]
+    return InvestigationListResponse(investigations=items)
 
 
 @router.get("/investigation/{inv_id}", response_model=InvestigationDetail)
