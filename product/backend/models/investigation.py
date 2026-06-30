@@ -25,17 +25,33 @@ class InvestigationORM(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="pending")
+    investigation_key: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    source_filename: Mapped[str] = mapped_column(String(512), default="")
+    summary: Mapped[str] = mapped_column(Text, default="")
     attack_surface_score: Mapped[int] = mapped_column(Integer, default=0)
     attack_surface_classification: Mapped[str] = mapped_column(String(32), default="")
     path_count: Mapped[int] = mapped_column(Integer, default=0)
     critical_count: Mapped[int] = mapped_column(Integer, default=0)
     raw_report_path: Mapped[str] = mapped_column(Text, default="")
 
-    attack_paths: Mapped[list["AttackPathORM"]] = relationship(back_populates="investigation")
-    graph_nodes: Mapped[list["GraphNodeORM"]] = relationship(back_populates="investigation")
-    graph_edges: Mapped[list["GraphEdgeORM"]] = relationship(back_populates="investigation")
-    findings: Mapped[list["FindingORM"]] = relationship(back_populates="investigation")
+    attack_paths: Mapped[list["AttackPathORM"]] = relationship(
+        back_populates="investigation",
+        cascade="all, delete-orphan",
+    )
+    graph_nodes: Mapped[list["GraphNodeORM"]] = relationship(
+        back_populates="investigation",
+        cascade="all, delete-orphan",
+    )
+    graph_edges: Mapped[list["GraphEdgeORM"]] = relationship(
+        back_populates="investigation",
+        cascade="all, delete-orphan",
+    )
+    findings: Mapped[list["FindingORM"]] = relationship(
+        back_populates="investigation",
+        cascade="all, delete-orphan",
+    )
 
 
 class AttackPathORM(Base):

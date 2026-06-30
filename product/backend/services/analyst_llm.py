@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import random
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
@@ -32,12 +31,6 @@ from vayne.llm.provider import load_analyst_system_prompt
 from vayne.llm.providers.openai_provider import OpenAIProvider, TokenUsage
 
 logger = logging.getLogger(__name__)
-
-THINKING_MESSAGES = [
-    "Analyzing evidence...",
-    "Correlating findings...",
-    "Constructing analyst response...",
-]
 
 REPORT_MODE_HINTS: dict[str, str] = {
     "executive": "Format as an executive summary for CEOs and management. Non-technical, business-focused.",
@@ -83,58 +76,21 @@ async def _llm_reachable() -> bool:
     _ping_cache = (ok, now)
     return ok
 
-BRIEF_INSTRUCTION = """Write the post-investigation analyst brief. Use ONLY facts from the context.
+BRIEF_INSTRUCTION = """Write your post-investigation analyst briefing. Use ONLY facts from the context.
 
-FORMAT EXACTLY like this (plain text, not markdown headers):
+Write like a senior analyst speaking — natural paragraphs, not a generated report.
 
-Investigation completed.
+Example tone:
+"I completed the investigation of the supplied environment. The analysis identified four assets and seven exposed services. Eleven findings were validated during investigation, with one attack path confirmed as exploitable.
 
-━━━━━━━━━━━━━━━━━━
+The most significant issue is [specific finding from context]. Based on available evidence, [explain impact in plain language].
 
-OVERVIEW
+From a business perspective, this environment should be considered [risk level from context]. I recommend [prioritized actions woven into prose]."
 
-2–4 short lines. Count assets, services, validated findings, and attack paths.
-State business risk on its own line:
-Business risk:
-HIGH
-
-━━━━━━━━━━━━━━━━━━
-
-KEY DISCOVERIES
-
-• one line per finding
-• keep each line short
-
-━━━━━━━━━━━━━━━━━━
-
-VALIDATED ATTACK PATH
-
-Show the top validated path vertically:
-Internet
-    ↓
-Service name
-    ↓
-Technique
-    ↓
-Outcome
-
-Confidence:
-89%
-
-━━━━━━━━━━━━━━━━━━
-
-WHAT I RECOMMEND
-
-1. first action
-2. second action
-3. third action
-
-WRITING RULES:
-- Sound like a senior analyst talking, not a blog post
-- Short sentences. Blank lines between thoughts
-- No markdown (#, **, etc). No "INVESTIGATION BRIEF" title
-- Use ━━━━━━━━━━━━━━━━━━ as section dividers
-- Section labels in ALL CAPS on their own line
+RULES:
+- Paragraphs first; bullets only when listing remediation steps
+- No ALL CAPS headers, no divider lines, no "Assets: N" label dumps
+- Include counts and CVEs inside sentences, not as isolated lines
 - Never invent facts"""
 
 
@@ -233,7 +189,6 @@ async def stream_analyst_reply(
         yield {"type": "error", "code": "llm_not_configured", "message": OFFLINE_MESSAGE}
         return
 
-    yield {"type": "thinking", "message": THINKING_MESSAGES[0]}
     if not await _llm_reachable():
         yield {"type": "error", "code": "llm_offline", "message": OFFLINE_MESSAGE}
         return
@@ -243,9 +198,6 @@ async def stream_analyst_reply(
     if cache_key and export_dir:
         cached = get_cached(export_dir, cache_key)
         if cached:
-            for msg in THINKING_MESSAGES:
-                yield {"type": "thinking", "message": msg}
-                await asyncio.sleep(0.35)
             async for event in _stream_cached(cached["text"]):
                 yield event
             yield {
@@ -258,10 +210,6 @@ async def stream_analyst_reply(
             }
             yield {"type": "done"}
             return
-
-    for msg in THINKING_MESSAGES:
-        yield {"type": "thinking", "message": msg}
-        await asyncio.sleep(0.35 + random.random() * 0.25)
 
     system = load_analyst_system_prompt()
     prompt = _build_prompt(context, user_message, history, report_mode, preset_id)
@@ -318,9 +266,6 @@ async def stream_investigation_brief(
     """Generate or replay the post-analysis INVESTIGATION BRIEF."""
     existing = get_brief(export_dir)
     if existing:
-        for msg in THINKING_MESSAGES[:2]:
-            yield {"type": "thinking", "message": msg}
-            await asyncio.sleep(0.3)
         async for event in _stream_cached(existing):
             yield event
         yield {"type": "done", "cached": True}
@@ -330,16 +275,11 @@ async def stream_investigation_brief(
         yield {"type": "error", "code": "llm_not_configured", "message": OFFLINE_MESSAGE}
         return
 
-    yield {"type": "thinking", "message": THINKING_MESSAGES[0]}
     if not await _llm_reachable():
         yield {"type": "error", "code": "llm_offline", "message": OFFLINE_MESSAGE}
         return
 
     provider = get_llm_provider()
-
-    for msg in THINKING_MESSAGES:
-        yield {"type": "thinking", "message": msg}
-        await asyncio.sleep(0.35 + random.random() * 0.25)
 
     system = load_analyst_system_prompt()
     prompt = (

@@ -38,13 +38,8 @@ export const ChatBubble = memo(function ChatBubble({
   const resolvedPersona = persona ?? personaFromMessageId(id);
 
   return (
-    <article
-      className={cn(
-        "py-8",
-        !streaming && "animate-in fade-in duration-500",
-      )}
-    >
-      <VayneIdentity persona={resolvedPersona} />
+    <article className={cn("py-4", !streaming && "animate-in fade-in duration-300")}>
+      <VayneIdentity persona={resolvedPersona} compact />
       <div className="min-w-0">
         <MessageContent text={content} />
         {streaming && content ? (

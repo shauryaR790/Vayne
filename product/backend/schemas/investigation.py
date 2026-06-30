@@ -45,6 +45,9 @@ class InvestigationListItem(InvestigationSummary):
     duration_seconds: float = 0.0
     findings_retained: int = 0
     avg_confidence: int | None = None
+    summary: str = ""
+    source_filename: str = ""
+    updated_at: datetime | None = None
 
 
 class InvestigationListResponse(BaseModel):

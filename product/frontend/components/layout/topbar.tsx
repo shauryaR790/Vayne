@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
+import { resetConversationToHome } from "@/lib/conversation-session";
 import { Button } from "@/components/ui/button";
 
 const segmentMap: Record<string, string> = {
@@ -22,6 +22,12 @@ const segmentMap: Record<string, string> = {
 
 export function Topbar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const goHome = () => {
+    resetConversationToHome();
+    router.replace("/");
+  };
 
   let segment = "Home";
   if (pathname.startsWith("/investigation/")) {
@@ -40,16 +46,14 @@ export function Topbar() {
 
       <div className="flex items-center gap-2">
         {pathname !== "/" && pathname !== "/analyze" && (
-          <Button variant="secondary" size="sm" asChild>
-            <Link href="/">Home</Link>
+          <Button variant="secondary" size="sm" onClick={goHome}>
+            Home
           </Button>
         )}
 
-        <Button size="sm" asChild>
-          <Link href="/">
-            <Plus className="size-4" />
-            New Scan
-          </Link>
+        <Button size="sm" onClick={goHome}>
+          <Plus className="size-4" />
+          New Scan
         </Button>
 
         <button

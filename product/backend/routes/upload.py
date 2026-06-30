@@ -45,7 +45,14 @@ async def analyze_upload(
             )
 
         svc = InvestigationService(db, get_storage_root())
-        inv = svc.run_analysis(name, saved, proof=True)
+        source_filename = ",".join(
+            sorted(
+                uf.filename
+                for uf in files
+                if uf.filename and Path(uf.filename).suffix.lower() in ALLOWED_SUFFIXES
+            )
+        )
+        inv = svc.run_analysis(name, saved, proof=True, source_filename=source_filename or name)
         return AnalyzeResponse(investigation_id=inv.id, status=inv.status)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

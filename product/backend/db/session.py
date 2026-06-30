@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import os
 from collections.abc import Generator
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from product.backend.db.base import Base
+from product.backend.env import default_database_url, load_repo_env
 
-DEFAULT_URL = "postgresql://vayne:vayne@localhost:5432/vayne"
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_URL)
+load_repo_env()
+
+DATABASE_URL = os.getenv("DATABASE_URL", default_database_url())
 
 # SQLite needs check_same_thread=False for TestClient.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
@@ -29,6 +32,33 @@ def init_db() -> None:
 
             Path(path).parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    _ensure_investigation_columns()
+
+
+def _ensure_investigation_columns() -> None:
+    """Lightweight SQLite dev migration for dedup columns."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "investigations" not in inspector.get_table_names():
+        return
+    existing = {col["name"] for col in inspector.get_columns("investigations")}
+    statements: list[str] = []
+    if "investigation_key" not in existing:
+        statements.append("ALTER TABLE investigations ADD COLUMN investigation_key VARCHAR(64)")
+    if "source_filename" not in existing:
+        statements.append(
+            "ALTER TABLE investigations ADD COLUMN source_filename VARCHAR(512) DEFAULT ''"
+        )
+    if "summary" not in existing:
+        statements.append("ALTER TABLE investigations ADD COLUMN summary TEXT DEFAULT ''")
+    if "updated_at" not in existing:
+        statements.append("ALTER TABLE investigations ADD COLUMN updated_at DATETIME")
+    if not statements:
+        return
+    with engine.begin() as conn:
+        for stmt in statements:
+            conn.execute(text(stmt))
 
 
 def get_db() -> Generator[Session, None, None]:

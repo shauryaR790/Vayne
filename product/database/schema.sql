@@ -5,6 +5,10 @@ CREATE TABLE IF NOT EXISTS investigations (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    investigation_key VARCHAR(64),
+    source_filename VARCHAR(512) NOT NULL DEFAULT '',
+    summary TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ,
     status VARCHAR(32) NOT NULL DEFAULT 'pending',
     attack_surface_score INTEGER NOT NULL DEFAULT 0,
     attack_surface_classification VARCHAR(32) NOT NULL DEFAULT '',
@@ -51,6 +55,7 @@ CREATE TABLE IF NOT EXISTS findings (
     data TEXT NOT NULL DEFAULT '{}'
 );
 
+CREATE INDEX IF NOT EXISTS idx_investigations_key ON investigations(investigation_key);
 CREATE INDEX IF NOT EXISTS idx_attack_paths_investigation ON attack_paths(investigation_id);
 CREATE INDEX IF NOT EXISTS idx_graph_nodes_investigation ON graph_nodes(investigation_id);
 CREATE INDEX IF NOT EXISTS idx_graph_edges_investigation ON graph_edges(investigation_id);

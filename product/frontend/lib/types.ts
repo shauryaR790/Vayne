@@ -52,6 +52,9 @@ export interface InvestigationListItem extends InvestigationSummary {
   duration_seconds: number;
   findings_retained: number;
   avg_confidence: number | null;
+  summary?: string;
+  source_filename?: string;
+  updated_at?: string;
 }
 
 export interface InvestigationDetail {

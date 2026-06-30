@@ -4,7 +4,7 @@ export function PageEdgeVignette() {
     <>
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-y-0 left-0 z-[35] w-8 bg-gradient-to-r from-black via-black/60 to-transparent sm:w-10 lg:left-[240px]"
+        className="pointer-events-none fixed inset-y-0 left-0 z-[35] w-8 bg-gradient-to-r from-black via-black/60 to-transparent sm:w-10 lg:left-[310px]"
       />
       <div
         aria-hidden

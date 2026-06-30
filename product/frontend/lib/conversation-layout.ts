@@ -1,4 +1,8 @@
-/** Shared layout tokens — chat column matches input bar width (768px + 30px each side). */
+/** Centered chat column — use .chat-input-container from globals.css */
+export const CHAT_CONTAINER_CLASS = "chat-input-container";
 
-export const CONVERSATION_MAX_WIDTH = "max-w-[828px]";
-export const CONVERSATION_SHELL = `mx-auto w-full ${CONVERSATION_MAX_WIDTH} px-4 sm:px-6`;
+/** @deprecated Use CHAT_CONTAINER_CLASS */
+export const CONVERSATION_SHELL = CHAT_CONTAINER_CLASS;
+
+/** Investigation workspace — full viewport analyst surface. */
+export const INVESTIGATION_SHELL = "w-full max-w-none px-5 py-5 lg:px-8";

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -15,6 +16,11 @@ from product.backend.models.investigation import (
     GraphEdgeORM,
     GraphNodeORM,
     InvestigationORM,
+)
+from product.backend.services.investigation_key import (
+    build_investigation_summary,
+    compute_investigation_key,
+    normalize_source_filename,
 )
 from product.backend.services.vayne_runner import analyze
 from vayne.models import InvestigationReport
@@ -31,6 +37,10 @@ EXPORT_ARTIFACTS = (
 )
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class InvestigationService:
     def __init__(self, db: Session, storage_root: Path):
         self.db = db
@@ -43,26 +53,95 @@ class InvestigationService:
         uploaded_paths: list[Path],
         *,
         proof: bool = True,
+        source_filename: str | None = None,
     ) -> InvestigationORM:
-        inv_id = str(uuid.uuid4())
-        export_dir = self.storage_root / inv_id
-        export_dir.mkdir(parents=True, exist_ok=True)
-
-        inv = InvestigationORM(id=inv_id, name=name, status="running")
-        self.db.add(inv)
-        self.db.commit()
+        source = source_filename or _derive_source_filename(uploaded_paths, name)
+        work_dir = self.storage_root / f"_work_{uuid.uuid4().hex}"
+        cleanup_dir: Path | None = work_dir
 
         try:
-            report = analyze(name, uploaded_paths, export_dir, proof=proof)
-            self._persist(inv, report, export_dir)
-            inv.status = "complete"
-        except Exception:
-            inv.status = "failed"
-            raise
-        finally:
+            report = analyze(name, uploaded_paths, work_dir, proof=proof)
+            findings_json = self._load_json(work_dir / "findings.json", {})
+            attack_paths_json = self._load_json(work_dir / "attack_paths.json", [])
+            validated = findings_json.get("validated") or []
+            risk_score = report.attack_surface_score
+            investigation_key = compute_investigation_key(
+                source,
+                validated,
+                attack_paths_json,
+                risk_score,
+            )
+            summary = build_investigation_summary(validated, attack_paths_json)
+
+            existing = (
+                self.db.query(InvestigationORM)
+                .filter(InvestigationORM.investigation_key == investigation_key)
+                .order_by(InvestigationORM.updated_at.desc(), InvestigationORM.created_at.desc())
+                .first()
+            )
+
+            if existing:
+                print("existing investigation found", flush=True)
+                inv = existing
+                inv.status = "running"
+                inv.summary = summary
+                inv.source_filename = normalize_source_filename(source) or source
+                inv.updated_at = _utcnow()
+                self.db.commit()
+
+                export_dir = self.export_dir(inv.id)
+                self._replace_export_dir(work_dir, export_dir)
+
+                self._clear_children(inv)
+                self._persist(inv, report, export_dir)
+                inv.status = "complete"
+            else:
+                print("creating new investigation", flush=True)
+                inv_id = str(uuid.uuid4())
+                export_dir = self.storage_root / inv_id
+                if export_dir.exists():
+                    shutil.rmtree(export_dir)
+                shutil.move(str(work_dir), str(export_dir))
+                cleanup_dir = None
+
+                now = _utcnow()
+                inv = InvestigationORM(
+                    id=inv_id,
+                    name=name,
+                    status="running",
+                    investigation_key=investigation_key,
+                    source_filename=normalize_source_filename(source) or source,
+                    summary=summary,
+                    created_at=now,
+                    updated_at=now,
+                )
+                self.db.add(inv)
+                self.db.commit()
+                self._persist(inv, report, export_dir)
+                inv.status = "complete"
+
             self.db.commit()
             self.db.refresh(inv)
-        return inv
+            return inv
+        except Exception:
+            self.db.rollback()
+            raise
+        finally:
+            if cleanup_dir is not None and cleanup_dir.exists():
+                shutil.rmtree(cleanup_dir, ignore_errors=True)
+
+    def _clear_children(self, inv: InvestigationORM) -> None:
+        inv.attack_paths.clear()
+        inv.graph_nodes.clear()
+        inv.graph_edges.clear()
+        inv.findings.clear()
+        self.db.flush()
+
+    @staticmethod
+    def _replace_export_dir(src: Path, dest: Path) -> None:
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest)
 
     def _persist(
         self,
@@ -77,10 +156,15 @@ class InvestigationService:
             1 for p in report.attack_paths if p.risk_score >= 8.0
         )
         inv.raw_report_path = str(export_dir / "investigation.json")
+        inv.updated_at = _utcnow()
 
         attack_paths_json = self._load_json(export_dir / "attack_paths.json", [])
         graph_json = self._load_json(export_dir / "graph.json", {})
         findings_json = self._load_json(export_dir / "findings.json", {})
+        inv.summary = build_investigation_summary(
+            findings_json.get("validated") or [],
+            attack_paths_json,
+        )
 
         for item in attack_paths_json:
             proof_bundle = {
@@ -146,10 +230,21 @@ class InvestigationService:
     def get_investigation(self, inv_id: str) -> InvestigationORM | None:
         return self.db.get(InvestigationORM, inv_id)
 
+    def find_by_investigation_key(self, key: str) -> InvestigationORM | None:
+        return (
+            self.db.query(InvestigationORM)
+            .filter(InvestigationORM.investigation_key == key)
+            .order_by(InvestigationORM.updated_at.desc(), InvestigationORM.created_at.desc())
+            .first()
+        )
+
     def list_investigations(self, limit: int = 100) -> list[dict]:
         rows = (
             self.db.query(InvestigationORM)
-            .order_by(InvestigationORM.created_at.desc())
+            .order_by(
+                InvestigationORM.updated_at.desc(),
+                InvestigationORM.created_at.desc(),
+            )
             .limit(limit)
             .all()
         )
@@ -160,7 +255,13 @@ class InvestigationService:
             paths = self.get_attack_paths_export(inv.id)
             avg_conf = None
             if paths:
-                scores = [int(p.get("confidence", {}).get("score", 0)) for p in paths if p.get("confidence")]
+                scores: list[int] = []
+                for p in paths:
+                    conf = p.get("confidence")
+                    if isinstance(conf, dict):
+                        scores.append(int(conf.get("score", 0)))
+                    elif conf is not None:
+                        scores.append(int(conf))
                 if scores:
                     avg_conf = round(sum(scores) / len(scores))
             items.append(
@@ -168,6 +269,7 @@ class InvestigationService:
                     "id": inv.id,
                     "name": inv.name,
                     "created_at": inv.created_at,
+                    "updated_at": inv.updated_at or inv.created_at,
                     "status": inv.status,
                     "attack_surface_score": inv.attack_surface_score,
                     "attack_surface_classification": inv.attack_surface_classification,
@@ -177,6 +279,8 @@ class InvestigationService:
                     "duration_seconds": float(report.get("duration_seconds") or 0),
                     "findings_retained": int(stats.get("findings_retained") or 0),
                     "avg_confidence": avg_conf,
+                    "summary": inv.summary or "",
+                    "source_filename": inv.source_filename or "",
                 }
             )
         return items
@@ -252,3 +356,20 @@ class InvestigationService:
             if item.get("stable_id") == ap.stable_id or item.get("id") == ap.engine_path_id:
                 return item
         return None
+
+    def delete_investigation(self, inv_id: str) -> None:
+        inv = self.get_investigation(inv_id)
+        if not inv:
+            return
+        export_dir = self.export_dir(inv_id)
+        self.db.delete(inv)
+        self.db.commit()
+        if export_dir.exists():
+            shutil.rmtree(export_dir, ignore_errors=True)
+
+
+def _derive_source_filename(uploaded_paths: list[Path], fallback_name: str) -> str:
+    names = [p.name for p in uploaded_paths if p.name]
+    if names:
+        return ",".join(sorted(names))
+    return fallback_name

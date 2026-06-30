@@ -217,3 +217,14 @@ select option {
     animation: none;
   }
 }
+
+/* Chat column — messages + input share identical centered width */
+.chat-input-container {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: min(920px, calc(100% - 48px));
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}

@@ -5,13 +5,10 @@ from __future__ import annotations
 import os
 import asyncio
 from contextlib import asynccontextmanager
-from pathlib import Path
 
-from dotenv import load_dotenv
+from product.backend.env import load_repo_env
 
-# Load repo-root .env so VAYNE_LLM_API_KEY persists across uvicorn restarts.
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(_REPO_ROOT / ".env")
+load_repo_env()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

@@ -43,14 +43,14 @@ export function MessageContent({ text }: { text: string }) {
 
   if (!blocks.length) {
     return (
-      <p className="text-[17px] leading-[1.75] text-white/80">
+      <p className="text-[16px] leading-[1.7] text-white/80">
         {renderInline(text, "plain")}
       </p>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {blocks.map((block, i) => {
         switch (block.type) {
           case "title":
@@ -96,7 +96,7 @@ export function MessageContent({ text }: { text: string }) {
             return (
               <p
                 key={i}
-                className="text-[17px] leading-[1.8] text-white/78"
+                className="text-[16px] leading-[1.7] text-white/78"
               >
                 {renderInline(block.text, `p-${i}`)}
               </p>
