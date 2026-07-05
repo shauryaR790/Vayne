@@ -137,3 +137,64 @@ def test_path_detail_and_proof(product_client, metasploit_path):
     proof = client.get(f"/api/investigation/{inv_id}/proof")
     assert proof.status_code == 200
     assert "PROOF" in proof.text.upper()
+
+
+def test_duplicate_analysis_reuses_investigation(product_client, metasploit_path, capsys):
+    client, storage = product_client
+    with metasploit_path.open("rb") as f:
+        first = client.post(
+            "/api/analyze",
+            data={"name": "metasploit-dedup-test"},
+            files={"files": ("metasploit.xml", f, "application/xml")},
+        )
+    assert first.status_code == 200, first.text
+    first_id = first.json()["investigation_id"]
+
+    with metasploit_path.open("rb") as f:
+        second = client.post(
+            "/api/analyze",
+            data={"name": "metasploit-dedup-test-again"},
+            files={"files": ("metasploit.xml", f, "application/xml")},
+        )
+    assert second.status_code == 200, second.text
+    second_id = second.json()["investigation_id"]
+
+    assert first_id == second_id
+
+    listed = client.get("/api/investigations").json()["investigations"]
+    matching = [row for row in listed if row["id"] == first_id]
+    assert len(matching) == 1
+
+    captured = capsys.readouterr()
+    assert "existing investigation found" in captured.out
+
+    inv_dirs = [p for p in storage.iterdir() if p.is_dir() and not p.name.startswith("_work_")]
+    assert len(inv_dirs) == 1
+
+
+def test_separate_mode_creates_multiple_investigations(product_client, metasploit_path):
+    client, storage = product_client
+    payload = metasploit_path.read_bytes()
+    resp = client.post(
+        "/api/analyze",
+        data={"name": "separate-test", "mode": "separate"},
+        files=[
+            ("files", ("scan-a.xml", payload, "application/xml")),
+            ("files", ("scan-b.xml", payload, "application/xml")),
+        ],
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["mode"] == "separate"
+    assert len(body["investigations"]) == 2
+    ids = {item["investigation_id"] for item in body["investigations"]}
+    assert len(ids) == 2
+    assert body["investigation_group_id"]
+
+    for inv_id in ids:
+        detail = client.get(f"/api/investigation/{inv_id}").json()
+        assert detail["summary"]["path_count"] == 4
+
+    inv_dirs = [p for p in storage.iterdir() if p.is_dir() and not p.name.startswith("_work_")]
+    assert len(inv_dirs) == 2
+

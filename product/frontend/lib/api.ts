@@ -63,7 +63,11 @@ export async function checkHealth(): Promise<boolean> {
   }
 }
 
-export async function analyzeFiles(files: FileList | File[], name: string) {
+export async function analyzeFiles(
+  files: FileList | File[],
+  name: string,
+  options?: { mode?: "combined" | "separate"; prompt?: string },
+) {
   const endpoint = apiUrl("/api/analyze");
   const fileList = Array.from(files);
   for (const f of fileList) {
@@ -71,10 +75,22 @@ export async function analyzeFiles(files: FileList | File[], name: string) {
   }
   const form = new FormData();
   form.append("name", name);
+  if (options?.prompt) form.append("prompt", options.prompt);
+  if (options?.mode) form.append("mode", options.mode);
   fileList.forEach((f) => form.append("files", f));
   const res = await fetch(endpoint, { method: "POST", body: form });
   if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<{ investigation_id: string; status: string }>;
+  return res.json() as Promise<{
+    investigation_id: string;
+    status: string;
+    mode: "combined" | "separate";
+    investigation_group_id?: string | null;
+    investigations: Array<{
+      investigation_id: string;
+      source_filename: string;
+      status: string;
+    }>;
+  }>;
 }
 
 export async function getInvestigation(id: string): Promise<InvestigationDetail> {

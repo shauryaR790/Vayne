@@ -25,6 +25,22 @@ function extension(name: string): string {
   return dot >= 0 ? name.slice(dot).toLowerCase() : "";
 }
 
+export function fileTypeLabel(filename: string): string {
+  const ext = extension(filename);
+  switch (ext) {
+    case ".xml":
+      return "XML File";
+    case ".json":
+      return "JSON File";
+    case ".csv":
+      return "CSV File";
+    case ".nessus":
+      return "Nessus Scan";
+    default:
+      return "File";
+  }
+}
+
 export function validateUploadFiles(files: FileList | File[]): UploadValidationResult {
   const list = Array.from(files);
   if (!list.length) {

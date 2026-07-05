@@ -54,6 +54,18 @@ def _ensure_investigation_columns() -> None:
         statements.append("ALTER TABLE investigations ADD COLUMN summary TEXT DEFAULT ''")
     if "updated_at" not in existing:
         statements.append("ALTER TABLE investigations ADD COLUMN updated_at DATETIME")
+    if "investigation_group_id" not in existing:
+        statements.append(
+            "ALTER TABLE investigations ADD COLUMN investigation_group_id VARCHAR(36)"
+        )
+    if "mode" not in existing:
+        statements.append(
+            "ALTER TABLE investigations ADD COLUMN mode VARCHAR(16) DEFAULT 'combined'"
+        )
+    if "group_index" not in existing:
+        statements.append(
+            "ALTER TABLE investigations ADD COLUMN group_index INTEGER DEFAULT 0"
+        )
     if not statements:
         return
     with engine.begin() as conn:

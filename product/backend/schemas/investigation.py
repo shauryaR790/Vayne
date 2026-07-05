@@ -8,9 +8,18 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class AnalyzeInvestigationItem(BaseModel):
+    investigation_id: str
+    source_filename: str = ""
+    status: str
+
+
 class AnalyzeResponse(BaseModel):
     investigation_id: str
     status: str
+    mode: str = "combined"
+    investigation_group_id: str | None = None
+    investigations: list[AnalyzeInvestigationItem] = Field(default_factory=list)
 
 
 class AttackSurfaceSummary(BaseModel):

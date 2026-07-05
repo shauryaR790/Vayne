@@ -21,9 +21,22 @@ import {
   loadConversationSession,
   saveConversationSession,
   clearConversationSession,
+  serializeMessages,
   type StoredChatMessage,
 } from "@/lib/conversation-session";
 import { ConversationHome } from "@/components/conversation/conversation-home";
+import { ComposerAttachments } from "@/components/conversation/composer-attachments";
+import { InvestigationModeToggle } from "@/components/conversation/investigation-mode-toggle";
+import {
+  defaultInvestigationMode,
+  resolveInvestigationMode,
+  type InvestigationMode,
+} from "@/lib/investigation-mode";
+import {
+  attachmentsFromFiles,
+  buildCombinedInvestigationsPrefix,
+  buildSeparateInvestigationsMessage,
+} from "@/lib/multi-investigation-message";
 import {
   ConversationQuickActions,
   type QuickActionId,
@@ -51,7 +64,22 @@ export function VayneConversation({
   const [thinking, setThinking] = useState(false);
   const [backendOnline, setBackendOnline] = useState(false);
   const [error, setError] = useState("");
+  const [investigationMode, setInvestigationMode] = useState<InvestigationMode>("combined");
+  const [modeExplicit, setModeExplicit] = useState(false);
+  const [investigationGroupId, setInvestigationGroupId] = useState<string | null>(null);
+  const [investigationIds, setInvestigationIds] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (files.length <= 1) {
+      setModeExplicit(false);
+      setInvestigationMode("combined");
+      return;
+    }
+    if (!modeExplicit) {
+      setInvestigationMode(defaultInvestigationMode(files.length, input));
+    }
+  }, [files.length, input, modeExplicit]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,24 +125,29 @@ export function VayneConversation({
     (next?: {
       messages?: ChatMessage[];
       investigationId?: string | null;
+      investigationGroupId?: string | null;
+      investigationIds?: string[];
+      investigationMode?: InvestigationMode;
       scrollTop?: number;
       inputDraft?: string;
     }) => {
       if (persistSkipRef.current) return;
       const invId = next?.investigationId !== undefined ? next.investigationId : investigationId ?? null;
-      const msgs = (next?.messages ?? messages)
-        .filter((m) => !m.streaming)
-        .map(({ id, role, content }) => ({ id, role, content }));
+      const msgs = serializeMessages(next?.messages ?? messages);
       if (!invId && !msgs.length) return;
       saveConversationSession({
         investigationId: invId,
+        investigationGroupId:
+          next?.investigationGroupId !== undefined ? next.investigationGroupId : investigationGroupId,
+        investigationIds: next?.investigationIds ?? investigationIds,
+        investigationMode: next?.investigationMode ?? investigationMode,
         messages: msgs,
         scrollTop: next?.scrollTop ?? scrollRef.current?.scrollTop ?? 0,
         inputDraft: next?.inputDraft ?? input,
         updatedAt: new Date().toISOString(),
       });
     },
-    [investigationId, messages, input],
+    [investigationGroupId, investigationId, investigationIds, investigationMode, messages, input],
   );
 
   useEffect(() => {
@@ -129,6 +162,12 @@ export function VayneConversation({
     if (session?.messages?.length) {
       setMessages(session.messages);
       setInput(session.inputDraft || "");
+      setInvestigationGroupId(session.investigationGroupId ?? null);
+      setInvestigationIds(session.investigationIds ?? []);
+      if (session.investigationMode) {
+        setInvestigationMode(session.investigationMode);
+        setModeExplicit(true);
+      }
     }
     if (id && !resumeId) syncUrl(id);
     if (id && session?.messages?.length) {
@@ -162,7 +201,10 @@ export function VayneConversation({
       if (persistSkipRef.current) return;
       saveConversationSession({
         investigationId: investigationId ?? null,
-        messages: messages.filter((m) => !m.streaming).map(({ id, role, content }) => ({ id, role, content })),
+        investigationGroupId,
+        investigationIds,
+        investigationMode,
+        messages: serializeMessages(messages),
         scrollTop: el.scrollTop,
         inputDraft: input,
         updatedAt: new Date().toISOString(),
@@ -170,7 +212,7 @@ export function VayneConversation({
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, [hydrated, investigationId, messages, input]);
+  }, [hydrated, investigationGroupId, investigationId, investigationIds, investigationMode, messages, input]);
 
   useEffect(() => {
     const streaming = messages.some((m) => m.streaming);
@@ -178,7 +220,12 @@ export function VayneConversation({
   }, [messages, thinking, scrollToBottom]);
 
   const streamBrief = useCallback(
-    async (invId: string, withLinks: boolean, signal?: AbortSignal) => {
+    async (
+      invId: string,
+      withLinks: boolean,
+      signal?: AbortSignal,
+      prefix = "",
+    ) => {
       const streamId = `brief-${invId}`;
       const batcher = createStreamBatcher((text) => {
         setThinking(false);
@@ -190,7 +237,7 @@ export function VayneConversation({
       const finalize = (text: string) => {
         batcher.finish();
         setThinking(false);
-        let out = text || ANALYST_OFFLINE_MESSAGE;
+        let out = `${prefix}${text || ANALYST_OFFLINE_MESSAGE}`;
         if (withLinks) out += investigationLinksFooter(invId);
         updateMessage(streamId, out, false);
       };
@@ -372,31 +419,80 @@ export function VayneConversation({
 
     const prompt =
       text || `Analyze ${validation.files.map((f) => f.name).join(", ")}`;
+    const attachments = attachmentsFromFiles(validation.files);
+    const resolvedMode = modeExplicit
+      ? investigationMode
+      : resolveInvestigationMode(validation.files.length, prompt);
 
     setInput("");
     setFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setBusy(true);
     setThinking(true);
     setError("");
 
-    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", content: prompt }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: `user-${Date.now()}`, role: "user", content: prompt, attachments },
+    ]);
 
     try {
       const label = validation.files.map((f) => f.name).join(", ");
-      const result = await analyzeFiles(validation.files, label);
-      const data = await loadInvestigationBundle(result.investigation_id);
-      setBundle(data);
-      saveRecentInvestigation(recentEntryFromBundle(data, label));
-      syncUrl(result.investigation_id);
-      const signal = beginStream();
-      await streamBrief(result.investigation_id, true, signal);
+      const result = await analyzeFiles(validation.files, label, {
+        mode: resolvedMode,
+        prompt,
+      });
+      const ids = result.investigations.map((item) => item.investigation_id);
+      setInvestigationGroupId(result.investigation_group_id ?? null);
+      setInvestigationIds(ids);
+      setInvestigationMode(result.mode);
+
+      if (result.mode === "separate" && result.investigations.length > 1) {
+        const bundles = await Promise.all(
+          result.investigations.map((item) => loadInvestigationBundle(item.investigation_id)),
+        );
+        setBundle(bundles[0] ?? null);
+        for (const data of bundles) {
+          saveRecentInvestigation(
+            recentEntryFromBundle(
+              data,
+              data.report.target?.split(/[/\\]/).pop() || label,
+            ),
+          );
+        }
+        syncUrl(bundles[0]?.detail.summary.id ?? result.investigation_id);
+        const groupBriefId = `brief-group-${result.investigation_group_id ?? result.investigation_id}`;
+        setThinking(false);
+        updateMessage(groupBriefId, buildSeparateInvestigationsMessage(bundles), false);
+      } else {
+        const data = await loadInvestigationBundle(result.investigation_id);
+        setBundle(data);
+        saveRecentInvestigation(recentEntryFromBundle(data, label));
+        syncUrl(result.investigation_id);
+        const prefix = buildCombinedInvestigationsPrefix(validation.files.map((file) => file.name));
+        const signal = beginStream();
+        await streamBrief(result.investigation_id, true, signal, prefix);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setThinking(false);
     } finally {
       setBusy(false);
     }
-  }, [backendOnline, beginStream, bundle, busy, files, input, streamBrief, streamReply, syncUrl]);
+  }, [
+    backendOnline,
+    beginStream,
+    bundle,
+    busy,
+    files,
+    input,
+    investigationMode,
+    modeExplicit,
+    streamBrief,
+    streamReply,
+    syncUrl,
+    updateMessage,
+  ]);
 
   useEffect(() => {
     const onNewChat = () => {
@@ -408,6 +504,10 @@ export function VayneConversation({
       setInput("");
       setFiles([]);
       setBundle(null);
+      setInvestigationGroupId(null);
+      setInvestigationIds([]);
+      setInvestigationMode("combined");
+      setModeExplicit(false);
       setBusy(false);
       setThinking(false);
       setError("");
@@ -448,6 +548,17 @@ export function VayneConversation({
     [busy],
   );
 
+  const removeFile = useCallback((index: number) => {
+    setFiles((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      if (!next.length && fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return next;
+    });
+    setError("");
+  }, []);
+
   const inputForm = (
     <>
       <input
@@ -458,14 +569,28 @@ export function VayneConversation({
         className="hidden"
         onChange={(e) => {
           const picked = Array.from(e.target.files ?? []);
-          setFiles(picked);
+          if (picked.length) {
+            setFiles((prev) => {
+              const seen = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
+              const merged = [...prev];
+              for (const file of picked) {
+                const key = `${file.name}:${file.size}:${file.lastModified}`;
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  merged.push(file);
+                }
+              }
+              return merged;
+            });
+          }
+          e.target.value = "";
           setError("");
         }}
       />
 
       <form
         className={cn(
-          "flex w-full items-end gap-2 rounded-[28px] border border-white/[0.14] bg-[#141414] p-2.5",
+          "flex w-full flex-col rounded-[28px] border border-white/[0.14] bg-[#141414] p-2.5",
           "shadow-[0_2px_24px_rgba(0,0,0,0.35)]",
           "transition-colors hover:border-white/20 focus-within:border-white/24",
         )}
@@ -474,51 +599,61 @@ export function VayneConversation({
           handleSubmit();
         }}
       >
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => fileInputRef.current?.click()}
-          className="flex size-11 shrink-0 items-center justify-center rounded-full text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white/80 disabled:opacity-40"
-          aria-label="Attach evidence"
-        >
-          <Paperclip className="size-5" strokeWidth={1.5} />
-        </button>
-
-        <div className="min-w-0 flex-1 py-1">
-          {files.length > 0 && !bundle ? (
-            <p className="mb-1 truncate px-1 text-[12px] text-white/38">
-              {files.map((f) => f.name).join(", ")}
-            </p>
-          ) : null}
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+        {files.length > 1 ? (
+          <InvestigationModeToggle
+            value={investigationMode}
             disabled={busy}
-            placeholder="Upload evidence or ask VAYNE to analyze a scan..."
-            rows={1}
-            className="max-h-32 w-full resize-none bg-transparent px-1 text-[16px] leading-relaxed text-white outline-none placeholder:text-white/28 disabled:opacity-50"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
+            onChange={(mode) => {
+              setModeExplicit(true);
+              setInvestigationMode(mode);
             }}
           />
-        </div>
+        ) : null}
 
-        <button
-          type="submit"
-          disabled={busy || (!input.trim() && !files.length && !bundle)}
-          className={cn(
-            "flex size-11 shrink-0 items-center justify-center rounded-full transition-all",
-            busy || (!input.trim() && !files.length && !bundle)
-              ? "text-white/18"
-              : "bg-white text-black hover:bg-white/92",
-          )}
-          aria-label="Send"
-        >
-          <ArrowUp className="size-5" strokeWidth={2} />
-        </button>
+        <ComposerAttachments files={files} onRemove={removeFile} disabled={busy} />
+
+        <div className="flex items-end gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex size-11 shrink-0 items-center justify-center rounded-full text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white/80 disabled:opacity-40"
+            aria-label="Attach evidence"
+          >
+            <Paperclip className="size-5" strokeWidth={1.5} />
+          </button>
+
+          <div className="min-w-0 flex-1 py-1">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={busy}
+              placeholder="Ask VAYNE anything..."
+              rows={1}
+              className="max-h-32 w-full resize-none bg-transparent px-1 text-[16px] leading-relaxed text-white outline-none placeholder:text-white/28 disabled:opacity-50"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={busy || (!input.trim() && !files.length && !bundle)}
+            className={cn(
+              "flex size-11 shrink-0 items-center justify-center rounded-full transition-all",
+              busy || (!input.trim() && !files.length && !bundle)
+                ? "text-white/18"
+                : "bg-white text-black hover:bg-white/92",
+            )}
+            aria-label="Send"
+          >
+            <ArrowUp className="size-5" strokeWidth={2} />
+          </button>
+        </div>
       </form>
     </>
   );
@@ -573,6 +708,7 @@ export function VayneConversation({
               role={msg.role}
               content={msg.content}
               streaming={msg.streaming}
+              attachments={msg.attachments}
             />
           ))}
           {thinking ? <VayneThinking /> : null}

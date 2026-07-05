@@ -17,11 +17,14 @@ from product.backend.models.investigation import (
     GraphNodeORM,
     InvestigationORM,
 )
+from dataclasses import dataclass
+
 from product.backend.services.investigation_key import (
     build_investigation_summary,
     compute_investigation_key,
     normalize_source_filename,
 )
+from product.backend.services.investigation_mode import resolve_investigation_mode
 from product.backend.services.vayne_runner import analyze
 from vayne.models import InvestigationReport
 
@@ -41,6 +44,17 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+@dataclass
+class AnalysisBatchResult:
+    mode: str
+    investigation_group_id: str
+    investigations: list[InvestigationORM]
+
+    @property
+    def primary(self) -> InvestigationORM:
+        return self.investigations[0]
+
+
 class InvestigationService:
     def __init__(self, db: Session, storage_root: Path):
         self.db = db
@@ -54,6 +68,9 @@ class InvestigationService:
         *,
         proof: bool = True,
         source_filename: str | None = None,
+        investigation_group_id: str | None = None,
+        mode: str = "combined",
+        group_index: int = 0,
     ) -> InvestigationORM:
         source = source_filename or _derive_source_filename(uploaded_paths, name)
         work_dir = self.storage_root / f"_work_{uuid.uuid4().hex}"
@@ -86,6 +103,9 @@ class InvestigationService:
                 inv.status = "running"
                 inv.summary = summary
                 inv.source_filename = normalize_source_filename(source) or source
+                inv.investigation_group_id = investigation_group_id or inv.investigation_group_id
+                inv.mode = mode or inv.mode
+                inv.group_index = group_index
                 inv.updated_at = _utcnow()
                 self.db.commit()
 
@@ -112,6 +132,9 @@ class InvestigationService:
                     investigation_key=investigation_key,
                     source_filename=normalize_source_filename(source) or source,
                     summary=summary,
+                    investigation_group_id=investigation_group_id,
+                    mode=mode,
+                    group_index=group_index,
                     created_at=now,
                     updated_at=now,
                 )
@@ -129,6 +152,59 @@ class InvestigationService:
         finally:
             if cleanup_dir is not None and cleanup_dir.exists():
                 shutil.rmtree(cleanup_dir, ignore_errors=True)
+
+    def run_analysis_batch(
+        self,
+        name: str,
+        uploads: list[tuple[Path, str]],
+        *,
+        prompt: str | None = None,
+        explicit_mode: str | None = None,
+        proof: bool = True,
+    ) -> AnalysisBatchResult:
+        """Run combined or per-file investigations before any cross-file correlation."""
+        if not uploads:
+            raise ValueError("No uploads provided")
+
+        mode = resolve_investigation_mode(
+            file_count=len(uploads),
+            prompt=prompt,
+            explicit=explicit_mode,
+        )
+        group_id = str(uuid.uuid4())
+        investigations: list[InvestigationORM] = []
+
+        if mode == "separate":
+            for index, (path, original_name) in enumerate(uploads):
+                inv = self.run_analysis(
+                    name,
+                    [path],
+                    proof=proof,
+                    source_filename=original_name,
+                    investigation_group_id=group_id,
+                    mode=mode,
+                    group_index=index,
+                )
+                investigations.append(inv)
+        else:
+            paths = [path for path, _ in uploads]
+            source = ",".join(sorted(original for _, original in uploads))
+            inv = self.run_analysis(
+                name,
+                paths,
+                proof=proof,
+                source_filename=source,
+                investigation_group_id=group_id,
+                mode=mode,
+                group_index=0,
+            )
+            investigations.append(inv)
+
+        return AnalysisBatchResult(
+            mode=mode,
+            investigation_group_id=group_id,
+            investigations=investigations,
+        )
 
     def _clear_children(self, inv: InvestigationORM) -> None:
         inv.attack_paths.clear()

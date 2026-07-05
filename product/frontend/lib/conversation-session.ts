@@ -1,11 +1,19 @@
+import type { MessageAttachment } from "./multi-investigation-message";
+
+export type { MessageAttachment };
+
 export interface StoredChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  attachments?: MessageAttachment[];
 }
 
 export interface ConversationSession {
   investigationId: string | null;
+  investigationGroupId?: string | null;
+  investigationIds?: string[];
+  investigationMode?: "combined" | "separate";
   messages: StoredChatMessage[];
   scrollTop: number;
   inputDraft: string;
@@ -46,4 +54,17 @@ export function resetConversationToHome() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(NEW_CHAT_EVENT));
   }
+}
+
+export function serializeMessages(
+  messages: Array<StoredChatMessage & { streaming?: boolean }>,
+): StoredChatMessage[] {
+  return messages
+    .filter((message) => !message.streaming)
+    .map(({ id, role, content, attachments }) => ({
+      id,
+      role,
+      content,
+      ...(attachments?.length ? { attachments } : {}),
+    }));
 }
