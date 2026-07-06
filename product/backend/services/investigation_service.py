@@ -120,8 +120,11 @@ class InvestigationService:
                 inv_id = str(uuid.uuid4())
                 export_dir = self.storage_root / inv_id
                 if export_dir.exists():
-                    shutil.rmtree(export_dir)
-                shutil.move(str(work_dir), str(export_dir))
+                    shutil.rmtree(export_dir, ignore_errors=True)
+                try:
+                    shutil.move(str(work_dir), str(export_dir))
+                except OSError:
+                    shutil.copytree(work_dir, export_dir, dirs_exist_ok=True)
                 cleanup_dir = None
 
                 now = _utcnow()
@@ -215,9 +218,36 @@ class InvestigationService:
 
     @staticmethod
     def _replace_export_dir(src: Path, dest: Path) -> None:
-        if dest.exists():
-            shutil.rmtree(dest)
-        shutil.copytree(src, dest)
+        """Replace export artifacts without deleting the parent folder (Windows-safe)."""
+        if not dest.exists():
+            shutil.copytree(src, dest)
+            return
+
+        staging = dest.parent / f"{dest.name}__staging_{uuid.uuid4().hex}"
+        retired = dest.parent / f"{dest.name}__retired_{uuid.uuid4().hex}"
+        shutil.copytree(src, staging)
+        try:
+            dest.rename(retired)
+            staging.rename(dest)
+            shutil.rmtree(retired, ignore_errors=True)
+        except OSError:
+            shutil.rmtree(staging, ignore_errors=True)
+            InvestigationService._merge_export_dir(src, dest)
+
+    @staticmethod
+    def _merge_export_dir(src: Path, dest: Path) -> None:
+        dest.mkdir(parents=True, exist_ok=True)
+        for item in src.iterdir():
+            target = dest / item.name
+            if item.is_dir():
+                shutil.rmtree(target, ignore_errors=True)
+                shutil.copytree(item, target)
+            else:
+                try:
+                    target.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                shutil.copy2(item, target)
 
     def _persist(
         self,
@@ -442,6 +472,31 @@ class InvestigationService:
         self.db.commit()
         if export_dir.exists():
             shutil.rmtree(export_dir, ignore_errors=True)
+
+    def reset_workspace(self) -> dict[str, int]:
+        """Delete every investigation, related rows, and on-disk export artifacts."""
+        rows = self.db.query(InvestigationORM).all()
+        investigation_count = len(rows)
+        for inv in rows:
+            self.db.delete(inv)
+        self.db.commit()
+
+        storage_dirs_removed = 0
+        storage_files_removed = 0
+        if self.storage_root.exists():
+            for child in list(self.storage_root.iterdir()):
+                if child.is_dir():
+                    shutil.rmtree(child, ignore_errors=True)
+                    storage_dirs_removed += 1
+                elif child.is_file():
+                    child.unlink(missing_ok=True)
+                    storage_files_removed += 1
+
+        return {
+            "investigations_deleted": investigation_count,
+            "storage_dirs_removed": storage_dirs_removed,
+            "storage_files_removed": storage_files_removed,
+        }
 
 
 def _derive_source_filename(uploaded_paths: list[Path], fallback_name: str) -> str:

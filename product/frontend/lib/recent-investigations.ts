@@ -45,6 +45,7 @@ export type InvestigationDateGroup = "today" | "yesterday" | "older";
 export type SidebarHistoryGroup = "today" | "yesterday" | "last_week" | "older";
 
 const STORAGE_KEY = "vayne-recent-investigations";
+export const RECENT_INVESTIGATIONS_STORAGE_KEY = STORAGE_KEY;
 export const SIDEBAR_HISTORY_MAX = 20;
 export const SIDEBAR_RECENTS_MAX = 8;
 export const HOME_RECENTS_MAX = 6;
@@ -267,6 +268,12 @@ function persistInvestigationList(items: RecentInvestigation[]) {
 function notifyRecentUpdated() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(RECENT_INVESTIGATIONS_UPDATED));
+}
+
+export function clearRecentInvestigations() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(STORAGE_KEY);
+  notifyRecentUpdated();
 }
 
 export function recentEntryFromParts(

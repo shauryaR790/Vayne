@@ -6,7 +6,7 @@ import { MoreHorizontal } from "lucide-react";
 
 
 
-import { CHAT_CONTAINER_CLASS } from "@/lib/conversation-layout";
+import { HOME_HERO_CONTAINER_CLASS } from "@/lib/conversation-layout";
 
 import { cn } from "@/lib/utils";
 
@@ -64,7 +64,7 @@ export function ConversationHome({
 
             "flex w-full flex-col items-center text-center",
 
-            CHAT_CONTAINER_CLASS,
+            HOME_HERO_CONTAINER_CLASS,
 
           )}
 

@@ -2,20 +2,26 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 
 import { listInvestigations } from "@/lib/api";
 import type { InvestigationListItem } from "@/lib/types";
 import { PageHeader } from "@/components/shared/workspace-card";
 import { Badge } from "@/components/ui/badge";
-import { ConfidenceRing } from "@/components/shared/confidence-ring";
-import { RiskMeter } from "@/components/shared/risk-meter";
-import {
-  MetricTile,
-  SectionLabel,
-} from "@/components/shared/workspace-card";
-import { CollapsibleWorkspaceCard } from "@/components/shared/collapsible-workspace-card";
 import { MotionGroup } from "@/components/dashboard/motion";
+
+function formatWhen(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
 
 export function InvestigationsList() {
   const [items, setItems] = useState<InvestigationListItem[]>([]);
@@ -30,105 +36,62 @@ export function InvestigationsList() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] px-5 py-8 lg:px-8">
+    <div className="mx-auto w-full max-w-[920px] px-5 py-8 lg:px-8">
       <PageHeader
-        title="Investigations"
-        subtitle={`${items.length} active AI-led security investigations`}
+        title="History"
+        subtitle="Previous investigations — open a chat to resume where you left off"
       />
 
-      {loading && (
-        <p className="text-[11px] font-bold uppercase tracking-wider text-white/50">
-          Loading…
-        </p>
-      )}
-      {error && <p className="text-[11px] font-bold uppercase text-white/70">{error}</p>}
+      {loading ? (
+        <p className="text-[13px] text-white/45">Loading history…</p>
+      ) : null}
+      {error ? <p className="text-[13px] text-white/60">{error}</p> : null}
 
-      <MotionGroup className="space-y-4">
+      <MotionGroup className="mt-6 flex flex-col gap-2">
         {items.map((inv) => {
           const target = inv.target.split(/[/\\]/).pop() || inv.target;
-          const confidence = inv.avg_confidence ?? 0;
-          const risk = inv.attack_surface_score ?? 0;
+          const risk = inv.attack_surface_classification;
 
           return (
-            <CollapsibleWorkspaceCard
+            <Link
               key={inv.id}
-              expandLabel="Expand investigation"
-              title={
-                <>
-                  <h2 className="text-lg font-black uppercase tracking-wide sm:text-xl">
-                    {target}
-                  </h2>
+              href={`/?id=${inv.id}`}
+              className="group flex items-center gap-4 rounded-2xl border border-white/[0.1] bg-[#0d0d0d] px-5 py-4 transition-colors hover:border-white/20 hover:bg-[#111111]"
+            >
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white/45 group-hover:text-white/70">
+                <MessageSquare className="size-4" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-[15px] font-medium text-white">{target}</p>
                   <Badge
                     variant={
-                      inv.attack_surface_classification.toLowerCase().includes("critical")
+                      risk.toLowerCase().includes("critical") || risk.toLowerCase().includes("high")
                         ? "critical"
                         : "default"
                     }
                   >
-                    {inv.attack_surface_classification}
+                    {risk}
                   </Badge>
-                  <span className="border border-white/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/60">
-                    {inv.status}
-                  </span>
-                </>
-              }
-              subtitle={
-                <p className="font-mono text-[12px] text-white/50">{inv.id.slice(0, 12)}</p>
-              }
-              trailing={
-                confidence > 0 ? <ConfidenceRing value={Math.round(confidence)} size={72} /> : null
-              }
-            >
-              <div className="flex flex-col gap-5 border-b border-white/15 p-6 sm:flex-row sm:items-start sm:justify-between">
-                <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 text-[13px] sm:grid-cols-4">
-                  <div>
-                    <SectionLabel>Asset</SectionLabel>
-                    <p className="mt-1 font-mono text-[13px] font-medium uppercase text-white/80">
-                      {target}
-                    </p>
-                  </div>
-                  <div>
-                    <SectionLabel>Findings</SectionLabel>
-                    <p className="mt-1 font-medium uppercase">{inv.findings_retained}</p>
-                  </div>
-                  <div>
-                    <SectionLabel>Paths</SectionLabel>
-                    <p className="mt-1 font-medium uppercase">{inv.path_count}</p>
-                  </div>
-                  <div>
-                    <SectionLabel>Critical</SectionLabel>
-                    <p className="mt-1 font-bold uppercase">{inv.critical_count}</p>
-                  </div>
                 </div>
+                <p className="mt-1 text-[12px] text-white/40">
+                  {inv.findings_retained} findings · {inv.path_count} paths ·{" "}
+                  {formatWhen(inv.created_at)}
+                </p>
               </div>
-
-              <div className="grid grid-cols-2 gap-px bg-surface sm:grid-cols-4">
-                <MetricTile label="Risk Score" value={risk.toFixed(1)} large />
-                <MetricTile label="Findings" value={inv.findings_retained} />
-                <MetricTile label="Paths" value={inv.path_count} />
-                <MetricTile label="Duration" value={`${inv.duration_seconds.toFixed(1)}s`} />
-              </div>
-
-              <div className="space-y-5 p-6">
-                <RiskMeter value={risk} label="Investigation Risk" />
-                <Link
-                  href={`/?id=${inv.id}`}
-                  className="inline-flex items-center gap-2 border border-white px-4 py-2.5 text-[12px] font-bold uppercase tracking-wider transition-colors hover:bg-white hover:text-black"
-                >
-                  Open full investigation
-                  <ArrowRight className="size-4" />
-                </Link>
-              </div>
-            </CollapsibleWorkspaceCard>
+              <span className="shrink-0 text-[12px] font-medium text-white/35 group-hover:text-white/70">
+                Open chat →
+              </span>
+            </Link>
           );
         })}
       </MotionGroup>
 
-      {!loading && !items.length && !error && (
-        <p className="py-16 text-center text-[11px] font-bold uppercase tracking-wider text-white/50">
-          No investigations yet. Start a new scan from Home.
+      {!loading && !items.length && !error ? (
+        <p className="py-16 text-center text-[14px] text-white/45">
+          No investigations yet. Upload evidence from Home to start.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

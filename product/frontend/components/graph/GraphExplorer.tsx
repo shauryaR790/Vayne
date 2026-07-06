@@ -17,7 +17,7 @@ import { GraphNodeInspector } from "./GraphNodeInspector";
 import { GraphEmptyState, type ReasoningCheck } from "./GraphEmptyState";
 import { useGraphAnimations } from "./useGraphAnimations";
 import { computeGraphLayout, normalizeGraphType } from "./layoutEngine";
-import { applyGraphFit } from "./graphFit";
+import { applyGraphFit, FIT_MAX_ZOOM, FIT_MIN_ZOOM, FIT_PADDING } from "./graphFit";
 
 const nodeTypes = { vayne: GraphNode };
 const edgeTypes = { vayne: VayneEdge };
@@ -107,11 +107,32 @@ function GraphExplorerInner({
   graph,
   context,
   embedded = false,
+  layout = "default",
 }: {
   graph: GraphData;
   context?: GraphExplorerContext;
   embedded?: boolean;
+  layout?: "default" | "inline" | "hero" | "workstation";
 }) {
+  const isInline = layout === "inline";
+  const isHero = layout === "hero";
+  const isWorkstation = layout === "workstation";
+  const isWide = isHero || isWorkstation;
+  const scrollableEmbed = embedded || isWorkstation || isInline;
+  const graphHeight = isWorkstation
+    ? "h-[640px]"
+    : isHero
+      ? "h-[580px]"
+      : isInline
+        ? "h-[420px]"
+        : GRAPH_HEIGHT;
+  const minHeight = isWorkstation
+    ? "min-h-[560px]"
+    : isHero
+      ? "min-h-[520px]"
+      : isInline
+        ? "min-h-[340px]"
+        : "min-h-[560px]";
   const containerRef = useRef<HTMLDivElement>(null);
   const flowRef = useRef<ReactFlowInstance | null>(null);
   const [flowReady, setFlowReady] = useState(false);
@@ -141,7 +162,7 @@ function GraphExplorerInner({
     [graph.nodes],
   );
 
-  useGraphAnimations(containerRef, flowReady);
+  useGraphAnimations(containerRef, flowReady, { hero: isWide });
 
   useEffect(() => {
     if (!flowRef.current || !flowNodes.length) return;
@@ -151,14 +172,40 @@ function GraphExplorerInner({
     return () => window.clearTimeout(t);
   }, [flowNodes]);
 
+  useEffect(() => {
+    if (!scrollableEmbed || !flowReady || !containerRef.current || !flowRef.current) return;
+
+    const el = containerRef.current;
+    const ro = new ResizeObserver(() => {
+      if (!flowNodes.length || !flowRef.current) return;
+      window.requestAnimationFrame(() => {
+        flowRef.current?.fitView({
+          nodes: flowNodes.filter((n) => !n.hidden),
+          padding: FIT_PADDING,
+          duration: 0,
+          maxZoom: FIT_MAX_ZOOM,
+          minZoom: FIT_MIN_ZOOM,
+        });
+      });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [flowNodes, flowReady, scrollableEmbed]);
+
   const showEmptyState = Boolean(context && !context.hasPaths && context.emptyChecks?.length);
 
   return (
-    <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_240px]">
+    <div
+      className={`grid min-w-0 grid-cols-1 items-stretch gap-px ${
+        isWorkstation ? "" : isInline ? "" : isHero ? "xl:grid-cols-[minmax(0,1fr)_220px]" : "xl:grid-cols-[minmax(0,1fr)_240px]"
+      }`}
+    >
         <div
           ref={containerRef}
-          className={`relative ${GRAPH_HEIGHT} min-h-[560px] overflow-hidden min-w-0 bg-black ${
-            embedded ? "border-0" : "border border-white"
+          className={`relative ${graphHeight} ${minHeight} isolate overflow-hidden min-w-0 bg-black ${
+            embedded || isWide
+              ? "border border-white/[0.12] transition-[border-color] duration-300 hover:border-white/[0.22]"
+              : "border border-white"
           }`}
         >
           {showEmptyState ? (
@@ -193,8 +240,9 @@ function GraphExplorerInner({
                 minZoom={0.35}
                 maxZoom={2.5}
                 panOnDrag
-                panOnScroll
-                zoomOnScroll
+                panOnScroll={!scrollableEmbed}
+                zoomOnScroll={!scrollableEmbed}
+                preventScrolling={!scrollableEmbed}
                 zoomOnPinch
                 nodesDraggable={false}
                 nodesConnectable={false}
@@ -242,8 +290,12 @@ function GraphExplorerInner({
         </div>
 
         <aside
-          className={`flex ${GRAPH_HEIGHT} min-h-[560px] min-w-0 flex-col bg-black ${
-            embedded ? "border-l border-white/20" : "border border-white"
+          className={`flex ${isWorkstation ? "h-auto max-h-[220px]" : isInline ? "h-auto max-h-[200px]" : graphHeight} ${
+            isWorkstation || isInline ? "min-h-0" : minHeight
+          } min-w-0 flex-col bg-black ${
+            embedded || isWide
+              ? "border border-white/[0.12] transition-[border-color] duration-300 hover:border-white/[0.22]"
+              : "border border-white"
           }`}
         >
           <div className="flex-1 overflow-y-auto p-4">
@@ -261,14 +313,16 @@ export function GraphExplorer({
   graph,
   context,
   embedded,
+  layout = "default",
 }: {
   graph: GraphData;
   context?: GraphExplorerContext;
   embedded?: boolean;
+  layout?: "default" | "inline" | "hero" | "workstation";
 }) {
   return (
     <ReactFlowProvider>
-      <GraphExplorerInner graph={graph} context={context} embedded={embedded} />
+      <GraphExplorerInner graph={graph} context={context} embedded={embedded} layout={layout} />
     </ReactFlowProvider>
   );
 }

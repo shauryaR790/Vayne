@@ -1,6 +1,9 @@
 /** Centered chat column — use .chat-input-container from globals.css */
 export const CHAT_CONTAINER_CLASS = "chat-input-container";
 
+/** Homepage hero — narrower than chat investigation column */
+export const HOME_HERO_CONTAINER_CLASS = "home-hero-container";
+
 /** @deprecated Use CHAT_CONTAINER_CLASS */
 export const CONVERSATION_SHELL = CHAT_CONTAINER_CLASS;
 

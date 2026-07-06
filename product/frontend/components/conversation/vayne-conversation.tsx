@@ -1,67 +1,79 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Paperclip, ArrowUp } from "lucide-react";
-import { motion } from "motion/react";
 
-import { analyzeFiles, API_BASE, checkHealth } from "@/lib/api";
+import { analyzeFiles, getApiBase, checkHealth } from "@/lib/api";
 import {
   ANALYST_OFFLINE_MESSAGE,
+  sanitizeChatHistory,
   streamAnalystChat,
-  streamInvestigationBrief,
 } from "@/lib/analyst-chat";
 import { loadInvestigationBundle, type InvestigationBundle } from "@/lib/investigation-bundle";
-import { investigationLinksFooter } from "@/lib/conversation-links";
-import { saveRecentInvestigation, recentEntryFromBundle, extractSourceFile } from "@/lib/recent-investigations";
-import { looksLikeFilename } from "@/lib/investigation-metadata";
-import { createStreamBatcher } from "@/lib/stream-buffer";
-import { CHAT_CONTAINER_CLASS } from "@/lib/conversation-layout";
+import { saveRecentInvestigation, recentEntryFromBundle } from "@/lib/recent-investigations";
+import { createRhythmStreamBatcher } from "@/lib/stream-buffer";
 import {
-  loadConversationSession,
-  saveConversationSession,
   clearConversationSession,
+  saveConversationSession,
   serializeMessages,
   type StoredChatMessage,
 } from "@/lib/conversation-session";
-import { ConversationHome } from "@/components/conversation/conversation-home";
-import { ComposerAttachments } from "@/components/conversation/composer-attachments";
-import { InvestigationModeToggle } from "@/components/conversation/investigation-mode-toggle";
+import {
+  buildInvestigationSessionFromBundle,
+  findSessionForInvestigation,
+  getActiveInvestigationId,
+  investigationDisplayId,
+  migrateLegacyConversationSession,
+  notifyInvestigationLoaded,
+  rebuildInvestigationSession,
+  saveInvestigationSession,
+  sessionStorageKeyFromState,
+  setActiveInvestigationId,
+} from "@/lib/investigation-session";
+import { ENGINE_MIN_DURATION_MS } from "@/components/conversation/engine-progress";
 import {
   defaultInvestigationMode,
   resolveInvestigationMode,
   type InvestigationMode,
 } from "@/lib/investigation-mode";
+import { attachmentsFromFiles } from "@/lib/multi-investigation-message";
+import { buildAnalystBriefingMessages } from "@/lib/analyst-briefing";
+import { ANALYST_THINKING_STEPS, streamAnalystBriefing } from "@/lib/analyst-stream";
+import { ensureEngineMessages } from "@/lib/engine-messages";
 import {
-  attachmentsFromFiles,
-  buildCombinedInvestigationsPrefix,
-  buildSeparateInvestigationsMessage,
-} from "@/lib/multi-investigation-message";
-import {
-  ConversationQuickActions,
-  type QuickActionId,
-} from "@/components/conversation/conversation-quick-actions";
-import { ACCEPTED_EXTENSIONS, validateUploadFiles } from "@/lib/upload";
-import { ChatBubble } from "@/components/investigation/chat-bubble";
-import { VayneThinking } from "@/components/shared/vayne-thinking";
-import { cn } from "@/lib/utils";
+  combinedAnalystIntro,
+  detectOverlappingAssets,
+  separateAnalystIntro,
+} from "@/lib/investigation-presentation";
+import { validateUploadFiles } from "@/lib/upload";
+import { VaneSidebar } from "@/components/workspace/vane-sidebar";
+import { VaneEnginePanel } from "@/components/workspace/vane-engine-panel";
+import { VaneAnalystPanel } from "@/components/workspace/vane-analyst-panel";
+import { LOG_PREFIX } from "@/lib/brand";
+import { ResetWorkspaceBootstrap } from "@/components/dev/reset-workspace-bootstrap";
 
 interface ChatMessage extends StoredChatMessage {
   streaming?: boolean;
 }
 
-export function VayneConversation({
+interface AnalystMessage extends StoredChatMessage {
+  streaming?: boolean;
+}
+
+export function VaneWorkspace({
   resumeId,
 }: {
   resumeId?: string | null;
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
+  const [analystMessages, setAnalystMessages] = useState<AnalystMessage[]>([]);
+  const [analystInput, setAnalystInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [bundle, setBundle] = useState<InvestigationBundle | null>(null);
   const [busy, setBusy] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [thinkingStep, setThinkingStep] = useState<string | null>(null);
   const [backendOnline, setBackendOnline] = useState(false);
   const [error, setError] = useState("");
   const [investigationMode, setInvestigationMode] = useState<InvestigationMode>("combined");
@@ -69,6 +81,7 @@ export function VayneConversation({
   const [investigationGroupId, setInvestigationGroupId] = useState<string | null>(null);
   const [investigationIds, setInvestigationIds] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [enginePhase, setEnginePhase] = useState<"idle" | "running" | "complete">("idle");
 
   useEffect(() => {
     if (files.length <= 1) {
@@ -77,16 +90,19 @@ export function VayneConversation({
       return;
     }
     if (!modeExplicit) {
-      setInvestigationMode(defaultInvestigationMode(files.length, input));
+      setInvestigationMode(defaultInvestigationMode(files.length, ""));
     }
-  }, [files.length, input, modeExplicit]);
+  }, [files.length, modeExplicit]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const analystScrollTopRef = useRef(0);
   const streamAbortRef = useRef<AbortController | null>(null);
-  const briefStartedRef = useRef(false);
+  const briefingAbortRef = useRef<AbortController | null>(null);
   const persistSkipRef = useRef(true);
   const skipResumeRef = useRef(false);
+  const switchingRef = useRef<string | null>(null);
+  const loadedResumeIdRef = useRef<string | null>(null);
+  const skipAutoScrollRef = useRef(false);
 
   const beginStream = useCallback(() => {
     streamAbortRef.current?.abort();
@@ -105,16 +121,6 @@ export function VayneConversation({
     [router],
   );
 
-  const updateMessage = useCallback((id: string, content: string, streaming: boolean) => {
-    setMessages((prev) => {
-      const idx = prev.findIndex((m) => m.id === id);
-      if (idx === -1) {
-        return [...prev, { id, role: "assistant", content, streaming }];
-      }
-      return prev.map((m) => (m.id === id ? { ...m, content, streaming } : m));
-    });
-  }, []);
-
   const scrollToBottom = useCallback((smooth: boolean) => {
     const el = scrollRef.current;
     if (!el) return;
@@ -129,219 +135,302 @@ export function VayneConversation({
       investigationIds?: string[];
       investigationMode?: InvestigationMode;
       scrollTop?: number;
-      inputDraft?: string;
+      analystScrollTop?: number;
+      analystInputDraft?: string;
+      analystMessages?: AnalystMessage[];
+      bundle?: InvestigationBundle | null;
     }) => {
       if (persistSkipRef.current) return;
+
       const invId = next?.investigationId !== undefined ? next.investigationId : investigationId ?? null;
+      const groupId =
+        next?.investigationGroupId !== undefined ? next.investigationGroupId : investigationGroupId;
+      const ids = next?.investigationIds ?? investigationIds;
       const msgs = serializeMessages(next?.messages ?? messages);
-      if (!invId && !msgs.length) return;
-      saveConversationSession({
+      const analystMsgs = serializeMessages(next?.analystMessages ?? analystMessages);
+      const activeBundle = next?.bundle !== undefined ? next.bundle : bundle;
+
+      const sessionKey = sessionStorageKeyFromState({
         investigationId: invId,
-        investigationGroupId:
-          next?.investigationGroupId !== undefined ? next.investigationGroupId : investigationGroupId,
-        investigationIds: next?.investigationIds ?? investigationIds,
+        investigationGroupId: groupId,
+        investigationIds: ids,
+      });
+      if (!sessionKey && !msgs.length) return;
+
+      const legacyPayload = {
+        investigationId: invId,
+        investigationGroupId: groupId,
+        investigationIds: ids,
         investigationMode: next?.investigationMode ?? investigationMode,
         messages: msgs,
         scrollTop: next?.scrollTop ?? scrollRef.current?.scrollTop ?? 0,
-        inputDraft: next?.inputDraft ?? input,
+        inputDraft: "",
         updatedAt: new Date().toISOString(),
-      });
+      };
+      saveConversationSession(legacyPayload);
+
+      if (!activeBundle || !sessionKey) return;
+
+      saveInvestigationSession(
+        buildInvestigationSessionFromBundle(activeBundle, {
+          messages: msgs,
+          analystMessages: analystMsgs,
+          investigationGroupId: groupId,
+          investigationIds: ids,
+          investigationMode: next?.investigationMode ?? investigationMode,
+          scrollTop: legacyPayload.scrollTop,
+          analystScrollTop: next?.analystScrollTop ?? analystScrollTopRef.current,
+          inputDraft: "",
+          analystInputDraft: next?.analystInputDraft ?? analystInput,
+          sessionId: sessionKey,
+        }),
+      );
     },
-    [investigationGroupId, investigationId, investigationIds, investigationMode, messages, input],
+    [
+      analystInput,
+      analystMessages,
+      bundle,
+      investigationGroupId,
+      investigationId,
+      investigationIds,
+      investigationMode,
+      messages,
+    ],
+  );
+
+  const playAnalystBriefing = useCallback(async (briefingMessages: StoredChatMessage[]) => {
+    briefingAbortRef.current?.abort();
+    const controller = new AbortController();
+    briefingAbortRef.current = controller;
+
+    setAnalystMessages([]);
+    setThinking(true);
+
+    try {
+      await streamAnalystBriefing(
+        briefingMessages,
+        (updater) => setAnalystMessages((prev) => updater(prev)),
+        {
+          onThinkingStep: setThinkingStep,
+          signal: controller.signal,
+        },
+      );
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      throw error;
+    } finally {
+      setThinking(false);
+      setThinkingStep(null);
+    }
+  }, []);
+
+  const switchToInvestigation = useCallback(
+    async (invId: string) => {
+      if (switchingRef.current === invId) return;
+      switchingRef.current = invId;
+
+      console.log(LOG_PREFIX);
+      console.log("Clearing current state...");
+
+      streamAbortRef.current?.abort();
+      briefingAbortRef.current?.abort();
+      persistSkipRef.current = true;
+
+      setMessages([]);
+      setAnalystMessages([]);
+      setThinkingStep(null);
+      setAnalystInput("");
+      setFiles([]);
+      setBundle(null);
+      setInvestigationGroupId(null);
+      setInvestigationIds([]);
+      setInvestigationMode("combined");
+      setModeExplicit(false);
+      setBusy(true);
+      setThinking(false);
+      setEnginePhase("idle");
+      setError("");
+
+      try {
+        migrateLegacyConversationSession();
+
+        let session = findSessionForInvestigation(invId);
+
+        console.log("Hydrating investigation state...");
+
+        if (!session) {
+          session = await rebuildInvestigationSession(invId);
+          saveInvestigationSession(session);
+        }
+
+        const displayId = investigationDisplayId(session);
+        console.log(`Loading investigation: ${displayId}`);
+
+        console.log("Restoring chat...");
+        const bundleIds = session.investigationIds?.length
+          ? session.investigationIds
+          : [invId];
+        const sourceLabels = session.files.map((file) => file.name);
+        const engineMessages = ensureEngineMessages(session.messages, bundleIds, {
+          investigationGroupId: session.investigationGroupId ?? null,
+          sourceLabels,
+        });
+        setMessages(engineMessages);
+        let restoredAnalyst = session.analystMessages ?? [];
+        setAnalystInput(session.analystInputDraft ?? "");
+        analystScrollTopRef.current = session.analystScrollTop ?? 0;
+        setInvestigationGroupId(session.investigationGroupId ?? null);
+        setInvestigationIds(session.investigationIds ?? [invId]);
+        if (session.investigationMode) {
+          setInvestigationMode(session.investigationMode);
+          setModeExplicit(true);
+        }
+
+        const primaryBundleId = session.investigationIds?.[0] ?? invId;
+        console.log("Restoring graph...");
+        const bundles = await Promise.all(bundleIds.map((id) => loadInvestigationBundle(id)));
+        const data = bundles[0];
+        setBundle(data);
+        if (!restoredAnalyst.length) {
+          void playAnalystBriefing(
+            buildAnalystBriefingMessages(bundles, {
+              sourceLabels: session.files.map((f) => f.name),
+            }),
+          );
+        } else {
+          setAnalystMessages(restoredAnalyst);
+        }
+        saveRecentInvestigation(
+          recentEntryFromBundle(
+            data,
+            session.files[0]?.name || data.report.target?.split(/[/\\]/).pop(),
+          ),
+        );
+
+        console.log("Restoring findings...");
+
+        setActiveInvestigationId(session.id);
+        syncUrl(invId);
+
+        persistSkipRef.current = false;
+        setHydrated(true);
+        notifyInvestigationLoaded(session.id);
+
+        skipAutoScrollRef.current = true;
+        requestAnimationFrame(() => {
+          if (session.scrollTop && scrollRef.current) {
+            scrollRef.current.scrollTop = session.scrollTop;
+          } else {
+            scrollToBottom(false);
+          }
+          skipAutoScrollRef.current = false;
+        });
+
+        console.log("Investigation loaded successfully.");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(false);
+        switchingRef.current = null;
+      }
+    },
+    [scrollToBottom, syncUrl, playAnalystBriefing],
   );
 
   useEffect(() => {
     checkHealth().then(setBackendOnline);
+    migrateLegacyConversationSession();
+
     if (skipResumeRef.current) {
       persistSkipRef.current = false;
       setHydrated(true);
+      skipResumeRef.current = false;
       return;
     }
-    const session = loadConversationSession();
-    const id = resumeId || session?.investigationId || null;
-    if (session?.messages?.length) {
-      setMessages(session.messages);
-      setInput(session.inputDraft || "");
-      setInvestigationGroupId(session.investigationGroupId ?? null);
-      setInvestigationIds(session.investigationIds ?? []);
-      if (session.investigationMode) {
-        setInvestigationMode(session.investigationMode);
-        setModeExplicit(true);
-      }
+
+    if (resumeId) {
+      if (loadedResumeIdRef.current === resumeId && hydrated) return;
+      loadedResumeIdRef.current = resumeId;
+      void switchToInvestigation(resumeId);
+      return;
     }
-    if (id && !resumeId) syncUrl(id);
-    if (id && session?.messages?.length) {
-      loadInvestigationBundle(id)
-        .then(setBundle)
-        .catch(() => null)
-        .finally(() => {
-          persistSkipRef.current = false;
-          setHydrated(true);
-          requestAnimationFrame(() => {
-            if (session.scrollTop && scrollRef.current) {
-              scrollRef.current.scrollTop = session.scrollTop;
-            }
-          });
-        });
-    } else {
+
+    loadedResumeIdRef.current = null;
+    if (!hydrated) {
       persistSkipRef.current = false;
       setHydrated(true);
     }
-  }, [resumeId, syncUrl]);
+  }, [resumeId, switchToInvestigation, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
     persist();
-  }, [messages, investigationId, input, hydrated, persist]);
+  }, [messages, analystMessages, investigationId, analystInput, hydrated, persist]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
       if (persistSkipRef.current) return;
-      saveConversationSession({
-        investigationId: investigationId ?? null,
-        investigationGroupId,
-        investigationIds,
-        investigationMode,
-        messages: serializeMessages(messages),
-        scrollTop: el.scrollTop,
-        inputDraft: input,
-        updatedAt: new Date().toISOString(),
-      });
+      persist({ scrollTop: el.scrollTop });
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, [hydrated, investigationGroupId, investigationId, investigationIds, investigationMode, messages, input]);
+  }, [hydrated, persist]);
 
   useEffect(() => {
+    if (skipAutoScrollRef.current) return;
     const streaming = messages.some((m) => m.streaming);
     scrollToBottom(!streaming);
-  }, [messages, thinking, scrollToBottom]);
+  }, [messages, thinking, enginePhase, scrollToBottom]);
 
-  const streamBrief = useCallback(
-    async (
-      invId: string,
-      withLinks: boolean,
-      signal?: AbortSignal,
-      prefix = "",
-    ) => {
-      const streamId = `brief-${invId}`;
-      const batcher = createStreamBatcher((text) => {
-        setThinking(false);
-        updateMessage(streamId, text, true);
+  const pushInvestigationMessage = useCallback(
+    (message: StoredChatMessage) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
       });
-
-      setThinking(true);
-
-      const finalize = (text: string) => {
-        batcher.finish();
-        setThinking(false);
-        let out = `${prefix}${text || ANALYST_OFFLINE_MESSAGE}`;
-        if (withLinks) out += investigationLinksFooter(invId);
-        updateMessage(streamId, out, false);
-      };
-
-      try {
-        for await (const event of streamInvestigationBrief(invId, { signal })) {
-          if (signal?.aborted) return;
-          if (event.type === "thinking") continue;
-          if (event.type === "error") {
-            const msg =
-              event.code === "llm_offline" || event.code === "llm_not_configured"
-                ? ANALYST_OFFLINE_MESSAGE
-                : event.message;
-            finalize(msg);
-            return;
-          }
-          if (event.type === "token") {
-            setThinking(false);
-            batcher.append(event.token);
-          }
-          if (event.type === "done") break;
-        }
-      } catch {
-        if (signal?.aborted) return;
-        finalize(ANALYST_OFFLINE_MESSAGE);
-        return;
-      }
-
-      if (signal?.aborted) return;
-      finalize(batcher.text);
     },
-    [updateMessage],
+    [],
   );
 
-  const loadInvestigation = useCallback(
-    async (invId: string, userPrompt?: string, skipBrief = false) => {
-      setBusy(true);
-      setError("");
-      syncUrl(invId);
-
-      try {
-        const data = await loadInvestigationBundle(invId);
-        setBundle(data);
-        saveRecentInvestigation(
-          recentEntryFromBundle(
-            data,
-            looksLikeFilename(userPrompt) ? userPrompt : extractSourceFile(undefined, data.report),
-          ),
-        );
-
-        if (userPrompt) {
-          setMessages((prev) => {
-            if (prev.some((m) => m.role === "user" && m.content === userPrompt)) return prev;
-            return [...prev, { id: `user-${Date.now()}`, role: "user", content: userPrompt }];
-          });
-        }
-
-        const hasBrief = messages.some((m) => m.id === `brief-${invId}`);
-        if (!skipBrief && !hasBrief) {
-          setThinking(true);
-          const signal = beginStream();
-          await streamBrief(invId, true, signal);
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-        setThinking(false);
-      } finally {
-        setBusy(false);
+  const updateAnalystMessage = useCallback((id: string, content: string, streaming: boolean) => {
+    setAnalystMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === id);
+      if (idx === -1) {
+        return [...prev, { id, role: "assistant", content, streaming }];
       }
-    },
-    [beginStream, messages, streamBrief, syncUrl],
-  );
-
-  useEffect(() => {
-    if (!resumeId) {
-      skipResumeRef.current = false;
-      if (!messages.length && !bundle) {
-        persistSkipRef.current = false;
-      }
-      return;
-    }
-    if (skipResumeRef.current || bundle || briefStartedRef.current) return;
-    briefStartedRef.current = true;
-    const session = loadConversationSession();
-    const hasHistory = session?.investigationId === resumeId && (session.messages?.length ?? 0) > 0;
-    loadInvestigation(resumeId, undefined, hasHistory);
-  }, [resumeId, bundle, loadInvestigation, messages.length]);
+      return prev.map((m) => (m.id === id ? { ...m, content, streaming } : m));
+    });
+  }, []);
 
   const streamReply = useCallback(
     async (question: string) => {
       if (!investigationId) return;
 
       const streamId = `reply-${Date.now()}`;
-      const history = messages
-        .filter((m) => !m.streaming)
-        .map(({ role, content }) => ({ role, content }));
+      const history = sanitizeChatHistory(analystMessages);
 
-      setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", content: question }]);
+      setAnalystMessages((prev) => [
+        ...prev,
+        { id: `user-${Date.now()}`, role: "user", content: question },
+      ]);
+      setAnalystInput("");
       setBusy(true);
       setThinking(true);
+      setThinkingStep(ANALYST_THINKING_STEPS[0]);
 
-      const batcher = createStreamBatcher((text) => {
+      let stepIndex = 0;
+      const stepTimer = window.setInterval(() => {
+        stepIndex = (stepIndex + 1) % ANALYST_THINKING_STEPS.length;
+        setThinkingStep(ANALYST_THINKING_STEPS[stepIndex]);
+      }, 600);
+
+      const batcher = createRhythmStreamBatcher((text) => {
+        window.clearInterval(stepTimer);
+        setThinkingStep(null);
         setThinking(false);
-        updateMessage(streamId, text, true);
+        updateAnalystMessage(streamId, text, true);
       });
       let gotTokens = false;
 
@@ -353,18 +442,24 @@ export function VayneConversation({
           if (event.type === "thinking") continue;
 
           if (event.type === "error") {
+            window.clearInterval(stepTimer);
+            setThinkingStep(null);
             setThinking(false);
             batcher.finish();
             const offline =
               event.code === "llm_offline" ||
               event.code === "http_error" ||
               event.code === "llm_not_configured";
-            updateMessage(streamId, offline ? ANALYST_OFFLINE_MESSAGE : event.message, false);
+            updateAnalystMessage(streamId, offline ? ANALYST_OFFLINE_MESSAGE : event.message, false);
             setBusy(false);
             return;
           }
 
           if (event.type === "token") {
+            if (!gotTokens) {
+              window.clearInterval(stepTimer);
+              setThinkingStep(null);
+            }
             gotTokens = true;
             setThinking(false);
             batcher.append(event.token);
@@ -373,37 +468,34 @@ export function VayneConversation({
           if (event.type === "done") break;
         }
       } catch {
+        window.clearInterval(stepTimer);
+        setThinkingStep(null);
         setThinking(false);
         batcher.finish();
-        updateMessage(streamId, ANALYST_OFFLINE_MESSAGE, false);
+        updateAnalystMessage(streamId, ANALYST_OFFLINE_MESSAGE, false);
         setBusy(false);
         return;
       }
 
       batcher.finish();
+      window.clearInterval(stepTimer);
+      setThinkingStep(null);
       setThinking(false);
-      updateMessage(
+      updateAnalystMessage(
         streamId,
         gotTokens ? batcher.text || ANALYST_OFFLINE_MESSAGE : ANALYST_OFFLINE_MESSAGE,
         false,
       );
       setBusy(false);
     },
-    [beginStream, investigationId, messages, updateMessage],
+    [analystMessages, beginStream, investigationId, updateAnalystMessage],
   );
 
-  const handleSubmit = useCallback(async () => {
-    const text = input.trim();
+  const handleAnalyze = useCallback(async () => {
     if (busy) return;
 
-    if (bundle && text) {
-      setInput("");
-      await streamReply(text);
-      return;
-    }
-
     if (!files.length) {
-      if (text) setError("Attach evidence first, then ask VAYNE to analyze it.");
+      setError("Upload evidence files, then click Analyze.");
       return;
     }
 
@@ -413,23 +505,21 @@ export function VayneConversation({
       return;
     }
     if (!backendOnline) {
-      setError(`Backend offline (${API_BASE})`);
+      setError(`Backend offline (${getApiBase()})`);
       return;
     }
 
-    const prompt =
-      text || `Analyze ${validation.files.map((f) => f.name).join(", ")}`;
+    const prompt = `Analyze ${validation.files.map((f) => f.name).join(", ")}`;
     const attachments = attachmentsFromFiles(validation.files);
     const resolvedMode = modeExplicit
       ? investigationMode
       : resolveInvestigationMode(validation.files.length, prompt);
 
-    setInput("");
     setFiles([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
     setBusy(true);
-    setThinking(true);
+    setEnginePhase("running");
     setError("");
+    const engineStartedAt = Date.now();
 
     setMessages((prev) => [
       ...prev,
@@ -438,6 +528,7 @@ export function VayneConversation({
 
     try {
       const label = validation.files.map((f) => f.name).join(", ");
+      const fileNames = validation.files.map((f) => f.name);
       const result = await analyzeFiles(validation.files, label, {
         mode: resolvedMode,
         prompt,
@@ -447,61 +538,113 @@ export function VayneConversation({
       setInvestigationIds(ids);
       setInvestigationMode(result.mode);
 
+      const engineElapsed = Date.now() - engineStartedAt;
+      const engineRemain = Math.max(0, ENGINE_MIN_DURATION_MS - engineElapsed);
+      if (engineRemain > 0) {
+        await new Promise((r) => window.setTimeout(r, engineRemain));
+      }
+      setEnginePhase("complete");
+      await new Promise((r) => window.setTimeout(r, 900));
+
       if (result.mode === "separate" && result.investigations.length > 1) {
         const bundles = await Promise.all(
           result.investigations.map((item) => loadInvestigationBundle(item.investigation_id)),
         );
         setBundle(bundles[0] ?? null);
-        for (const data of bundles) {
+        for (const row of bundles) {
           saveRecentInvestigation(
             recentEntryFromBundle(
-              data,
-              data.report.target?.split(/[/\\]/).pop() || label,
+              row,
+              row.report.target?.split(/[/\\]/).pop() || label,
             ),
           );
         }
         syncUrl(bundles[0]?.detail.summary.id ?? result.investigation_id);
-        const groupBriefId = `brief-group-${result.investigation_group_id ?? result.investigation_id}`;
-        setThinking(false);
-        updateMessage(groupBriefId, buildSeparateInvestigationsMessage(bundles), false);
+
+        const overlap = detectOverlappingAssets(bundles);
+        let intro = separateAnalystIntro(bundles.length);
+        if (overlap) {
+          intro += " VANE correlated overlapping assets across uploaded evidence.";
+        }
+
+        const groupId = `inv-group-${result.investigation_group_id ?? result.investigation_id}`;
+        pushInvestigationMessage({
+          id: groupId,
+          role: "assistant",
+          content: "",
+          kind: "multi-investigation",
+          investigationSources: bundles.map((row, index) => ({
+            id: row.detail.summary.id,
+            sourceLabel:
+              fileNames[index] ||
+              row.report.target?.split(/[/\\]/).pop() ||
+              `Evidence ${index + 1}`,
+          })),
+        });
+        void playAnalystBriefing(
+          buildAnalystBriefingMessages(bundles, {
+            intro,
+            sourceLabels: fileNames,
+          }),
+        );
       } else {
         const data = await loadInvestigationBundle(result.investigation_id);
         setBundle(data);
         saveRecentInvestigation(recentEntryFromBundle(data, label));
         syncUrl(result.investigation_id);
-        const prefix = buildCombinedInvestigationsPrefix(validation.files.map((file) => file.name));
-        const signal = beginStream();
-        await streamBrief(result.investigation_id, true, signal, prefix);
+
+        const intro = combinedAnalystIntro(fileNames.length);
+        pushInvestigationMessage({
+          id: `inv-${result.investigation_id}`,
+          role: "assistant",
+          content: "",
+          kind: "investigation",
+          investigationId: result.investigation_id,
+          sourceLabel: fileNames.length === 1 ? fileNames[0] : label,
+        });
+        void playAnalystBriefing(
+          buildAnalystBriefingMessages([data], {
+            intro: intro || undefined,
+            sourceLabels: [fileNames.length === 1 ? fileNames[0] : label],
+          }),
+        );
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setThinking(false);
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.toLowerCase().includes("failed to fetch")) {
+        setError(
+          `Cannot reach VANE API at ${getApiBase()}. Start the backend (uvicorn) and ensure NEXT_PUBLIC_API_URL matches.`,
+        );
+      } else {
+        setError(message);
+      }
     } finally {
+      setEnginePhase("idle");
       setBusy(false);
     }
   }, [
     backendOnline,
-    beginStream,
-    bundle,
     busy,
     files,
-    input,
     investigationMode,
     modeExplicit,
-    streamBrief,
-    streamReply,
+    pushInvestigationMessage,
+    playAnalystBriefing,
     syncUrl,
-    updateMessage,
   ]);
 
   useEffect(() => {
     const onNewChat = () => {
       streamAbortRef.current?.abort();
+      briefingAbortRef.current?.abort();
       persistSkipRef.current = true;
       skipResumeRef.current = true;
-      briefStartedRef.current = false;
+      loadedResumeIdRef.current = null;
+      switchingRef.current = null;
       setMessages([]);
-      setInput("");
+      setAnalystMessages([]);
+      setThinkingStep(null);
+      setAnalystInput("");
       setFiles([]);
       setBundle(null);
       setInvestigationGroupId(null);
@@ -510,7 +653,10 @@ export function VayneConversation({
       setModeExplicit(false);
       setBusy(false);
       setThinking(false);
+      setThinkingStep(null);
+      setEnginePhase("idle");
       setError("");
+      setActiveInvestigationId(null);
       clearConversationSession();
       router.replace("/", { scroll: false });
     };
@@ -521,206 +667,97 @@ export function VayneConversation({
   useEffect(() => {
     return () => {
       streamAbortRef.current?.abort();
+      briefingAbortRef.current?.abort();
     };
   }, []);
 
-  const sessionActive =
-    messages.length > 0 || !!bundle || thinking || busy;
-
-  const handleQuickAction = useCallback(
-    (id: QuickActionId) => {
-      if (busy) return;
-      setError("");
-      if (id === "analyze") {
-        fileInputRef.current?.click();
-        return;
-      }
-      if (id === "paths") {
-        setInput(
-          "Find the most critical attack paths in this environment and explain how an attacker would chain them.",
-        );
-        return;
-      }
-      setInput(
-        "Prepare an executive report summarizing business risk, critical findings, and prioritized remediation.",
-      );
-    },
-    [busy],
-  );
-
   const removeFile = useCallback((index: number) => {
-    setFiles((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      if (!next.length && fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      return next;
-    });
+    setFiles((prev) => prev.filter((_, i) => i !== index));
     setError("");
   }, []);
 
-  const inputForm = (
-    <>
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept={ACCEPTED_EXTENSIONS.join(",")}
-        className="hidden"
-        onChange={(e) => {
-          const picked = Array.from(e.target.files ?? []);
-          if (picked.length) {
-            setFiles((prev) => {
-              const seen = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
-              const merged = [...prev];
-              for (const file of picked) {
-                const key = `${file.name}:${file.size}:${file.lastModified}`;
-                if (!seen.has(key)) {
-                  seen.add(key);
-                  merged.push(file);
-                }
-              }
-              return merged;
-            });
-          }
-          e.target.value = "";
-          setError("");
-        }}
-      />
-
-      <form
-        className={cn(
-          "flex w-full flex-col rounded-[28px] border border-white/[0.14] bg-[#141414] p-2.5",
-          "shadow-[0_2px_24px_rgba(0,0,0,0.35)]",
-          "transition-colors hover:border-white/20 focus-within:border-white/24",
-        )}
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit();
-        }}
-      >
-        {files.length > 1 ? (
-          <InvestigationModeToggle
-            value={investigationMode}
-            disabled={busy}
-            onChange={(mode) => {
-              setModeExplicit(true);
-              setInvestigationMode(mode);
-            }}
-          />
-        ) : null}
-
-        <ComposerAttachments files={files} onRemove={removeFile} disabled={busy} />
-
-        <div className="flex items-end gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => fileInputRef.current?.click()}
-            className="flex size-11 shrink-0 items-center justify-center rounded-full text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white/80 disabled:opacity-40"
-            aria-label="Attach evidence"
-          >
-            <Paperclip className="size-5" strokeWidth={1.5} />
-          </button>
-
-          <div className="min-w-0 flex-1 py-1">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={busy}
-              placeholder="Ask VAYNE anything..."
-              rows={1}
-              className="max-h-32 w-full resize-none bg-transparent px-1 text-[16px] leading-relaxed text-white outline-none placeholder:text-white/28 disabled:opacity-50"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-              }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={busy || (!input.trim() && !files.length && !bundle)}
-            className={cn(
-              "flex size-11 shrink-0 items-center justify-center rounded-full transition-all",
-              busy || (!input.trim() && !files.length && !bundle)
-                ? "text-white/18"
-                : "bg-white text-black hover:bg-white/92",
-            )}
-            aria-label="Send"
-          >
-            <ArrowUp className="size-5" strokeWidth={2} />
-          </button>
-        </div>
-      </form>
-    </>
-  );
-
-  const statusMessages = (
-    <>
-      {error ? <p className="mb-2 text-center text-[11px] text-white/45">{error}</p> : null}
-      {!backendOnline && !busy ? (
-        <p className="mb-2 text-center text-[11px] text-white/35">
-          Backend offline — start the VAYNE API on port 8000
-        </p>
-      ) : null}
-    </>
-  );
-
-  if (!sessionActive) {
-    return (
-      <ConversationHome
-        quickActions={
-          <ConversationQuickActions onAction={handleQuickAction} disabled={busy} />
-        }
-      >
-        {statusMessages}
-        {inputForm}
-      </ConversationHome>
-    );
-  }
+  const showEngineResults = !!bundle || enginePhase !== "idle" || messages.length > 0;
+  const engineSourceLabels = bundle
+    ? [
+        bundle.report.target?.split(/[/\\]/).pop() ||
+          investigationIds.find((id) => id === bundle.detail.summary.id) ||
+          "evidence",
+      ]
+    : [];
 
   return (
-    <div className="relative flex h-[calc(100vh-0px)] flex-col">
-      <header className="flex items-center justify-between px-6 py-4 lg:px-8">
-        <span className="text-[13px] font-semibold tracking-[0.14em] text-white/70">VAYNE</span>
-        <button
-          type="button"
-          className="flex size-9 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/70"
-          aria-label="Menu"
-        >
-          <MoreHorizontal className="size-5" strokeWidth={1.5} />
-        </button>
-      </header>
+    <div className="flex h-screen w-full overflow-hidden bg-vx-app text-white">
+      <ResetWorkspaceBootstrap />
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto pb-24">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className={`flex flex-col pt-2 ${CHAT_CONTAINER_CLASS}`}
-        >
-          {messages.map((msg) => (
-            <ChatBubble
-              key={msg.id}
-              id={msg.id}
-              role={msg.role}
-              content={msg.content}
-              streaming={msg.streaming}
-              attachments={msg.attachments}
-            />
-          ))}
-          {thinking ? <VayneThinking /> : null}
-        </motion.div>
-      </div>
+      <Suspense
+        fallback={
+          <aside className="h-screen w-[20%] min-w-[260px] shrink-0 bg-vx-app" />
+        }
+      >
+        <VaneSidebar />
+      </Suspense>
 
-      <div className="sticky bottom-0 z-20 shrink-0 bg-gradient-to-t from-black via-black/95 to-transparent pt-6">
-        <div className={`pb-5 ${CHAT_CONTAINER_CLASS}`}>
-          {statusMessages}
-          {inputForm}
-        </div>
-      </div>
+      <VaneEnginePanel
+        scrollRef={scrollRef}
+        showResults={showEngineResults}
+        busy={busy}
+        backendOnline={backendOnline}
+        error={error}
+        files={files}
+        investigationMode={investigationMode}
+        enginePhase={enginePhase}
+        messages={messages}
+        investigationIds={
+          investigationIds.length
+            ? investigationIds
+            : bundle
+              ? [bundle.detail.summary.id]
+              : []
+        }
+        investigationGroupId={investigationGroupId}
+        sourceLabels={engineSourceLabels}
+        onSelectFiles={(picked) => {
+          setFiles((prev) => {
+            const seen = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
+            const merged = [...prev];
+            for (const file of picked) {
+              const key = `${file.name}:${file.size}:${file.lastModified}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                merged.push(file);
+              }
+            }
+            return merged;
+          });
+          setError("");
+        }}
+        onRemoveFile={removeFile}
+        onModeChange={(mode) => {
+          setModeExplicit(true);
+          setInvestigationMode(mode);
+        }}
+        onAnalyze={() => void handleAnalyze()}
+      />
+
+      <VaneAnalystPanel
+        bundle={bundle}
+        messages={analystMessages}
+        input={analystInput}
+        busy={busy}
+        thinking={thinking}
+        thinkingStep={thinkingStep}
+        analystOnline={backendOnline}
+        initialScrollTop={analystScrollTopRef.current}
+        onInputChange={setAnalystInput}
+        onAsk={(q) => void streamReply(q)}
+        onScroll={(top) => {
+          analystScrollTopRef.current = top;
+          persist({ analystScrollTop: top });
+        }}
+      />
     </div>
   );
 }
+
+/** @deprecated Use VaneWorkspace */
+export const VayneConversation = VaneWorkspace;

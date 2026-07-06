@@ -1,6 +1,6 @@
 /** Ask VAYNE — streaming chat client (OpenAI GPT analyst). */
 
-import { API_BASE } from "./api";
+import { getApiBase } from "./api";
 import type { ChatTurn } from "./vayne-analyst";
 
 export type AnalystStreamEvent =
@@ -160,12 +160,29 @@ async function* readSseStream(
 
 export async function fetchAnalystStatus(): Promise<AnalystStatus | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/analyst/status`, { cache: "no-store" });
+    const res = await fetch(`${getApiBase()}/api/analyst/status`, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json()) as AnalystStatus;
   } catch {
     return null;
   }
+}
+
+/** Strip empty / structured investigation turns — backend requires min_length=1 per turn. */
+export function sanitizeChatHistory(
+  messages: Array<{
+    role: string;
+    content: string;
+    streaming?: boolean;
+    kind?: string;
+  }>,
+): ChatTurn[] {
+  return messages
+    .filter((m) => !m.streaming)
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .filter((m) => m.kind !== "investigation" && m.kind !== "multi-investigation")
+    .map(({ role, content }) => ({ role: role as ChatTurn["role"], content: content.trim() }))
+    .filter((m) => m.content.length > 0);
 }
 
 export async function* streamAnalystChat(
@@ -178,13 +195,15 @@ export async function* streamAnalystChat(
     signal?: AbortSignal;
   },
 ): AsyncGenerator<AnalystStreamEvent> {
-  const url = `${API_BASE}/api/investigation/${investigationId}/chat`;
+  const url = `${getApiBase()}/api/investigation/${investigationId}/chat`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message,
-      history,
+      history: history
+        .map((turn) => ({ role: turn.role, content: turn.content.trim() }))
+        .filter((turn) => turn.content.length > 0),
       report_mode: options?.reportMode ?? null,
       preset_id: options?.presetId ?? null,
     }),
@@ -204,7 +223,7 @@ export async function* streamInvestigationBrief(
   investigationId: string,
   options?: { signal?: AbortSignal },
 ): AsyncGenerator<AnalystStreamEvent> {
-  const url = `${API_BASE}/api/investigation/${investigationId}/brief`;
+  const url = `${getApiBase()}/api/investigation/${investigationId}/brief`;
   const res = await fetch(url, {
     method: "GET",
     cache: "no-store",

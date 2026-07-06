@@ -13,7 +13,10 @@ import type {
 const LOCAL_DEV_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 function normalizeApiBase(raw?: string): string {
-  const fallback = "http://127.0.0.1:8000";
+  const fallback =
+    typeof window !== "undefined"
+      ? `http://${window.location.hostname}:8000`
+      : "http://127.0.0.1:8000";
   if (!raw?.trim()) return fallback;
 
   let url = raw.trim().replace(/\/$/, "");
@@ -24,8 +27,6 @@ function normalizeApiBase(raw?: string): string {
     const parsed = new URL(url);
     if (parsed.protocol === "https:" && LOCAL_DEV_HOSTS.has(parsed.hostname)) {
       parsed.protocol = "http:";
-      if (parsed.hostname === "localhost") parsed.hostname = "127.0.0.1";
-      url = parsed.origin;
     }
     return parsed.origin;
   } catch {
@@ -33,11 +34,27 @@ function normalizeApiBase(raw?: string): string {
   }
 }
 
+/** Resolve API origin — always match browser hostname in local dev. */
+export function getApiBase(): string {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (LOCAL_DEV_HOSTS.has(host)) {
+      return `http://${host}:8000`;
+    }
+  }
+  const configured = process.env.NEXT_PUBLIC_API_URL;
+  if (configured?.trim()) {
+    return normalizeApiBase(configured);
+  }
+  return "http://127.0.0.1:8000";
+}
+
+/** Use getApiBase() in client code — this snapshot is SSR-only. */
 export const API_BASE =
-  normalizeApiBase(process.env.NEXT_PUBLIC_API_URL) ?? "http://127.0.0.1:8000";
+  typeof window !== "undefined" ? getApiBase() : "http://localhost:8000";
 
 function apiUrl(path: string): string {
-  return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${getApiBase()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 async function fetchJson<T>(path: string): Promise<T> {
@@ -78,19 +95,31 @@ export async function analyzeFiles(
   if (options?.prompt) form.append("prompt", options.prompt);
   if (options?.mode) form.append("mode", options.mode);
   fileList.forEach((f) => form.append("files", f));
-  const res = await fetch(endpoint, { method: "POST", body: form });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<{
-    investigation_id: string;
-    status: string;
-    mode: "combined" | "separate";
-    investigation_group_id?: string | null;
-    investigations: Array<{
+  try {
+    const res = await fetch(endpoint, { method: "POST", body: form });
+    if (!res.ok) {
+      const detail = await res.text();
+      throw new Error(detail || `Analysis failed (${res.status})`);
+    }
+    return res.json() as Promise<{
       investigation_id: string;
-      source_filename: string;
       status: string;
+      mode: "combined" | "separate";
+      investigation_group_id?: string | null;
+      investigations: Array<{
+        investigation_id: string;
+        source_filename: string;
+        status: string;
+      }>;
     }>;
-  }>;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(
+        `Cannot reach VAYNE API at ${getApiBase()}. Start the backend: python -m uvicorn product.backend.main:app --reload --port 8000`,
+      );
+    }
+    throw error;
+  }
 }
 
 export async function getInvestigation(id: string): Promise<InvestigationDetail> {
@@ -131,4 +160,18 @@ export async function getReportMarkdown(
   type: "executive" | "analyst" | "attack_story" | "remediation",
 ): Promise<string> {
   return fetchText(`/api/investigation/${id}/reports/${type}`);
+}
+
+export async function resetWorkspace(): Promise<{
+  status: string;
+  investigations_deleted: number;
+  storage_dirs_removed: number;
+  storage_files_removed: number;
+}> {
+  const res = await fetch(apiUrl("/api/dev/reset-workspace"), { method: "POST" });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(detail || `Workspace reset failed (${res.status})`);
+  }
+  return res.json();
 }

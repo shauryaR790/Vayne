@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { resetConversationToHome } from "@/lib/conversation-session";
+import { DeveloperMenu } from "@/components/dev/developer-menu";
 import { Button } from "@/components/ui/button";
 
 const segmentMap: Record<string, string> = {
@@ -55,6 +56,8 @@ export function Topbar() {
           <Plus className="size-4" />
           New Scan
         </Button>
+
+        <DeveloperMenu placement="below" />
 
         <button
           type="button"

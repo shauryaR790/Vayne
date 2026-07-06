@@ -2,10 +2,21 @@ import type { MessageAttachment } from "./multi-investigation-message";
 
 export type { MessageAttachment };
 
+export type MessageKind = "text" | "investigation" | "multi-investigation";
+
+export interface InvestigationSourceRef {
+  id: string;
+  sourceLabel?: string;
+}
+
 export interface StoredChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  kind?: MessageKind;
+  investigationId?: string;
+  sourceLabel?: string;
+  investigationSources?: InvestigationSourceRef[];
   attachments?: MessageAttachment[];
 }
 
@@ -21,6 +32,7 @@ export interface ConversationSession {
 }
 
 const SESSION_KEY = "vayne-active-conversation";
+export const CONVERSATION_SESSION_STORAGE_KEY = SESSION_KEY;
 
 export function loadConversationSession(): ConversationSession | null {
   if (typeof window === "undefined") return null;
@@ -61,10 +73,25 @@ export function serializeMessages(
 ): StoredChatMessage[] {
   return messages
     .filter((message) => !message.streaming)
-    .map(({ id, role, content, attachments }) => ({
-      id,
-      role,
-      content,
-      ...(attachments?.length ? { attachments } : {}),
-    }));
+    .map(
+      ({
+        id,
+        role,
+        content,
+        kind,
+        investigationId,
+        sourceLabel,
+        investigationSources,
+        attachments,
+      }) => ({
+        id,
+        role,
+        content,
+        ...(kind && kind !== "text" ? { kind } : {}),
+        ...(investigationId ? { investigationId } : {}),
+        ...(sourceLabel ? { sourceLabel } : {}),
+        ...(investigationSources?.length ? { investigationSources } : {}),
+        ...(attachments?.length ? { attachments } : {}),
+      }),
+    );
 }

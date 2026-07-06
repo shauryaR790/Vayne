@@ -7,6 +7,7 @@ import {
   ANALYST_OFFLINE_MESSAGE,
   ANALYST_PRESETS,
   fetchAnalystStatus,
+  sanitizeChatHistory,
   streamAnalystChat,
   type AnalystStatus,
   type ReportMode,
@@ -171,9 +172,7 @@ export function AskVaynePanel({
       const q = question.trim();
       if (!q || busy) return;
 
-      const history: ChatTurn[] = messages
-        .filter((m) => !m.streaming)
-        .map(({ role, content }) => ({ role, content }));
+      const history: ChatTurn[] = sanitizeChatHistory(messages);
 
       setMessages((prev) => [
         ...prev,

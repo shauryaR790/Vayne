@@ -1,7 +1,7 @@
-import { API_BASE } from "./api";
+import { getApiBase } from "./api";
 
 export function investigationLinksFooter(investigationId: string): string {
-  const base = `${API_BASE}/api/investigation/${investigationId}`;
+  const base = `${getApiBase()}/api/investigation/${investigationId}`;
   return [
     "",
     "[View Full Investigation →](/investigation/" + investigationId + ")",

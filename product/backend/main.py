@@ -10,11 +10,12 @@ from product.backend.env import load_repo_env
 
 load_repo_env()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from product.backend.db.session import init_db
-from product.backend.routes import analyst_chat, attack_paths, investigations, proof, upload
+from product.backend.routes import analyst_chat, attack_paths, dev, investigations, proof, upload
 
 
 @asynccontextmanager
@@ -40,16 +41,28 @@ origins = os.getenv(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in origins if o.strip()],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "path": str(request.url.path)},
+    )
+
 
 app.include_router(upload.router)
 app.include_router(investigations.router)
 app.include_router(attack_paths.router)
 app.include_router(proof.router)
 app.include_router(analyst_chat.router)
+app.include_router(dev.router)
 
 
 @app.get("/health")

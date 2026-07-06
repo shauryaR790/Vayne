@@ -5,7 +5,7 @@ import { VayneThinking } from "@/components/shared/vayne-thinking";
 
 export default function HomePage() {
   return (
-    <AppShell activeNav="home" hideTopbar>
+    <AppShell activeNav="home" workspaceMode>
       <Suspense
         fallback={
           <div className="flex min-h-[50vh] items-center justify-center">

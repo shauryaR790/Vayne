@@ -24,6 +24,7 @@ import {
   syncRecentInvestigationsFromApi,
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
+import { DeveloperMenu } from "@/components/dev/developer-menu";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -286,18 +287,21 @@ export function Sidebar({ activeNav }: { activeNav?: string }) {
       <SidebarDivider />
 
       <div className="shrink-0 p-3">
-        <button
-          type="button"
-          className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-white/[0.05]"
-        >
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-[11px] font-semibold text-emerald-400">
-            O
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[14px] font-medium text-white">Operator</p>
-            <p className="truncate text-[12px] text-white/70">Plan / Workspace</p>
-          </div>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-white/[0.05]"
+          >
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-[11px] font-semibold text-emerald-400">
+              O
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-medium text-white">Operator</p>
+              <p className="truncate text-[12px] text-white/70">Plan / Workspace</p>
+            </div>
+          </button>
+          <DeveloperMenu />
+        </div>
       </div>
     </aside>
   );

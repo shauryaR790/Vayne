@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { PageEdgeVignette } from "@/components/layout/page-edge-vignette";
+import { ResetWorkspaceBootstrap } from "@/components/dev/reset-workspace-bootstrap";
 import { DotPattern } from "@/components/ui/dot-pattern";
 
 function SidebarFallback() {
@@ -14,15 +15,22 @@ function SidebarFallback() {
 export function AppShell({
   children,
   hideTopbar = false,
+  workspaceMode = false,
   activeNav: _activeNav,
 }: {
   children: React.ReactNode;
   hideTopbar?: boolean;
+  workspaceMode?: boolean;
   /** @deprecated Sidebar no longer uses dashboard nav highlighting */
   activeNav?: string;
 }) {
+  if (workspaceMode) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="relative flex min-h-screen bg-black">
+      <ResetWorkspaceBootstrap />
       <DotPattern
         width={24}
         height={24}

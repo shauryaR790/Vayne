@@ -10,14 +10,18 @@ const WAVE_DELAY = 0.1;
 export function useGraphAnimations(
   containerRef: React.RefObject<HTMLDivElement | null>,
   ready: boolean,
+  options?: { hero?: boolean },
 ) {
   const ran = useRef(false);
+  const hero = options?.hero ?? false;
 
   useEffect(() => {
     if (!ready || !containerRef.current || ran.current) return;
     ran.current = true;
 
     const root = containerRef.current;
+    const waveDelay = hero ? 0.14 : WAVE_DELAY;
+    const edgeDelay = hero ? 0.75 : 0.55;
 
     for (const wave of WAVE_ORDER) {
       const nodes = root.querySelectorAll(`.graph-node-inner[data-wave="${wave}"]`);
@@ -26,10 +30,10 @@ export function useGraphAnimations(
         { opacity: 0 },
         {
           opacity: wave === 5 ? 0.55 : 1,
-          duration: 0.25,
-          stagger: 0.1,
+          duration: hero ? 0.35 : 0.25,
+          stagger: hero ? 0.12 : 0.1,
           ease: "power2.out",
-          delay: wave * WAVE_DELAY,
+          delay: wave * waveDelay,
         },
       );
     }
@@ -38,7 +42,19 @@ export function useGraphAnimations(
     gsap.fromTo(
       edges,
       { opacity: 0 },
-      { opacity: 0.35, duration: 0.4, stagger: 0.008, ease: "power2.out", delay: 0.55 },
+      {
+        opacity: hero ? 0.75 : 0.35,
+        duration: hero ? 0.55 : 0.4,
+        stagger: hero ? 0.015 : 0.008,
+        ease: "power2.out",
+        delay: edgeDelay,
+        onComplete: () => {
+          if (!hero) return;
+          root.querySelectorAll(".react-flow__edge-path.vx-edge-flow").forEach((edge) => {
+            edge.classList.add("vx-edge-hero-glow");
+          });
+        },
+      },
     );
-  }, [containerRef, ready]);
+  }, [containerRef, ready, hero]);
 }

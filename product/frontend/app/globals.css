@@ -2,12 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "../styles/theme.css";
+
 :root {
   color-scheme: dark;
-  --color-background: #000000;
-  --color-surface: #181818;
-  --color-foreground: #ffffff;
-  --color-border: rgba(255, 255, 255, 0.2);
+  --color-background: var(--vx-app);
+  --color-surface: var(--vx-panel);
+  --color-surface-elevated: var(--vx-elevated);
+  --color-foreground: var(--vx-text);
+  --color-muted: var(--vx-text-secondary);
+  --color-muted-dim: var(--vx-text-muted);
+  --color-border: var(--vx-border);
 }
 
 html,
@@ -17,7 +22,7 @@ body {
 }
 
 body {
-  background-color: var(--color-background);
+  background-color: var(--vx-app);
   color: var(--color-foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -30,7 +35,7 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -39,15 +44,15 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 ::selection {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 select option {
-  background: var(--color-surface);
+  background: var(--vx-panel);
   color: #ffffff;
 }
 
@@ -60,7 +65,7 @@ select option {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .skeleton::after {
@@ -71,7 +76,7 @@ select option {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.06),
     transparent
   );
   animation: shimmer 1.6s infinite;
@@ -96,31 +101,11 @@ select option {
   }
 
   .vx-panel {
-    @apply border border-white bg-surface;
+    @apply border border-vx-border bg-vx-panel;
   }
 
   .vx-label {
-    @apply text-[12px] font-bold uppercase tracking-[0.18em] text-white/45;
-  }
-
-  .vx-page-grid-bg {
-    background-color: #000;
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-    background-size: 40px 40px;
-    -webkit-mask-image: radial-gradient(
-      ellipse 100% 85% at 50% 40%,
-      rgba(0, 0, 0, 0.85) 0%,
-      rgba(0, 0, 0, 0.4) 45%,
-      rgba(0, 0, 0, 0) 72%
-    );
-    mask-image: radial-gradient(
-      ellipse 100% 85% at 50% 40%,
-      rgba(0, 0, 0, 0.85) 0%,
-      rgba(0, 0, 0, 0.4) 45%,
-      rgba(0, 0, 0, 0) 72%
-    );
+    @apply text-[12px] font-bold uppercase tracking-[0.18em] text-vx-secondary;
   }
 
   .vx-no-scrollbar,
@@ -136,7 +121,7 @@ select option {
 }
 
 .react-flow__node {
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 .react-flow__controls,
@@ -147,6 +132,10 @@ select option {
 
 .react-flow__edge-path {
   transition: opacity 0.35s ease, stroke 0.2s ease;
+}
+
+.react-flow__edge-path.vx-edge-hero-glow {
+  stroke-width: 2;
 }
 
 .react-flow__edge-text {
@@ -218,7 +207,6 @@ select option {
   }
 }
 
-/* Chat column — messages + input share identical centered width */
 .chat-input-container {
   box-sizing: border-box;
   width: 100%;

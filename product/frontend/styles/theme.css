@@ -1,0 +1,28 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════
+ *  VANE THEME — edit colors here only
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ *  After changing values, save this file. Dev server hot-reloads CSS.
+ *  All workspace UI reads these CSS variables via Tailwind classes:
+ *    bg-vx-app, bg-vx-sidebar, bg-vx-panel, bg-vx-elevated
+ *    text-vx-text, text-vx-secondary, text-vx-muted, text-vx-body
+ *    border-vx-border
+ */
+
+:root {
+  /* Surfaces */
+  --vx-app: #000000;
+  --vx-sidebar: #000000;
+  --vx-panel: #000000;
+  --vx-elevated: #000000;
+
+  /* Text */
+  --vx-text: #ffffff;
+  --vx-text-secondary: #9ea3ad;
+  --vx-text-muted: #6f747d;
+  --vx-text-body: #d0d3d8;
+
+  /* Borders */
+  --vx-border: rgba(255, 255, 255, 0.08);
+}
