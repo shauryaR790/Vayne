@@ -1,18 +1,21 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { RefObject } from "react";
 import { ArrowUp } from "lucide-react";
 
 import { AnalystMessage, AnalystMessageDivider, UserMessage } from "@/components/workspace/analyst/analyst-message";
 import { AnalystThinking } from "@/components/workspace/analyst/analyst-thinking";
 import type { InvestigationBundle } from "@/lib/investigation-bundle";
-import { ANALYST_NAME } from "@/lib/brand";
 import type { StoredChatMessage } from "@/lib/conversation-session";
 import { cn } from "@/lib/utils";
 
 interface AnalystMessageRow extends StoredChatMessage {
   streaming?: boolean;
 }
+
+const composerShell =
+  "overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]";
 
 export function VaneAnalystPanel({
   bundle,
@@ -25,6 +28,7 @@ export function VaneAnalystPanel({
   onAsk,
   onScroll,
   initialScrollTop = 0,
+  inputRef,
 }: {
   bundle: InvestigationBundle | null;
   messages: AnalystMessageRow[];
@@ -37,6 +41,7 @@ export function VaneAnalystPanel({
   onAsk: (question: string) => void;
   onScroll?: (scrollTop: number) => void;
   initialScrollTop?: number;
+  inputRef?: RefObject<HTMLTextAreaElement>;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const restoredScroll = useRef(false);
@@ -56,56 +61,53 @@ export function VaneAnalystPanel({
   }, [messages, thinking, thinkingStep]);
 
   const disabled = !bundle || busy;
+  const empty = !messages.length && !thinking && !thinkingStep;
 
   return (
     <aside className="flex h-screen w-[25%] min-w-[300px] shrink-0 flex-col border-l border-vx-border bg-vx-app">
-      <header className="shrink-0 border-b border-vx-border px-4 py-3.5">
-        <h2 className="text-[15px] font-medium text-white">{ANALYST_NAME}</h2>
-      </header>
-
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-4"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onScroll={() => onScroll?.(scrollRef.current?.scrollTop ?? 0)}
       >
-        {!bundle ? (
-          <p className="text-[15px] leading-relaxed text-vx-secondary">
-            Run an investigation to ask the analyst about findings, paths, and evidence.
-          </p>
-        ) : !messages.length && !thinking && !thinkingStep ? (
-          <p className="text-[15px] leading-relaxed text-vx-secondary">
-            Ask why a finding was retained, how a path was validated, or what to fix first.
-          </p>
+        {empty ? (
+          <div className="flex h-full min-h-[200px] items-center justify-center px-2 text-center">
+            <p className="max-w-[240px] text-[14px] leading-relaxed text-vx-muted">
+              {!bundle
+                ? "Run an investigation to ask about findings, paths, and evidence."
+                : "Ask why a finding was retained, how a path was validated, or what to fix first."}
+            </p>
+          </div>
         ) : null}
 
-        <div className="space-y-6">
+        <div className="space-y-5">
           {messages.map((msg, index) => (
-            <div key={msg.id} className="space-y-6">
+            <div key={msg.id}>
               {index > 0 ? <AnalystMessageDivider /> : null}
               {msg.role === "user" ? (
-                <UserMessage content={msg.content} turn={index} />
+                <UserMessage content={msg.content} />
               ) : (
-                <AnalystMessage content={msg.content} streaming={msg.streaming} turn={index} />
+                <AnalystMessage content={msg.content} streaming={msg.streaming} />
               )}
             </div>
           ))}
         </div>
 
         {thinkingStep ? (
-          <div className={cn(messages.length ? "mt-6" : "")}>
+          <div className={cn(messages.length ? "mt-5" : "mt-0")}>
             <AnalystThinking step={thinkingStep} />
           </div>
         ) : null}
 
         {thinking && !thinkingStep ? (
-          <p className="mt-4 font-mono text-[13px] text-vx-secondary">
-            <span className="text-vx-muted">{">"}</span> thinking
+          <p className="mt-4 font-mono text-[13px] text-vx-muted">
+            <span>{">"}</span> thinking
             <span className="ml-0.5 inline-block h-[1em] w-[2px] animate-pulse bg-vx-secondary align-middle" />
           </p>
         ) : null}
       </div>
 
-      <div className="shrink-0 border-t border-vx-border px-3 py-3">
+      <div className="shrink-0 p-3">
         <form
           className="w-full"
           onSubmit={(e) => {
@@ -115,14 +117,15 @@ export function VaneAnalystPanel({
             onAsk(q);
           }}
         >
-          <div className="flex w-full items-end gap-2 rounded-lg border border-vx-border bg-vx-panel px-3 py-2.5">
+          <div className={composerShell}>
             <textarea
+              ref={inputRef}
               value={input}
               disabled={disabled}
               onChange={(e) => onInputChange(e.target.value)}
               placeholder="Ask about findings, paths, evidence…"
               rows={3}
-              className="max-h-32 min-w-0 flex-1 resize-none bg-transparent text-[15px] leading-relaxed text-white outline-none placeholder:text-vx-muted disabled:opacity-50"
+              className="max-h-36 min-h-[72px] w-full resize-none bg-transparent px-4 pt-4 text-[14px] leading-relaxed text-white outline-none placeholder:text-vx-muted disabled:opacity-50"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -131,14 +134,17 @@ export function VaneAnalystPanel({
                 }
               }}
             />
-            <button
-              type="submit"
-              disabled={disabled || !input.trim()}
-              className="mb-0.5 flex size-8 shrink-0 items-center justify-center rounded-md text-vx-secondary transition-colors hover:bg-vx-elevated hover:text-white disabled:opacity-30"
-              aria-label="Send"
-            >
-              <ArrowUp className="size-4" strokeWidth={2} />
-            </button>
+            <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-1">
+              <span className="rounded-md px-2 py-1 text-[12px] text-vx-muted">Analyst</span>
+              <button
+                type="submit"
+                disabled={disabled || !input.trim()}
+                className="flex size-8 items-center justify-center rounded-lg bg-white/[0.08] text-vx-secondary transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-30"
+                aria-label="Send"
+              >
+                <ArrowUp className="size-4" strokeWidth={2} />
+              </button>
+            </div>
           </div>
         </form>
       </div>

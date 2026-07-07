@@ -15,7 +15,7 @@ import {
   Target,
 } from "lucide-react";
 
-import { VaneLogo } from "@/components/brand/vane-logo";
+import { VaneSidebarBrand } from "@/components/brand/vane-logo";
 import { DeveloperMenu } from "@/components/dev/developer-menu";
 import { resetConversationToHome } from "@/lib/conversation-session";
 import {
@@ -142,15 +142,15 @@ export function VaneSidebar() {
 
   return (
     <aside className="flex h-screen w-[20%] min-w-[272px] max-w-[320px] shrink-0 flex-col border-r border-vx-border bg-vx-sidebar">
-      <div className="shrink-0 px-4 pb-3 pt-5">
-        <Link href="/" className="block px-2 py-1">
-          <VaneLogo size="sm" showWordmark />
+      <div className="shrink-0 px-3 pb-3 pt-4">
+        <Link href="/" className="block">
+          <VaneSidebarBrand />
         </Link>
 
         <button
           type="button"
           onClick={startNew}
-          className="mt-4 flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-[16px] text-vx-secondary transition-colors hover:bg-vx-panel hover:text-white"
+          className="mt-3 flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left text-[16px] text-vx-secondary transition-colors hover:bg-vx-panel hover:text-white"
         >
           <Plus className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
           New Investigation

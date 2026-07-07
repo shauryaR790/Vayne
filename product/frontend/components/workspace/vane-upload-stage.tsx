@@ -1,41 +1,36 @@
 "use client";
 
-import { X } from "lucide-react";
+import { useCallback, useEffect, useRef } from "react";
+import { motion } from "motion/react";
 
-import { VaneLogoMark } from "@/components/brand/vane-logo";
-import { InvestigationModeToggle } from "@/components/conversation/investigation-mode-toggle";
+import {
+  WorkspaceHomeShortcuts,
+  WorkspaceSupportedFormats,
+} from "@/components/workspace/workspace-shortcuts-overlay";
 import { shortFilename } from "@/lib/evidence-presentation";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
+import { OPEN_EVIDENCE_EVENT } from "@/lib/workspace-shortcuts";
 import { cn } from "@/lib/utils";
 
-function UploadFileCard({
-  name,
-  onRemove,
-  disabled,
+function FadeIn({
+  children,
+  delay = 0,
+  className,
 }: {
-  name: string;
-  onRemove?: () => void;
-  disabled?: boolean;
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
 }) {
   return (
-    <div className="relative flex w-full max-w-[320px] flex-col items-center rounded-md border border-vx-border bg-vx-panel px-4 py-3 text-center">
-      <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-vx-muted">Evidence</p>
-      <p className="mt-1 w-full truncate text-[15px] font-medium text-white">
-        {shortFilename(name)}
-      </p>
-      {onRemove ? (
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={onRemove}
-          className="absolute right-2 top-2 flex size-6 items-center justify-center rounded text-vx-muted transition-colors hover:bg-vx-elevated hover:text-white disabled:opacity-40"
-          aria-label={`Remove ${name}`}
-        >
-          <X className="size-3.5" strokeWidth={2} />
-        </button>
-      ) : null}
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay, ease: "easeOut" }}
+      className={className}
+    >
+      {children}
+    </motion.div>
   );
 }
 
@@ -58,9 +53,29 @@ export function VaneUploadStage({
   disabled?: boolean;
   error?: string;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const openFilePicker = useCallback(
+    (multiple = true) => {
+      const input = fileInputRef.current;
+      if (!input || disabled) return;
+      input.multiple = multiple;
+      input.click();
+    },
+    [disabled],
+  );
+
+  useEffect(() => {
+    const onOpenEvidence = () => openFilePicker(true);
+    window.addEventListener(OPEN_EVIDENCE_EVENT, onOpenEvidence);
+    return () => window.removeEventListener(OPEN_EVIDENCE_EVENT, onOpenEvidence);
+  }, [openFilePicker]);
+
+  const hasFiles = files.length > 0;
+
   return (
     <div
-      className="flex h-full w-full flex-col items-center justify-center px-6 py-12"
+      className="flex h-full w-full items-center justify-center overflow-y-auto px-8 py-16 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
@@ -69,72 +84,98 @@ export function VaneUploadStage({
         if (picked.length) onSelectFiles(picked);
       }}
     >
-      <div className="flex w-full max-w-[360px] flex-col items-center">
-        <VaneLogoMark size={128} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPTED_EXTENSIONS.join(",")}
+        className="hidden"
+        disabled={disabled}
+        onChange={(e) => {
+          const picked = Array.from(e.target.files ?? []);
+          if (picked.length) onSelectFiles(picked);
+          e.target.value = "";
+        }}
+      />
 
-        <h1 className="mt-6 text-center text-[20px] font-medium text-white">
-          What should we investigate?
-        </h1>
-        <p className="mt-2 text-center text-[15px] text-vx-secondary">Upload evidence</p>
+      <div className="flex w-full max-w-[480px] flex-col items-center text-center">
+        <FadeIn delay={0}>
+          <h1 className="text-[22px] font-medium tracking-[-0.02em] text-white">
+            What should we investigate?
+          </h1>
+        </FadeIn>
 
-        <label
-          className={cn(
-            "mt-8 cursor-pointer rounded-md border border-vx-border bg-vx-panel px-5 py-2.5 text-[15px] text-vx-secondary transition-colors hover:bg-vx-elevated hover:text-white",
-            disabled && "pointer-events-none opacity-40",
-          )}
-        >
-          Upload Evidence
-          <input
-            type="file"
-            multiple
-            accept={ACCEPTED_EXTENSIONS.join(",")}
-            className="hidden"
-            disabled={disabled}
-            onChange={(e) => {
-              const picked = Array.from(e.target.files ?? []);
-              if (picked.length) onSelectFiles(picked);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        <FadeIn delay={0.08} className="mt-3">
+          <p className="text-[15px] leading-relaxed text-vx-secondary">
+            Drop scan files anywhere or start a new investigation.
+          </p>
+        </FadeIn>
 
-        {files.length > 0 ? (
-          <div className="mt-8 flex w-full flex-col items-center gap-4">
+        {hasFiles ? (
+          <FadeIn delay={0.14} className="mt-10 w-full">
+            <p className="text-[13px] text-vx-muted">
+              {files.length} file{files.length === 1 ? "" : "s"} selected ·{" "}
+              <span className="font-mono text-vx-secondary">Enter</span> to analyze
+            </p>
+            <ul className="mt-4 space-y-2 text-left">
+              {files.map((file, index) => (
+                <li
+                  key={`${file.name}-${file.size}-${file.lastModified}`}
+                  className="flex items-center justify-between gap-4 text-[14px]"
+                >
+                  <span className="min-w-0 truncate text-vx-body">{shortFilename(file.name)}</span>
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onRemoveFile(index)}
+                    className="shrink-0 text-[12px] text-vx-muted transition-colors hover:text-white disabled:opacity-40"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+
             {files.length > 1 ? (
-              <div className="w-full max-w-[320px]">
-                <InvestigationModeToggle
-                  value={investigationMode}
+              <div className="mt-4 flex items-center justify-center gap-3 text-[12px] text-vx-muted">
+                <button
+                  type="button"
                   disabled={disabled}
-                  onChange={onModeChange}
-                />
+                  onClick={() => onModeChange("combined")}
+                  className={cn(
+                    "transition-colors",
+                    investigationMode === "combined" ? "text-white" : "hover:text-vx-secondary",
+                  )}
+                >
+                  Merge scans
+                </button>
+                <span>·</span>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onModeChange("separate")}
+                  className={cn(
+                    "transition-colors",
+                    investigationMode === "separate" ? "text-white" : "hover:text-vx-secondary",
+                  )}
+                >
+                  Compare separately
+                </button>
               </div>
             ) : null}
-
-            <div className="flex w-full flex-col items-center gap-3">
-              {files.map((file, index) => (
-                <UploadFileCard
-                  key={`${file.name}-${file.size}-${file.lastModified}`}
-                  name={file.name}
-                  disabled={disabled}
-                  onRemove={() => onRemoveFile(index)}
-                />
-              ))}
-            </div>
-
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={onAnalyze}
-              className="mt-2 w-full max-w-[320px] rounded-md border border-vx-border bg-vx-elevated px-4 py-3 text-[15px] font-medium text-white transition-colors hover:bg-vx-panel disabled:opacity-40"
-            >
-              Analyze
-            </button>
-          </div>
+          </FadeIn>
         ) : null}
 
         {error ? (
-          <p className="mt-6 text-center text-[14px] text-vx-secondary">{error}</p>
+          <p className="mt-6 text-[13px] text-vx-secondary">{error}</p>
         ) : null}
+
+        <FadeIn delay={hasFiles ? 0.2 : 0.16} className="mt-12 w-full">
+          <WorkspaceHomeShortcuts />
+        </FadeIn>
+
+        <FadeIn delay={hasFiles ? 0.28 : 0.24} className="mt-10">
+          <WorkspaceSupportedFormats />
+        </FadeIn>
       </div>
     </div>
   );

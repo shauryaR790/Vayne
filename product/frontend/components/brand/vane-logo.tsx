@@ -8,19 +8,20 @@ export function VaneLogo({
   showWordmark = true,
   className,
 }: {
-  size?: "sm" | "md" | "lg" | "hero";
+  size?: "sm" | "sidebar" | "md" | "lg" | "hero";
   showWordmark?: boolean;
   className?: string;
 }) {
   const sizes = {
-    sm: { icon: 24, text: "text-[13px]" },
-    md: { icon: 32, text: "text-[15px]" },
-    lg: { icon: 48, text: "text-[22px]" },
-    hero: { icon: 72, text: "text-[28px]" },
+    sm: { icon: 24, text: "text-[13px]", gap: "gap-3", tracking: "tracking-[0.2em]" },
+    sidebar: { icon: 36, text: "text-[19px]", gap: "gap-2", tracking: "tracking-[0.16em]" },
+    md: { icon: 32, text: "text-[15px]", gap: "gap-3", tracking: "tracking-[0.2em]" },
+    lg: { icon: 48, text: "text-[22px]", gap: "gap-3", tracking: "tracking-[0.18em]" },
+    hero: { icon: 72, text: "text-[28px]", gap: "gap-3", tracking: "tracking-[0.16em]" },
   }[size];
 
   return (
-    <div className={cn("flex items-center gap-3", className)}>
+    <div className={cn("flex items-center", sizes.gap, className)}>
       <Image
         src="/vane-logo.png"
         alt={PRODUCT_NAME}
@@ -32,14 +33,28 @@ export function VaneLogo({
       {showWordmark ? (
         <span
           className={cn(
-            "font-semibold tracking-[0.2em] text-white",
+            "font-semibold leading-none text-white",
             sizes.text,
+            sizes.tracking,
           )}
         >
           {PRODUCT_NAME}
         </span>
       ) : null}
     </div>
+  );
+}
+
+export function VaneSidebarBrand({ className }: { className?: string }) {
+  return (
+    <Image
+      src="/vane-logo.png"
+      alt={PRODUCT_NAME}
+      width={248}
+      height={80}
+      className={cn("h-[80px] w-full max-w-full object-contain object-left", className)}
+      priority
+    />
   );
 }
 

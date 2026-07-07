@@ -49,6 +49,8 @@ import { validateUploadFiles } from "@/lib/upload";
 import { VaneSidebar } from "@/components/workspace/vane-sidebar";
 import { VaneEnginePanel } from "@/components/workspace/vane-engine-panel";
 import { VaneAnalystPanel } from "@/components/workspace/vane-analyst-panel";
+import { WorkspaceShortcutsOverlay } from "@/components/workspace/workspace-shortcuts-overlay";
+import { useWorkspaceKeyboard } from "@/components/workspace/use-workspace-keyboard";
 import { LOG_PREFIX } from "@/lib/brand";
 import { ResetWorkspaceBootstrap } from "@/components/dev/reset-workspace-bootstrap";
 
@@ -82,6 +84,7 @@ export function VaneWorkspace({
   const [investigationIds, setInvestigationIds] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [enginePhase, setEnginePhase] = useState<"idle" | "running" | "complete">("idle");
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   useEffect(() => {
     if (files.length <= 1) {
@@ -95,6 +98,7 @@ export function VaneWorkspace({
   }, [files.length, modeExplicit]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const analystInputRef = useRef<HTMLTextAreaElement>(null);
   const analystScrollTopRef = useRef(0);
   const streamAbortRef = useRef<AbortController | null>(null);
   const briefingAbortRef = useRef<AbortController | null>(null);
@@ -685,9 +689,24 @@ export function VaneWorkspace({
       ]
     : [];
 
+  const focusAnalyst = useCallback(() => {
+    analystInputRef.current?.focus();
+  }, []);
+
+  useWorkspaceKeyboard({
+    workspaceEmpty: !showEngineResults,
+    canAnalyze: files.length > 0 && !busy,
+    onNewInvestigation: () => window.dispatchEvent(new Event("vayne:new-chat")),
+    onAnalyze: () => void handleAnalyze(),
+    onFocusAnalyst: focusAnalyst,
+    onCommandPalette: () => router.push("/investigations"),
+    onShowShortcuts: () => setShortcutsOpen(true),
+  });
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-vx-app text-white">
       <ResetWorkspaceBootstrap />
+      <WorkspaceShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       <Suspense
         fallback={
@@ -754,6 +773,7 @@ export function VaneWorkspace({
           analystScrollTopRef.current = top;
           persist({ analystScrollTop: top });
         }}
+        inputRef={analystInputRef}
       />
     </div>
   );
