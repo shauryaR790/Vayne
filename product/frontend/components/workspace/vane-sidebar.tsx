@@ -3,20 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { LucideIcon } from "lucide-react";
-import {
-  FileText,
-  FolderOpen,
-  GitBranch,
-  LayoutGrid,
-  Plus,
-  Settings,
-  ShieldAlert,
-  Target,
-} from "lucide-react";
+import { Plus, Target } from "lucide-react";
 
 import { VaneSidebarBrand } from "@/components/brand/vane-logo";
 import { DeveloperMenu } from "@/components/dev/developer-menu";
+import { ANALYST_RESOURCE_NAV, type AnalystNavItem } from "@/lib/analyst-panel-nav";
 import { resetConversationToHome } from "@/lib/conversation-session";
 import {
   RECENT_INVESTIGATIONS_UPDATED,
@@ -27,27 +18,11 @@ import {
 } from "@/lib/recent-investigations";
 import { cn } from "@/lib/utils";
 
-type NavItem = {
-  id: string;
-  label: string;
-  href: string;
-  icon: LucideIcon;
-};
-
-const workspaceNav: NavItem[] = [
-  { id: "investigations", label: "Investigations", href: "/investigations", icon: LayoutGrid },
-  { id: "evidence", label: "Evidence", href: "/upload", icon: FolderOpen },
-  { id: "attack-paths", label: "Attack Paths", href: "/attack-paths", icon: GitBranch },
-  { id: "findings", label: "Findings", href: "/investigations", icon: ShieldAlert },
-  { id: "reports", label: "Reports", href: "/report", icon: FileText },
-  { id: "settings", label: "Settings", href: "/system", icon: Settings },
-];
-
 function SidebarDivider() {
   return <div className="mx-4 border-t border-vx-border" aria-hidden />;
 }
 
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+function NavLink({ item, active }: { item: AnalystNavItem; active: boolean }) {
   const Icon = item.icon;
   return (
     <Link
@@ -124,13 +99,6 @@ export function VaneSidebar() {
     };
   }, [refresh]);
 
-  const isNavActive = (item: NavItem) => {
-    if (item.href === "/investigations") {
-      return pathname === "/investigations" || pathname.startsWith("/investigation/");
-    }
-    return pathname === item.href || pathname.startsWith(`${item.href}/`);
-  };
-
   const startNew = () => {
     resetConversationToHome();
     router.replace("/");
@@ -192,10 +160,13 @@ export function VaneSidebar() {
       <SidebarDivider />
 
       <nav className="shrink-0 px-3 py-4">
-        <p className="mb-2 px-3 text-[13px] font-medium text-vx-muted">Workspace</p>
         <div className="flex flex-col gap-1">
-          {workspaceNav.map((item) => (
-            <NavLink key={item.id} item={item} active={isNavActive(item)} />
+          {ANALYST_RESOURCE_NAV.map((item) => (
+            <NavLink
+              key={item.id}
+              item={item}
+              active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+            />
           ))}
         </div>
       </nav>

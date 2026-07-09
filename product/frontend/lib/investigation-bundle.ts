@@ -5,6 +5,7 @@ import {
   getProof,
   getRemediation,
   getReport,
+  getWorkbench,
 } from "./api";
 import type {
   FindingsData,
@@ -12,6 +13,7 @@ import type {
   InvestigationDetail,
   InvestigationReport,
   RemediationData,
+  WorkbenchData,
 } from "./types";
 
 export interface InvestigationBundle {
@@ -21,16 +23,18 @@ export interface InvestigationBundle {
   graph: GraphData;
   proof: string;
   remediation: RemediationData;
+  workbench: WorkbenchData | null;
 }
 
 export async function loadInvestigationBundle(id: string): Promise<InvestigationBundle> {
-  const [detail, report, findings, graph, proof, remediation] = await Promise.all([
+  const [detail, report, findings, graph, proof, remediation, workbench] = await Promise.all([
     getInvestigation(id),
     getReport(id),
     getFindings(id),
     getGraph(id),
     getProof(id),
     getRemediation(id),
+    getWorkbench(id).catch(() => null),
   ]);
-  return { detail, report, findings, graph, proof, remediation };
+  return { detail, report, findings, graph, proof, remediation, workbench };
 }

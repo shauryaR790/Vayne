@@ -1,10 +1,10 @@
-import { AppShell } from "@/components/layout/AppShell";
+import { VaneWorkspaceShell } from "@/components/workspace/vane-workspace-shell";
 import { RoadmapContent } from "@/components/knowledge/RoadmapContent";
 
 export default function RoadmapPage() {
   return (
-    <AppShell activeNav="roadmap">
+    <VaneWorkspaceShell>
       <RoadmapContent />
-    </AppShell>
+    </VaneWorkspaceShell>
   );
 }

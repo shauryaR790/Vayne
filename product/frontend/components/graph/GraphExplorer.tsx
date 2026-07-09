@@ -22,7 +22,7 @@ import { applyGraphFit, FIT_MAX_ZOOM, FIT_MIN_ZOOM, FIT_PADDING } from "./graphF
 const nodeTypes = { vayne: GraphNode };
 const edgeTypes = { vayne: VayneEdge };
 
-const COLUMN_LABELS = ["Entry", "Asset", "Services", "Software", "Vulnerability"];
+const STORY_COLUMNS = ["Internet", "Asset", "Service", "Vulnerability", "Privilege", "Target"];
 const GRAPH_HEIGHT = "h-[640px]";
 
 export interface GraphExplorerContext {
@@ -39,9 +39,40 @@ function normalizeNodeType(n: GraphNodeType): string {
   return n.type || raw.node_type || normalizeGraphType(n);
 }
 
+function isValidatedEdge(e: GraphData["edges"][number]): boolean {
+  const rel = String(e.relationship ?? "").toLowerCase();
+  const cat = String(e.category ?? "").toLowerCase();
+  return !rel.includes("reject") && !cat.includes("reject");
+}
+
+function computeHighlightNodeIds(
+  nodes: GraphNodeType[],
+  edges: GraphData["edges"],
+): Set<string> {
+  const onPath = new Set<string>();
+  for (const e of edges.filter(isValidatedEdge)) {
+    onPath.add(e.source);
+    onPath.add(e.target);
+  }
+  if (onPath.size === 0) {
+    for (const n of nodes) {
+      const t = normalizeNodeType(n).toLowerCase();
+      if (
+        ["endpoint", "asset", "service", "software", "vulnerability", "attack", "verified"].includes(
+          t,
+        )
+      ) {
+        onPath.add(n.id);
+      }
+    }
+  }
+  return onPath;
+}
+
 function buildFlowGraph(
   nodes: GraphNodeType[],
   edges: GraphData["edges"],
+  highlightIds?: Set<string>,
 ): { flowNodes: Node[]; flowEdges: Edge[] } {
   const layout = computeGraphLayout(nodes, edges);
   const visibleIds = new Set(nodes.map((n) => n.id));
@@ -61,6 +92,8 @@ function buildFlowGraph(
           secondary: pos.secondary,
           animationWave: pos.animationWave,
           animationIndex: pos.animationIndex,
+          dimmed: highlightIds ? !highlightIds.has(n.id) : false,
+          onPath: highlightIds ? highlightIds.has(n.id) : false,
         },
       };
     });
@@ -85,6 +118,9 @@ function buildFlowGraph(
       String(e.category ?? "").toLowerCase().includes("reject") ||
       String(e.relationship ?? "").toLowerCase().includes("reject");
 
+    const onPath =
+      highlightIds != null && highlightIds.has(e.source) && highlightIds.has(e.target);
+
     flowEdges.push({
       id: `e-${e.source}-${e.target}-${i++}`,
       source: e.source,
@@ -95,7 +131,8 @@ function buildFlowGraph(
         relationship: rel,
         displayLabel,
         edgeCount: count,
-        validated: !rejected,
+        validated: !rejected && (highlightIds == null || onPath),
+        dimmed: highlightIds != null && !onPath,
       },
     });
   }
@@ -108,11 +145,13 @@ function GraphExplorerInner({
   context,
   embedded = false,
   layout = "default",
+  workbench,
 }: {
   graph: GraphData;
   context?: GraphExplorerContext;
   embedded?: boolean;
   layout?: "default" | "inline" | "hero" | "workstation";
+  workbench?: unknown;
 }) {
   const isInline = layout === "inline";
   const isHero = layout === "hero";
@@ -145,9 +184,14 @@ function GraphExplorerInner({
     (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
   );
 
+  const highlightIds = useMemo(
+    () => (isWorkstation ? computeHighlightNodeIds(filteredNodes, filteredEdges) : undefined),
+    [filteredNodes, filteredEdges, isWorkstation],
+  );
+
   const { flowNodes, flowEdges } = useMemo(
-    () => buildFlowGraph(filteredNodes, filteredEdges),
-    [filteredNodes, filteredEdges],
+    () => buildFlowGraph(filteredNodes, filteredEdges, highlightIds),
+    [filteredNodes, filteredEdges, highlightIds],
   );
 
   const onInit = useCallback((instance: ReactFlowInstance) => {
@@ -161,6 +205,15 @@ function GraphExplorerInner({
     },
     [graph.nodes],
   );
+
+  useEffect(() => {
+    if (!isWorkstation || selected || !graph.nodes.length) return;
+    const pick =
+      graph.nodes.find((n) => highlightIds?.has(n.id) && normalizeNodeType(n) === "vulnerability") ||
+      graph.nodes.find((n) => highlightIds?.has(n.id)) ||
+      graph.nodes[0];
+    if (pick) setSelected(pick);
+  }, [graph.nodes, highlightIds, isWorkstation, selected]);
 
   useGraphAnimations(containerRef, flowReady, { hero: isWide });
 
@@ -215,10 +268,10 @@ function GraphExplorerInner({
               <GraphCanvasBackground />
 
               <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
-                {COLUMN_LABELS.map((label, col) => (
+                {STORY_COLUMNS.map((label, col) => (
                   <div
                     key={label}
-                    className="absolute top-3 text-center text-[9px] font-bold uppercase tracking-[0.14em] text-white/20"
+                    className="absolute top-3 text-center text-[9px] font-bold uppercase tracking-[0.14em] text-white/25"
                     style={{
                       left: 60 + col * 280,
                       width: 240,
@@ -290,17 +343,15 @@ function GraphExplorerInner({
         </div>
 
         <aside
-          className={`flex ${isWorkstation ? "h-auto max-h-[220px]" : isInline ? "h-auto max-h-[200px]" : graphHeight} ${
-            isWorkstation || isInline ? "min-h-0" : minHeight
-          } min-w-0 flex-col bg-black ${
-            embedded || isWide
-              ? "border border-white/[0.12] transition-[border-color] duration-300 hover:border-white/[0.22]"
-              : "border border-white"
+          className={`flex ${
+            isWorkstation ? "h-auto min-h-[220px] max-h-none" : isInline ? "h-auto max-h-[200px]" : graphHeight
+          } ${isWorkstation || isInline ? "min-h-0" : minHeight} min-w-0 flex-col bg-black ${
+            embedded || isWide ? "border border-white/30" : "border border-white"
           }`}
         >
-          <div className="flex-1 overflow-y-auto p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/50">
-              Selected Node
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-white/70">
+              Inspector
             </p>
             <GraphNodeInspector node={selected} />
           </div>
@@ -314,15 +365,23 @@ export function GraphExplorer({
   context,
   embedded,
   layout = "default",
+  workbench,
 }: {
   graph: GraphData;
   context?: GraphExplorerContext;
   embedded?: boolean;
   layout?: "default" | "inline" | "hero" | "workstation";
+  workbench?: unknown;
 }) {
   return (
     <ReactFlowProvider>
-      <GraphExplorerInner graph={graph} context={context} embedded={embedded} layout={layout} />
+      <GraphExplorerInner
+        graph={graph}
+        context={context}
+        embedded={embedded}
+        layout={layout}
+        workbench={workbench}
+      />
     </ReactFlowProvider>
   );
 }

@@ -36,9 +36,9 @@ function VayneEdgeComponent({
     targetPosition,
   });
 
-  const stroke = active ? "#e4e4e7" : validated ? "#71717a" : rejected ? "#f97316" : "#52525b";
-  const strokeWidth = active ? 3.5 : validated ? 2.5 : 2;
-  const opacity = active ? 1 : validated ? 0.65 : rejected ? 0.45 : 0.4;
+  const stroke = active ? "#fafafa" : validated ? "#a1a1aa" : "#52525b";
+  const strokeWidth = active ? 3 : validated ? 2.5 : 1.5;
+  const opacity = data?.dimmed ? 0.15 : active ? 1 : validated ? 0.75 : 0.35;
 
   return (
     <>
@@ -57,7 +57,7 @@ function VayneEdgeComponent({
           stroke,
           strokeWidth,
           opacity,
-          strokeDasharray: rejected ? "8 6" : undefined,
+          strokeDasharray: rejected ? "6 5" : undefined,
           transition: "opacity 200ms, stroke-width 200ms, stroke 200ms",
         }}
         className={validated || active ? "vx-edge-flow" : undefined}

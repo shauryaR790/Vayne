@@ -119,6 +119,17 @@ def get_report(inv_id: str, db: Session = Depends(get_db)) -> InvestigationRepor
     )
 
 
+@router.get("/investigation/{inv_id}/workbench")
+def get_workbench(inv_id: str, db: Session = Depends(get_db)):
+    svc = _svc(db)
+    if not svc.get_investigation(inv_id):
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    data = svc.get_workbench(inv_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Workbench not found")
+    return data
+
+
 @router.get("/investigation/{inv_id}/findings", response_model=FindingsResponse)
 def get_findings(inv_id: str, db: Session = Depends(get_db)) -> FindingsResponse:
     svc = _svc(db)

@@ -184,3 +184,250 @@ export interface RemediationData {
   items: RemediationItem[];
   total_items: number;
 }
+
+export interface WorkbenchPipelineStage {
+  id: string;
+  label: string;
+  detail: string;
+  timestamp: string;
+  offset_ms: number;
+}
+
+export interface WorkbenchEvidenceSource {
+  tool: string;
+  label: string;
+  status: string;
+  objects: number;
+  findings: number;
+  retained: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  info: number;
+  note: string;
+}
+
+export interface WorkbenchCorrelation {
+  subject: string;
+  host: string;
+  cve: string;
+  sources: string[];
+  confidence: number;
+  retained: boolean;
+  base_confidence?: number;
+  final_confidence?: number;
+  consensus?: string;
+}
+
+export interface WorkbenchConfirmedFinding {
+  id: string;
+  title: string;
+  host: string;
+  severity: string;
+  classification: string;
+  status: "Observed" | "Correlated" | "Hypothesized" | "Validated" | "Rejected";
+  /** Primary decision-relevant score among displayed semantic metrics. */
+  machine_confidence: number;
+  analyst_confidence: string;
+  sources: string[];
+  reasoning: string[];
+  evidence: string[];
+  proof?: WorkbenchProofItem[];
+  /** Semantic confidence model — observation / correlation / exploit. */
+  confidence?: WorkbenchSemanticConfidence;
+  /** @deprecated Prefer confidence.observation.factors */
+  confidence_factors?: WorkbenchConfidenceFactor[];
+  base_confidence?: number;
+  final_confidence?: number;
+  scanner_agreement?: WorkbenchScannerAgreement;
+  why_it_matters: string;
+  business_impact: string;
+  business_impact_detail?: WorkbenchBusinessImpact;
+  cve: string;
+  validated_checks: string[];
+  not_validated_checks: string[];
+  unique_reason?: string;
+  evidence_summary?: WorkbenchEvidenceSummary;
+}
+
+export type WorkbenchConfidenceKind =
+  | "informational"
+  | "service_observation"
+  | "correlated_vulnerability"
+  | "validated_exposure";
+
+export type WorkbenchConfidenceMetricKey = "observation" | "correlation" | "exploit";
+
+export interface WorkbenchConfidenceMetric {
+  score: number;
+  factors: WorkbenchConfidenceFactor[];
+  question: string;
+}
+
+export interface WorkbenchSemanticConfidence {
+  kind: WorkbenchConfidenceKind;
+  observation: WorkbenchConfidenceMetric;
+  correlation: WorkbenchConfidenceMetric | null;
+  exploit: WorkbenchConfidenceMetric | null;
+  /** Which metrics are analytically meaningful to display. */
+  display: WorkbenchConfidenceMetricKey[];
+  primary: {
+    metric: WorkbenchConfidenceMetricKey;
+    score: number;
+  };
+  features?: WorkbenchConfidenceFactor[];
+  evidence_summary?: WorkbenchEvidenceSummary;
+  scanner_agreement?: WorkbenchScannerAgreement;
+}
+
+export interface WorkbenchProofItem {
+  source: string;
+  detail: string;
+}
+
+export interface WorkbenchConfidenceFactor {
+  label: string;
+  delta: number;
+}
+
+export interface WorkbenchScannerAgreement {
+  agreed: string[];
+  capable?: string[];
+  total: number;
+  ratio: string;
+}
+
+export interface WorkbenchEvidenceSummary {
+  scanners: number;
+  capable_scanners: number;
+  independent_observations: number;
+  conflicts: number;
+  canonical_entity: string;
+  version_confidence: number;
+  version?: string;
+  cpe?: string;
+  category?: string;
+}
+
+export interface WorkbenchBusinessImpact {
+  attacker_gains: string;
+  systems_exposed: string;
+  process_affected: string;
+  importance: string;
+  summary: string;
+}
+
+export interface WorkbenchHypothesis {
+  title: string;
+  status: string;
+  reason: string;
+  current_evidence: string;
+  required_validation: string;
+  confidence: number;
+}
+
+export interface WorkbenchConflictStatement {
+  source: string;
+  claim: string;
+}
+
+export interface WorkbenchConflict {
+  subject: string;
+  host: string;
+  statements: WorkbenchConflictStatement[];
+  explanation: string;
+}
+
+export interface WorkbenchProvenanceSupport {
+  source: string;
+  evidence: string;
+}
+
+export interface WorkbenchProvenance {
+  claim: string;
+  supports: WorkbenchProvenanceSupport[];
+}
+
+export interface WorkbenchUnknown {
+  topic: string;
+  reason: string;
+  evidence_needed: string;
+  expected_gain?: number;
+}
+
+export interface WorkbenchEvidenceTrailEvent {
+  time: string;
+  event: string;
+  detail: string;
+  kind: string;
+}
+
+export interface WorkbenchTimelineStep {
+  event: string;
+  detail: string;
+  kind: string;
+}
+
+export interface WorkbenchCandidatePath {
+  steps: string[];
+  status: "VALIDATED" | "REJECTED";
+  confidence: number;
+  risk: number;
+  reason: string;
+  missing: string[];
+  tools_that_help: string[];
+}
+
+export interface WorkbenchStat {
+  label: string;
+  value: string | number;
+}
+
+export interface WorkbenchFileContribution {
+  file: string;
+  tool: string;
+  findings: number;
+  retained: number;
+  rejected: number;
+  signals: number;
+  hosts: number;
+}
+
+export interface WorkbenchNotes {
+  evidence: string;
+  correlation: string;
+  paths: string;
+  summary: string;
+}
+
+export interface WorkbenchData {
+  generated_at: string;
+  duration_seconds: number;
+  pipeline: WorkbenchPipelineStage[];
+  evidence_sources: WorkbenchEvidenceSource[];
+  correlations: WorkbenchCorrelation[];
+  candidate_paths: WorkbenchCandidatePath[];
+  statistics: WorkbenchStat[];
+  file_contributions: WorkbenchFileContribution[];
+  notes: WorkbenchNotes;
+  executive_summary: string;
+  confirmed_findings: WorkbenchConfirmedFinding[];
+  hypotheses: WorkbenchHypothesis[];
+  conflicts: WorkbenchConflict[];
+  unknowns: (string | WorkbenchUnknown)[];
+  missing_evidence?: WorkbenchUnknown[];
+  next_actions: string[];
+  provenance: WorkbenchProvenance[];
+  evidence_trail?: WorkbenchEvidenceTrailEvent[];
+  investigation_timeline?: WorkbenchTimelineStep[];
+  closing_line: string;
+  totals: {
+    files: number;
+    sources: number;
+    validated_paths: number;
+    rejected_paths: number;
+    cross_source_matches: number;
+    confirmed_findings?: number;
+  };
+}

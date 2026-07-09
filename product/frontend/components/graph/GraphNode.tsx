@@ -10,17 +10,18 @@ function GraphNodeComponent({ data, selected }: NodeProps) {
   const label = String(data.label || data.id || "");
   const secondary = Boolean(data.secondary);
   const rejected = type.toLowerCase().includes("reject");
+  const dimmed = Boolean(data.dimmed);
   const { primary, secondary: sublabel } = formatGraphNodeLabel(label);
   const glow = glowForType(type, secondary);
   const size = nodeSizeForType(type, secondary);
   const isPill = type === "endpoint" && !secondary;
   const [hovered, setHovered] = useState(false);
   const active = selected || hovered;
-  const scale = active ? 1.04 : 1;
+  const scale = active ? 1.03 : 1;
 
   const boxShadow = active
-    ? `0 0 24px ${glow.color}88, 0 0 8px ${glow.color}44, inset 0 0 12px ${glow.color}22`
-    : `0 0 12px ${glow.color}44, inset 0 0 6px ${glow.color}11`;
+    ? `0 0 16px ${glow.color}55, inset 0 0 8px ${glow.color}15`
+    : `0 0 8px ${glow.color}22`;
 
   return (
     <div
@@ -29,7 +30,7 @@ function GraphNodeComponent({ data, selected }: NodeProps) {
       data-index={data.animationIndex ?? 0}
       style={{
         width: size.width,
-        opacity: secondary ? 0.65 : 1,
+        opacity: dimmed ? 0.18 : secondary ? 0.55 : 1,
         transform: `scale(${scale})`,
         transformOrigin: "center center",
       }}

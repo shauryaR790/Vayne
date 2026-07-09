@@ -14,12 +14,35 @@ class AnalyzeInvestigationItem(BaseModel):
     status: str
 
 
+class SkippedFile(BaseModel):
+    file: str
+    stage: str = ""
+    error: str = ""
+    error_kind: str = ""
+
+
 class AnalyzeResponse(BaseModel):
     investigation_id: str
     status: str
     mode: str = "combined"
     investigation_group_id: str | None = None
     investigations: list[AnalyzeInvestigationItem] = Field(default_factory=list)
+    files_processed: int = 0
+    files_skipped: int = 0
+    warnings: list[str] = Field(default_factory=list)
+    skipped: list[SkippedFile] = Field(default_factory=list)
+
+
+class AnalyzeErrorResponse(BaseModel):
+    success: bool = False
+    stage: str = ""
+    file: str = ""
+    error: str = ""
+    error_kind: str = ""
+    details: str = ""
+    files_processed: int = 0
+    files_skipped: int = 0
+    warnings: list[str] = Field(default_factory=list)
 
 
 class AttackSurfaceSummary(BaseModel):

@@ -13,5 +13,9 @@ export function VaneEngineEmpty(props: {
   disabled?: boolean;
   error?: string;
 }) {
-  return <VaneUploadStage {...props} />;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <VaneUploadStage {...props} />
+    </div>
+  );
 }

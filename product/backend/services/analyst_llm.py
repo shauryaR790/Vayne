@@ -76,23 +76,22 @@ async def _llm_reachable() -> bool:
     _ping_cache = (ok, now)
     return ok
 
-BRIEF_INSTRUCTION = """Write your post-investigation analyst briefing. Use ONLY facts from the context.
+BRIEF_INSTRUCTION = """Interpret this investigation for a peer analyst. Use ONLY facts from the context.
 
-Write like a senior analyst speaking — natural paragraphs, not a generated report.
+Answer:
+1. What happened (strongest retained exposure)
+2. Why VANE believes it (proof / scanner agreement — cite source + detail)
+3. How certain (confidence and what built it, if factors exist)
+4. What should happen next (highest expected-confidence-gain missing evidence)
 
-Example tone:
-"I completed the investigation of the supplied environment. The analysis identified four assets and seven exposed services. Eleven findings were validated during investigation, with one attack path confirmed as exploitable.
-
-The most significant issue is [specific finding from context]. Based on available evidence, [explain impact in plain language].
-
-From a business perspective, this environment should be considered [risk level from context]. I recommend [prioritized actions woven into prose]."
+Write like a senior analyst speaking — natural paragraphs, not a generated report dump.
 
 RULES:
-- Paragraphs first; bullets only when listing remediation steps
+- Interpret, do not summarize the report
+- Never invent facts
 - No ALL CAPS headers, no divider lines, no "Assets: N" label dumps
-- Include counts and CVEs inside sentences, not as isolated lines
-- Never invent facts"""
-
+- If confidence_factors exist for the top finding, you may show the factor math briefly
+"""
 
 def estimate_cost_usd(usage: TokenUsage) -> float:
     prompt_cost = (usage.prompt_tokens / 1_000_000) * llm_input_cost_per_m()

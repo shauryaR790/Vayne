@@ -2,9 +2,7 @@
 
 import type { GraphNode } from "@/lib/types";
 import { formatGraphNodeLabel } from "@/lib/format";
-import { ConfidenceBar } from "@/components/ui/ConfidenceBar";
 import { SectionLabel } from "@/components/shared/workspace-card";
-import { Button } from "@/components/ui/button";
 import { normalizeGraphType } from "./layoutEngine";
 
 function parseNodeMeta(node: GraphNode) {
@@ -25,98 +23,99 @@ function riskLabel(risk?: number): string {
   return "Low";
 }
 
+function inferSources(node: GraphNode): string[] {
+  const fromEvidence = (node.evidence ?? [])
+    .map((e) => {
+      const m = e.match(/^(nmap|nessus|burp|nuclei|openvas|httpx)/i);
+      return m ? m[1] : null;
+    })
+    .filter(Boolean) as string[];
+  return [...new Set(fromEvidence.map((s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()))];
+}
+
+function InspectorField({
+  label,
+  value,
+  mono,
+  large,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  large?: boolean;
+}) {
+  return (
+    <div>
+      <SectionLabel>{label}</SectionLabel>
+      <p
+        className={
+          mono
+            ? "mt-2 font-mono text-[14px] font-medium text-white/85"
+            : large
+              ? "mt-2 text-[18px] font-black uppercase leading-none text-white"
+              : "mt-2 text-[14px] font-medium uppercase text-white/85"
+        }
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export function GraphNodeInspector({ node }: { node: GraphNode | null }) {
   if (!node) {
     return (
-      <p className="mt-4 text-[11px] leading-relaxed text-white/40">
-        Select a node to inspect evidence, confidence, risk, and reasoning.
+      <p className="mt-4 text-[14px] leading-relaxed text-white/50">
+        Select a node on the attack path to inspect evidence and confidence.
       </p>
     );
   }
 
   const type = normalizeGraphType(node);
   const meta = parseNodeMeta(node);
-  const cves = (node.evidence ?? []).filter((e) => /CVE-/i.test(e));
+  const sources = inferSources(node);
+  const evidenceCount = node.evidence?.length ?? 0;
 
   return (
-    <div className="mt-4 space-y-3 text-left min-w-0">
-      <div>
-        <SectionLabel>Type</SectionLabel>
-        <p className="mt-1 text-[11px] font-bold uppercase text-white">{type}</p>
+    <div className="mt-4 space-y-5 text-left min-w-0">
+      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
+        <InspectorField label="Host" value={meta.host} mono />
+        <InspectorField label="Type" value={type} />
+        <InspectorField
+          label="Confidence"
+          value={node.confidence != null ? `${node.confidence}%` : "—"}
+          large
+        />
+        <InspectorField label="Risk" value={riskLabel(node.risk)} />
+        <InspectorField
+          label="Evidence"
+          value={`${evidenceCount} signal${evidenceCount === 1 ? "" : "s"}`}
+        />
+        <InspectorField
+          label="Scanners"
+          value={sources.length ? sources.join(", ") : "—"}
+        />
       </div>
-      <div>
-        <SectionLabel>Name</SectionLabel>
-        <p className="mt-1 break-all font-mono text-[11px] text-white/85">{meta.name}</p>
-      </div>
-      <div>
-        <SectionLabel>Host</SectionLabel>
-        <p className="mt-1 font-mono text-[11px] text-white/75">{meta.host}</p>
-      </div>
-      {type === "service" && (
-        <div>
-          <SectionLabel>Port</SectionLabel>
-          <p className="mt-1 font-mono text-[11px] text-white/75">{meta.port}</p>
-        </div>
-      )}
-      {node.confidence != null && (
-        <div>
-          <SectionLabel>Confidence</SectionLabel>
-          <div className="mt-2">
-            <ConfidenceBar value={node.confidence} />
-          </div>
-        </div>
-      )}
-      <div>
-        <SectionLabel>Risk</SectionLabel>
-        <p className="mt-1 text-[11px] font-bold uppercase text-white">
-          {riskLabel(node.risk)}
+
+      <div className="border-t border-white/15 pt-4">
+        <SectionLabel>Node</SectionLabel>
+        <p className="mt-2 break-all font-mono text-[14px] font-medium leading-relaxed text-white/85">
+          {meta.name}
         </p>
       </div>
+
       {node.evidence?.length ? (
-        <div>
-          <SectionLabel>Evidence</SectionLabel>
-          <ul className="mt-2 space-y-1 break-all font-mono text-[10px] text-white/65">
-            {node.evidence.slice(0, 4).map((e) => (
-              <li key={e}>{e}</li>
+        <div className="border-t border-white/15 pt-4">
+          <SectionLabel>Proof</SectionLabel>
+          <ul className="mt-3 max-h-32 space-y-2 overflow-y-auto">
+            {node.evidence.slice(0, 5).map((e) => (
+              <li key={e} className="font-mono text-[13px] leading-relaxed text-white/65">
+                {e}
+              </li>
             ))}
           </ul>
         </div>
       ) : null}
-      {cves.length > 0 && (
-        <div>
-          <SectionLabel>Related CVEs</SectionLabel>
-          <ul className="mt-2 space-y-1 font-mono text-[10px] text-white/70">
-            {cves.map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <div>
-        <SectionLabel>Business Impact</SectionLabel>
-        <p className="mt-1 text-[11px] uppercase text-white/70">
-          {node.criticality || riskLabel(node.risk)}
-        </p>
-      </div>
-      <div>
-        <SectionLabel>Reasoning</SectionLabel>
-        <p className="mt-2 text-[11px] leading-relaxed text-white/60">
-          VAYNE identified {meta.name} through scan fingerprinting
-          {node.evidence?.[0] ? ` — ${node.evidence[0]}` : ""}
-          {cves.length ? " and matched vulnerability intelligence." : "."}
-        </p>
-      </div>
-      <div className="flex flex-col gap-1.5 pt-2">
-        <Button variant="secondary" size="sm" className="w-full">
-          Investigate
-        </Button>
-        <Button variant="ghost" size="sm" className="w-full">
-          Explain
-        </Button>
-        <Button variant="ghost" size="sm" className="w-full">
-          Generate Remediation
-        </Button>
-      </div>
     </div>
   );
 }

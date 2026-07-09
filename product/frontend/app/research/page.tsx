@@ -1,10 +1,10 @@
-import { AppShell } from "@/components/layout/AppShell";
+import { VaneWorkspaceShell } from "@/components/workspace/vane-workspace-shell";
 import { ResearchContent } from "@/components/knowledge/ResearchContent";
 
 export default function ResearchPage() {
   return (
-    <AppShell activeNav="research">
+    <VaneWorkspaceShell>
       <ResearchContent />
-    </AppShell>
+    </VaneWorkspaceShell>
   );
 }

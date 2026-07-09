@@ -15,73 +15,42 @@ import {
   formatInvestigationRecordTimestamp,
 } from "@/lib/investigation-record";
 import { cn } from "@/lib/utils";
-
-function WorkstationSection({
-  title,
-  children,
-  bodyClassName,
-}: {
-  title: string;
-  children: React.ReactNode;
-  bodyClassName?: string;
-}) {
-  return (
-    <section className="border-b border-vx-border">
-      <div className="border-b border-vx-border bg-vx-panel px-6 py-3">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-vx-secondary">
-          {title}
-        </h2>
-      </div>
-      <div className={cn("min-w-0 bg-vx-app px-6 py-5", bodyClassName)}>{children}</div>
-    </section>
-  );
-}
-
-function HeaderMetric({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string | number;
-  mono?: boolean;
-}) {
-  const display = String(value);
-
-  return (
-    <div className="min-w-0 overflow-hidden border border-vx-border bg-vx-panel px-4 py-3">
-      <p className="truncate text-[10px] font-medium uppercase tracking-[0.1em] text-vx-muted">
-        {label}
-      </p>
-      <p
-        className={cn(
-          "mt-1 truncate font-semibold text-white",
-          mono ? "font-mono text-[13px]" : "text-[16px]",
-        )}
-        title={display}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
+import {
+  createReveal,
+  HeaderMetric,
+  WorkstationSection,
+} from "@/components/workspace/workstation-primitives";
+import {
+  AttackPathsTimeline,
+  ConfirmedFindingsSection,
+  DeveloperDetailsSection,
+  EvidenceSection,
+  ExecutiveVerdictSection,
+  InvestigationSummarySection,
+  InvestigationTimelineSection,
+  MissingEvidenceSection,
+  RecommendationsSection,
+  RiskOverviewSection,
+} from "@/components/workspace/investigation-workbench-sections";
 
 function InvestigationHeader({
   presentation,
   displayId,
   environment,
   createdAt,
+  reveal,
 }: {
   presentation: InvestigationPresentation;
   displayId: string;
   environment: string;
   createdAt: string;
+  reveal: number;
 }) {
   const { executive } = presentation;
   const confidence = presentation.graphConfidence ?? "—";
 
   return (
-    <WorkstationSection title="Investigation Header">
+    <WorkstationSection title="Investigation Header" reveal={reveal}>
       <div className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
         <HeaderMetric label="Investigation ID" value={displayId} mono />
         <HeaderMetric label="Environment" value={environment} mono />
@@ -319,196 +288,234 @@ export function InvestigationWorkstationReport({
     ...new Set(validatedChains.flatMap((c) => c.mitreTags)),
   ];
   const assetRows = [...new Set(findings.map((f) => f.asset))];
+  const workbench = bundle.workbench;
 
-  const timeline = [
-    { phase: "Evidence ingested", detail: record.files.join(", ") || presentation.sourceLabel },
-    { phase: "Asset discovery", detail: `${executive.assets} assets mapped` },
-    { phase: "Path validation", detail: `${executive.attackPaths} paths evaluated` },
-    { phase: "Findings retained", detail: `${executive.validatedFindings} findings above threshold` },
-  ];
+  const nextDelay = createReveal();
 
   return (
-    <article className={cn("flex w-full min-w-0 flex-col", className)}>
-      <InvestigationHeader
-        presentation={presentation}
-        displayId={record.displayId}
-        environment={presentation.sourceLabel}
-        createdAt={formatInvestigationRecordTimestamp(record.createdAt)}
-      />
+    <article className={cn("flex w-full min-w-0 flex-col gap-1", className)}>
+      {workbench ? (
+        <>
+          <InvestigationSummarySection workbench={workbench} reveal={nextDelay()} />
+          <ExecutiveVerdictSection workbench={workbench} reveal={nextDelay()} />
+          <RiskOverviewSection
+            workbench={workbench}
+            risk={executive.risk}
+            confidence={presentation.graphConfidence}
+            reveal={nextDelay()}
+          />
+          <ConfirmedFindingsSection workbench={workbench} reveal={nextDelay()} />
 
-      <WorkstationSection title="Attack Graph" bodyClassName="p-0 min-h-[420px]">
-        <GraphExplorer
-          embedded
-          layout="workstation"
-          graph={presentation.graph}
-          context={{
-            hasPaths: presentation.hasPaths,
-            attackPaths: executive.attackPaths,
-            rejectedPaths: presentation.rejectedPathCount,
-            confidence: presentation.graphConfidence,
-            summary: "",
-            emptyChecks: EMPTY_GRAPH_CHECKS.filter((c) => c.ok || !presentation.hasPaths),
-          }}
-        />
-      </WorkstationSection>
+          <WorkstationSection
+            title="Attack Graph"
+            bodyClassName="p-0 min-h-[380px]"
+            reveal={nextDelay()}
+            large
+          >
+            <GraphExplorer
+              embedded
+              layout="workstation"
+              graph={presentation.graph}
+              workbench={workbench}
+              context={{
+                hasPaths: presentation.hasPaths,
+                attackPaths: executive.attackPaths,
+                rejectedPaths: presentation.rejectedPathCount,
+                confidence: presentation.graphConfidence,
+                summary: "",
+                emptyChecks: EMPTY_GRAPH_CHECKS.filter((c) => c.ok || !presentation.hasPaths),
+              }}
+            />
+            <AttackPathsTimeline workbench={workbench} />
+          </WorkstationSection>
 
-      <WorkstationSection title="Executive Summary">
-        <p className="mb-4 max-w-[90ch] text-[14px] leading-relaxed text-vx-body">
-          {executive.validatedFindings > 0
-            ? `${executive.validatedFindings} validated finding${executive.validatedFindings === 1 ? "" : "s"} across ${executive.assets} asset${executive.assets === 1 ? "" : "s"}. Risk classified ${executive.risk}.`
-            : "Investigation completed. No findings met the retention threshold."}
-        </p>
-        <div className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
-          <HeaderMetric label="Risk" value={executive.risk} />
-          <HeaderMetric label="Assets" value={executive.assets} />
-          <HeaderMetric label="Findings" value={executive.validatedFindings} />
-          <HeaderMetric label="Paths" value={executive.attackPaths} />
-          <HeaderMetric label="Blast Radius" value={executive.blastRadius} />
-          <HeaderMetric label="Rejected" value={rejectedChains.length} />
-        </div>
-      </WorkstationSection>
+          <MissingEvidenceSection workbench={workbench} reveal={nextDelay()} />
+          <RecommendationsSection workbench={workbench} reveal={nextDelay()} />
+          <InvestigationTimelineSection workbench={workbench} reveal={nextDelay()} />
+          <EvidenceSection workbench={workbench} reveal={nextDelay()} />
+          <DeveloperDetailsSection workbench={workbench} reveal={nextDelay()} />
+        </>
+      ) : (
+        <>
+          <InvestigationHeader
+            presentation={presentation}
+            displayId={record.displayId}
+            environment={presentation.sourceLabel}
+            createdAt={formatInvestigationRecordTimestamp(record.createdAt)}
+            reveal={nextDelay()}
+          />
 
-      <WorkstationSection title="Validated Attack Paths">
-        <div className="space-y-4">
-          {topPath ? <PrimaryAttackVector topPath={topPath} /> : null}
-          {secondaryPaths.length > 0 ? (
-            <div className="grid gap-3 lg:grid-cols-2">
-              {secondaryPaths.map((chain, i) => (
-                <SecondaryPathCard key={chain.id} chain={chain} index={i} />
+          <WorkstationSection title="Attack Graph" bodyClassName="p-0 min-h-[420px]" reveal={nextDelay()}>
+            <GraphExplorer
+              embedded
+              layout="workstation"
+              graph={presentation.graph}
+              context={{
+                hasPaths: presentation.hasPaths,
+                attackPaths: executive.attackPaths,
+                rejectedPaths: presentation.rejectedPathCount,
+                confidence: presentation.graphConfidence,
+                summary: "",
+                emptyChecks: EMPTY_GRAPH_CHECKS.filter((c) => c.ok || !presentation.hasPaths),
+              }}
+            />
+          </WorkstationSection>
+
+          <WorkstationSection title="Executive Summary" reveal={nextDelay()}>
+            <p className="mb-4 max-w-[90ch] text-[14px] leading-relaxed text-vx-body">
+              {executive.validatedFindings > 0
+                ? `${executive.validatedFindings} validated finding${executive.validatedFindings === 1 ? "" : "s"} across ${executive.assets} asset${executive.assets === 1 ? "" : "s"}. Risk classified ${executive.risk}.`
+                : "Investigation completed. No findings met the retention threshold."}
+            </p>
+            <div className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
+              <HeaderMetric label="Risk" value={executive.risk} />
+              <HeaderMetric label="Assets" value={executive.assets} />
+              <HeaderMetric label="Findings" value={executive.validatedFindings} />
+              <HeaderMetric label="Paths" value={executive.attackPaths} />
+              <HeaderMetric label="Blast Radius" value={executive.blastRadius} />
+              <HeaderMetric label="Rejected" value={rejectedChains.length} />
+            </div>
+          </WorkstationSection>
+
+          <WorkstationSection title="Validated Attack Paths" reveal={nextDelay()}>
+            <div className="space-y-4">
+              {topPath ? <PrimaryAttackVector topPath={topPath} /> : null}
+              {secondaryPaths.length > 0 ? (
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {secondaryPaths.map((chain, i) => (
+                    <SecondaryPathCard key={chain.id} chain={chain} index={i} />
+                  ))}
+                </div>
+              ) : null}
+              {!topPath && !secondaryPaths.length ? (
+                <p className="text-[13px] text-vx-muted">No validated attack paths recorded.</p>
+              ) : null}
+            </div>
+          </WorkstationSection>
+
+          {rejectedChains.length > 0 ? (
+            <WorkstationSection title="Rejected Paths" reveal={nextDelay()}>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {rejectedChains.map((chain, i) => (
+                  <RejectedPathCard key={`rej-${i}`} chain={chain} index={i} />
+                ))}
+              </div>
+            </WorkstationSection>
+          ) : null}
+
+          {findings.length > 0 ? (
+            <WorkstationSection title="Findings" reveal={nextDelay()}>
+              <div className="mb-4 grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4">
+                <HeaderMetric label="Critical" value={breakdown.critical} />
+                <HeaderMetric label="High" value={breakdown.high} />
+                <HeaderMetric label="Medium" value={breakdown.medium} />
+                <HeaderMetric label="Low" value={breakdown.low} />
+              </div>
+              <div className="space-y-4">
+                {findings.map((f) => (
+                  <FindingWorkstationCard key={f.id} finding={f} />
+                ))}
+              </div>
+            </WorkstationSection>
+          ) : null}
+
+          {findings.some((f) => f.beliefReasons.length) ? (
+            <WorkstationSection title="Evidence" reveal={nextDelay()}>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {findings.flatMap((f, fi) =>
+                  f.beliefReasons.slice(0, 2).map((reason, ri) => (
+                    <EvidenceWorkstationCard
+                      key={`${f.id}-${ri}`}
+                      index={fi * 2 + ri}
+                      finding={f}
+                      reason={reason}
+                    />
+                  )),
+                )}
+              </div>
+            </WorkstationSection>
+          ) : null}
+
+          <WorkstationSection title="Remediation Priority" reveal={nextDelay()}>
+            <div className="space-y-3">
+              {findings.slice(0, 5).map((f) => (
+                <div
+                  key={f.id}
+                  className="flex flex-wrap items-baseline justify-between gap-2 border border-vx-border bg-vx-panel px-4 py-3"
+                >
+                  <span className="text-[14px] text-white">{f.finding}</span>
+                  <span className="text-[12px] text-vx-secondary">{f.remediationPriority}</span>
+                </div>
               ))}
             </div>
-          ) : null}
-          {!topPath && !secondaryPaths.length ? (
-            <p className="text-[13px] text-vx-muted">No validated attack paths recorded.</p>
-          ) : null}
-        </div>
-      </WorkstationSection>
+          </WorkstationSection>
 
-      {rejectedChains.length > 0 ? (
-        <WorkstationSection title="Rejected Paths">
-          <div className="grid gap-3 lg:grid-cols-2">
-            {rejectedChains.map((chain, i) => (
-              <RejectedPathCard key={`rej-${i}`} chain={chain} index={i} />
-            ))}
-          </div>
-        </WorkstationSection>
-      ) : null}
+          <WorkstationSection title="Validation Logic" reveal={nextDelay()}>
+            <ul className="space-y-2">
+              {validatedChains.map((chain) => (
+                <li
+                  key={chain.id}
+                  className="border border-vx-border bg-vx-panel px-4 py-3 text-[13px] text-vx-body"
+                >
+                  <span className="font-medium text-white">Path {chain.id}: </span>
+                  {chain.analystNote}
+                </li>
+              ))}
+              {rejectedChains.map((chain, i) => (
+                <li
+                  key={`val-rej-${i}`}
+                  className="border border-vx-border bg-vx-panel/80 px-4 py-3 text-[13px] text-vx-muted"
+                >
+                  Rejected: {chain.reason}
+                </li>
+              ))}
+            </ul>
+          </WorkstationSection>
 
-      {findings.length > 0 ? (
-        <WorkstationSection title="Findings">
-          <div className="mb-4 grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4">
-            <HeaderMetric label="Critical" value={breakdown.critical} />
-            <HeaderMetric label="High" value={breakdown.high} />
-            <HeaderMetric label="Medium" value={breakdown.medium} />
-            <HeaderMetric label="Low" value={breakdown.low} />
-          </div>
-          <div className="space-y-4">
-            {findings.map((f) => (
-              <FindingWorkstationCard key={f.id} finding={f} />
-            ))}
-          </div>
-        </WorkstationSection>
-      ) : null}
-
-      {findings.some((f) => f.beliefReasons.length) ? (
-        <WorkstationSection title="Evidence">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {findings.flatMap((f, fi) =>
-              f.beliefReasons.slice(0, 2).map((reason, ri) => (
-                <EvidenceWorkstationCard
-                  key={`${f.id}-${ri}`}
-                  index={fi * 2 + ri}
-                  finding={f}
-                  reason={reason}
-                />
-              )),
-            )}
-          </div>
-        </WorkstationSection>
-      ) : null}
-
-      <WorkstationSection title="Remediation Priority">
-        <div className="space-y-3">
-          {findings.slice(0, 5).map((f) => (
-            <div key={f.id} className="flex flex-wrap items-baseline justify-between gap-2 border border-vx-border bg-vx-panel px-4 py-3">
-              <span className="text-[14px] text-white">{f.finding}</span>
-              <span className="text-[12px] text-vx-secondary">{f.remediationPriority}</span>
-            </div>
-          ))}
-        </div>
-      </WorkstationSection>
-
-      <WorkstationSection title="Validation Logic">
-        <ul className="space-y-2">
-          {validatedChains.map((chain) => (
-            <li key={chain.id} className="border border-vx-border bg-vx-panel px-4 py-3 text-[13px] text-vx-body">
-              <span className="font-medium text-white">Path {chain.id}: </span>
-              {chain.analystNote}
-            </li>
-          ))}
-          {rejectedChains.map((chain, i) => (
-            <li key={`val-rej-${i}`} className="border border-vx-border bg-vx-panel/80 px-4 py-3 text-[13px] text-vx-muted">
-              Rejected: {chain.reason}
-            </li>
-          ))}
-        </ul>
-      </WorkstationSection>
-
-      {mitreTags.length > 0 ? (
-        <WorkstationSection title="MITRE Mapping">
-          <div className="flex flex-wrap gap-2">
-            {mitreTags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded border border-vx-border bg-vx-elevated px-3 py-1.5 text-[12px] text-vx-body"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </WorkstationSection>
-      ) : null}
-
-      <WorkstationSection title="Confidence Breakdown">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {findings.map((f) => (
-            <div key={f.id} className="border border-vx-border bg-vx-panel px-4 py-3">
-              <p className="text-[12px] text-vx-muted">{f.finding}</p>
-              <p className="mt-1 text-[18px] font-semibold text-white">{f.confidence}%</p>
-            </div>
-          ))}
-        </div>
-      </WorkstationSection>
-
-      <WorkstationSection title="Asset Exposure Matrix">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {assetRows.map((asset) => {
-            const assetFindings = findings.filter((f) => f.asset === asset);
-            return (
-              <div key={asset} className="border border-vx-border bg-vx-panel px-4 py-3">
-                <p className="text-[14px] font-medium text-white">{asset}</p>
-                <p className="mt-1 text-[12px] text-vx-secondary">
-                  {assetFindings.length} finding{assetFindings.length === 1 ? "" : "s"} · max risk{" "}
-                  {Math.max(...assetFindings.map((f) => f.riskScore), 0)}/10
-                </p>
+          {mitreTags.length > 0 ? (
+            <WorkstationSection title="MITRE Mapping" reveal={nextDelay()}>
+              <div className="flex flex-wrap gap-2">
+                {mitreTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded border border-vx-border bg-vx-elevated px-3 py-1.5 text-[12px] text-vx-body"
+                  >
+                    {tag}
+                  </span>
+                ))}
               </div>
-            );
-          })}
-        </div>
-      </WorkstationSection>
+            </WorkstationSection>
+          ) : null}
 
-      <WorkstationSection title="Timeline">
-        <ol className="space-y-3">
-          {timeline.map((item) => (
-            <li key={item.phase} className="flex gap-4 border-l-2 border-vx-border pl-4">
-              <div>
-                <p className="text-[13px] font-medium text-white">{item.phase}</p>
-                <p className="mt-0.5 text-[12px] text-vx-secondary">{item.detail}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </WorkstationSection>
+          <WorkstationSection title="Confidence Breakdown" reveal={nextDelay()}>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {findings.map((f) => (
+                <div key={f.id} className="border border-vx-border bg-vx-panel px-4 py-3">
+                  <p className="text-[12px] text-vx-muted">{f.finding}</p>
+                  <p className="mt-1 text-[18px] font-semibold text-white">{f.confidence}%</p>
+                </div>
+              ))}
+            </div>
+          </WorkstationSection>
+
+          <WorkstationSection title="Asset Exposure Matrix" reveal={nextDelay()}>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {assetRows.map((asset) => {
+                const assetFindings = findings.filter((f) => f.asset === asset);
+                return (
+                  <div key={asset} className="border border-vx-border bg-vx-panel px-4 py-3">
+                    <p className="text-[14px] font-medium text-white">{asset}</p>
+                    <p className="mt-1 text-[12px] text-vx-secondary">
+                      {assetFindings.length} finding{assetFindings.length === 1 ? "" : "s"} · max
+                      risk {Math.max(...assetFindings.map((f) => f.riskScore), 0)}/10
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </WorkstationSection>
+        </>
+      )}
     </article>
   );
 }

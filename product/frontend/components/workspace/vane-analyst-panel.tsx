@@ -4,9 +4,11 @@ import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import { ArrowUp } from "lucide-react";
 
+import { AnalystPanelHeader } from "@/components/workspace/analyst/analyst-panel-header";
 import { AnalystMessage, AnalystMessageDivider, UserMessage } from "@/components/workspace/analyst/analyst-message";
 import { AnalystThinking } from "@/components/workspace/analyst/analyst-thinking";
 import type { InvestigationBundle } from "@/lib/investigation-bundle";
+import { ANALYST_NAME } from "@/lib/brand";
 import type { StoredChatMessage } from "@/lib/conversation-session";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +31,7 @@ export function VaneAnalystPanel({
   onScroll,
   initialScrollTop = 0,
   inputRef,
+  onClearChat,
 }: {
   bundle: InvestigationBundle | null;
   messages: AnalystMessageRow[];
@@ -42,6 +45,7 @@ export function VaneAnalystPanel({
   onScroll?: (scrollTop: number) => void;
   initialScrollTop?: number;
   inputRef?: RefObject<HTMLTextAreaElement>;
+  onClearChat?: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const restoredScroll = useRef(false);
@@ -62,9 +66,16 @@ export function VaneAnalystPanel({
 
   const disabled = !bundle || busy;
   const empty = !messages.length && !thinking && !thinkingStep;
+  const contextLabel = bundle
+    ? bundle.report.name?.trim() || bundle.detail.summary.id || ANALYST_NAME
+    : ANALYST_NAME;
 
   return (
     <aside className="flex h-screen w-[25%] min-w-[300px] shrink-0 flex-col border-l border-vx-border bg-vx-app">
+      <AnalystPanelHeader
+        contextLabel={contextLabel}
+        onDismiss={messages.length && onClearChat ? onClearChat : undefined}
+      />
       <div
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto px-4 py-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

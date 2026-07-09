@@ -14,15 +14,15 @@ export const NODE_SIZE: Record<string, { width: number; height: number }> = {
 };
 
 export const NODE_GLOW: Record<string, { color: string; label: string }> = {
-  endpoint: { color: "#a1a1aa", label: "ENTRY" },
-  asset: { color: "#3B82F6", label: "ASSET" },
-  service: { color: "#06b6d4", label: "SERVICE" },
-  software: { color: "#FFB224", label: "SOFTWARE" },
-  vulnerability: { color: "#FF4D4D", label: "VULNERABILITY" },
-  attack: { color: "#00C16A", label: "VERIFIED ATTACK" },
-  verified: { color: "#00C16A", label: "VERIFIED ATTACK" },
-  rejected: { color: "#f97316", label: "REJECTED ATTACK" },
-  secondary: { color: "#71717a", label: "EVIDENCE" },
+  endpoint: { color: "#d4d4d8", label: "ENTRY" },
+  asset: { color: "#e4e4e7", label: "ASSET" },
+  service: { color: "#a1a1aa", label: "SERVICE" },
+  software: { color: "#d4d4d8", label: "SOFTWARE" },
+  vulnerability: { color: "#fafafa", label: "VULNERABILITY" },
+  attack: { color: "#ffffff", label: "ATTACK" },
+  verified: { color: "#ffffff", label: "VERIFIED" },
+  rejected: { color: "#737373", label: "REJECTED" },
+  secondary: { color: "#52525b", label: "EVIDENCE" },
   unknown: { color: "#71717a", label: "NODE" },
 };
 

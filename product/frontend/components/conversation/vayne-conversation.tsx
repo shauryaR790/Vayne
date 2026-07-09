@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 
-import { analyzeFiles, getApiBase, checkHealth } from "@/lib/api";
+import { analyzeFiles, AnalyzeError, getApiBase, checkHealth } from "@/lib/api";
 import {
   ANALYST_OFFLINE_MESSAGE,
   sanitizeChatHistory,
@@ -37,7 +37,7 @@ import {
   type InvestigationMode,
 } from "@/lib/investigation-mode";
 import { attachmentsFromFiles } from "@/lib/multi-investigation-message";
-import { buildAnalystBriefingMessages } from "@/lib/analyst-briefing";
+import { buildAnalystBriefingMessages, interpretAnalystQuestion } from "@/lib/analyst-briefing";
 import { ANALYST_THINKING_STEPS, streamAnalystBriefing } from "@/lib/analyst-stream";
 import { ensureEngineMessages } from "@/lib/engine-messages";
 import {
@@ -53,6 +53,35 @@ import { WorkspaceShortcutsOverlay } from "@/components/workspace/workspace-shor
 import { useWorkspaceKeyboard } from "@/components/workspace/use-workspace-keyboard";
 import { LOG_PREFIX } from "@/lib/brand";
 import { ResetWorkspaceBootstrap } from "@/components/dev/reset-workspace-bootstrap";
+
+/** Map a caught analyze failure to a precise, user-facing message. */
+function describeAnalyzeError(e: unknown): string {
+  if (e instanceof AnalyzeError) {
+    switch (e.kind) {
+      case "offline":
+        return `Cannot reach VANE API at ${getApiBase()}. Start the backend (uvicorn) and ensure NEXT_PUBLIC_API_URL matches.`;
+      case "timeout":
+        return "Analysis exceeded timeout.";
+      case "unsupported_file":
+      case "invalid_xml":
+      case "invalid_json":
+        return `Unsupported file format.\n\n${e.file ? `File: ${e.file}\n` : ""}${e.message}`;
+      case "parser_error":
+      case "internal_error":
+        return `Investigation failed\n\nReason:\n${
+          e.stage ? `${e.stage} — ` : ""
+        }${e.message}`;
+      default:
+        return e.message;
+    }
+  }
+  const message = e instanceof Error ? e.message : String(e);
+  // Genuine browser-level network failure is the only "cannot reach" case.
+  if (message.toLowerCase().includes("failed to fetch")) {
+    return `Cannot reach VANE API at ${getApiBase()}. Start the backend (uvicorn) and ensure NEXT_PUBLIC_API_URL matches.`;
+  }
+  return message;
+}
 
 interface ChatMessage extends StoredChatMessage {
   streaming?: boolean;
@@ -420,6 +449,15 @@ export function VaneWorkspace({
         { id: `user-${Date.now()}`, role: "user", content: question },
       ]);
       setAnalystInput("");
+
+      // Deterministic reconstruction for confidence / rejection questions —
+      // prefer workbench facts over an LLM paraphrase when we can answer exactly.
+      const interpreted = interpretAnalystQuestion(question, bundle?.workbench);
+      if (interpreted) {
+        updateAnalystMessage(streamId, interpreted, false);
+        return;
+      }
+
       setBusy(true);
       setThinking(true);
       setThinkingStep(ANALYST_THINKING_STEPS[0]);
@@ -492,7 +530,7 @@ export function VaneWorkspace({
       );
       setBusy(false);
     },
-    [analystMessages, beginStream, investigationId, updateAnalystMessage],
+    [analystMessages, beginStream, bundle, investigationId, updateAnalystMessage],
   );
 
   const handleAnalyze = useCallback(async () => {
@@ -537,6 +575,15 @@ export function VaneWorkspace({
         mode: resolvedMode,
         prompt,
       });
+      if (result.warnings?.length) {
+        console.warn(
+          `${LOG_PREFIX} Investigation completed with warnings — ` +
+            `${result.files_processed ?? "?"} processed, ${result.files_skipped ?? 0} skipped`,
+        );
+        for (const warning of result.warnings) {
+          console.warn(`${LOG_PREFIX} \u2717 ${warning}`);
+        }
+      }
       const ids = result.investigations.map((item) => item.investigation_id);
       setInvestigationGroupId(result.investigation_group_id ?? null);
       setInvestigationIds(ids);
@@ -614,14 +661,7 @@ export function VaneWorkspace({
         );
       }
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (message.toLowerCase().includes("failed to fetch")) {
-        setError(
-          `Cannot reach VANE API at ${getApiBase()}. Start the backend (uvicorn) and ensure NEXT_PUBLIC_API_URL matches.`,
-        );
-      } else {
-        setError(message);
-      }
+      setError(describeAnalyzeError(e));
     } finally {
       setEnginePhase("idle");
       setBusy(false);
@@ -774,6 +814,7 @@ export function VaneWorkspace({
           persist({ analystScrollTop: top });
         }}
         inputRef={analystInputRef}
+        onClearChat={() => setAnalystMessages([])}
       />
     </div>
   );

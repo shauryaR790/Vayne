@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import json
 import shutil
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
+
+from product.backend.logging_config import get_logger
+
+logger = get_logger()
 
 from product.backend.models.investigation import (
     AttackPathORM,
@@ -76,8 +81,32 @@ class InvestigationService:
         work_dir = self.storage_root / f"_work_{uuid.uuid4().hex}"
         cleanup_dir: Path | None = work_dir
 
+        stage_clock = {"last": time.perf_counter()}
+
+        def _on_stage(index: int, label: str, detail: str) -> None:
+            now = time.perf_counter()
+            elapsed_ms = (now - stage_clock["last"]) * 1000
+            stage_clock["last"] = now
+            logger.info(
+                "  \u2193 stage %d/%d | %-24s | %s (+%.0f ms)",
+                index,
+                7,
+                label,
+                detail,
+                elapsed_ms,
+            )
+
         try:
-            report = analyze(name, uploaded_paths, work_dir, proof=proof)
+            engine_started = time.perf_counter()
+            logger.info("Engine run started for %s", source)
+            report = analyze(
+                name, uploaded_paths, work_dir, proof=proof, on_stage=_on_stage
+            )
+            logger.info(
+                "Engine run finished for %s in %.0f ms",
+                source,
+                (time.perf_counter() - engine_started) * 1000,
+            )
             findings_json = self._load_json(work_dir / "findings.json", {})
             attack_paths_json = self._load_json(work_dir / "attack_paths.json", [])
             validated = findings_json.get("validated") or []
@@ -150,6 +179,7 @@ class InvestigationService:
             self.db.refresh(inv)
             return inv
         except Exception:
+            logger.exception("Engine run failed for %s", source)
             self.db.rollback()
             raise
         finally:
@@ -425,6 +455,26 @@ class InvestigationService:
 
     def get_report_view(self, inv_id: str) -> dict | None:
         return self.load_artifact(inv_id, "investigation.json")
+
+    def get_workbench(self, inv_id: str) -> dict | None:
+        """Rich analyst-workstation payload derived from engine exports."""
+        from product.backend.services.investigation_workbench import build_workbench
+
+        inv = self.get_investigation(inv_id)
+        if not inv:
+            return None
+        report = self.load_artifact(inv_id, "investigation.json") or {}
+        graph = self.get_full_graph(inv_id)
+        findings = self.get_findings_export(inv_id)
+        remediation = self.get_remediation_export(inv_id)
+        return build_workbench(
+            report,
+            graph,
+            findings,
+            source_filename=inv.source_filename or "",
+            created_at=inv.created_at,
+            remediation=remediation,
+        )
 
     def get_findings_export(self, inv_id: str) -> dict:
         return self.load_artifact(inv_id, "findings.json") or {

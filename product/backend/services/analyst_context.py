@@ -200,6 +200,38 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
         if scores:
             avg_conf = round(sum(float(s) for s in scores) / len(scores), 1)
 
+    # Analyst-first workbench slice — confidence factors, proof, missing evidence.
+    workbench_slice: dict[str, Any] = {}
+    try:
+        wb = svc.get_workbench(inv_id) or {}
+        top_findings = []
+        for f in (wb.get("confirmed_findings") or [])[:6]:
+            top_findings.append(
+                {
+                    "title": f.get("title"),
+                    "host": f.get("host"),
+                    "status": f.get("status"),
+                    "confidence": f.get("machine_confidence"),
+                    "semantic_confidence": f.get("confidence"),
+                    "base_confidence": f.get("base_confidence"),
+                    "final_confidence": f.get("final_confidence"),
+                    "confidence_factors": f.get("confidence_factors") or [],
+                    "proof": f.get("proof") or [],
+                    "scanner_agreement": f.get("scanner_agreement"),
+                    "business_impact": f.get("business_impact_detail") or f.get("business_impact"),
+                }
+            )
+        workbench_slice = {
+            "executive_summary": wb.get("executive_summary"),
+            "confirmed_findings": top_findings,
+            "missing_evidence": (wb.get("missing_evidence") or wb.get("unknowns") or [])[:8],
+            "candidate_paths": (wb.get("candidate_paths") or [])[:8],
+            "investigation_timeline": wb.get("investigation_timeline") or [],
+            "next_actions": (wb.get("next_actions") or [])[:6],
+        }
+    except Exception:
+        workbench_slice = {}
+
     return {
         "investigation_summary": {
             "id": inv_id,
@@ -302,6 +334,7 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
                 "credential_nodes",
             )},
         },
+        "workbench": workbench_slice,
     }
 
 
@@ -319,6 +352,7 @@ def pack_prompt_context(context: dict[str, Any]) -> dict[str, Any]:
         "remediation": context.get("remediation") or context.get("recommendations") or [],
         "proof_timeline": context.get("proof_timeline") or [],
         "graph_summary": context.get("graph_summary") or context.get("graph_statistics") or {},
+        "workbench": context.get("workbench") or {},
     }
 
 

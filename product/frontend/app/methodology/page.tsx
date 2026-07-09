@@ -1,10 +1,10 @@
-import { AppShell } from "@/components/layout/AppShell";
+import { VaneWorkspaceShell } from "@/components/workspace/vane-workspace-shell";
 import { MethodologyContent } from "@/components/knowledge/MethodologyContent";
 
 export default function MethodologyPage() {
   return (
-    <AppShell activeNav="methodology">
+    <VaneWorkspaceShell>
       <MethodologyContent />
-    </AppShell>
+    </VaneWorkspaceShell>
   );
 }

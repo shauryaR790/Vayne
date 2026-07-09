@@ -5,9 +5,11 @@ import { motion } from "motion/react";
 
 import {
   WorkspaceHomeShortcuts,
-  WorkspaceSupportedFormats,
 } from "@/components/workspace/workspace-shortcuts-overlay";
-import { shortFilename } from "@/lib/evidence-presentation";
+import {
+  AddEvidenceButton,
+  EvidenceQueue,
+} from "@/components/workspace/evidence-queue";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { OPEN_EVIDENCE_EVENT } from "@/lib/workspace-shortcuts";
@@ -75,7 +77,7 @@ export function VaneUploadStage({
 
   return (
     <div
-      className="flex h-full w-full items-center justify-center overflow-y-auto px-8 py-16 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex h-full min-h-0 w-full flex-col overflow-hidden"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
@@ -97,7 +99,12 @@ export function VaneUploadStage({
         }}
       />
 
-      <div className="flex w-full max-w-[480px] flex-col items-center text-center">
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-[520px] min-h-0 flex-1 flex-col px-8 text-center",
+          hasFiles ? "justify-start py-8" : "items-center justify-center py-16",
+        )}
+      >
         <FadeIn delay={0}>
           <h1 className="text-[22px] font-medium tracking-[-0.02em] text-white">
             What should we investigate?
@@ -111,70 +118,33 @@ export function VaneUploadStage({
         </FadeIn>
 
         {hasFiles ? (
-          <FadeIn delay={0.14} className="mt-10 w-full">
-            <p className="text-[13px] text-vx-muted">
-              {files.length} file{files.length === 1 ? "" : "s"} selected ·{" "}
-              <span className="font-mono text-vx-secondary">Enter</span> to analyze
-            </p>
-            <ul className="mt-4 space-y-2 text-left">
-              {files.map((file, index) => (
-                <li
-                  key={`${file.name}-${file.size}-${file.lastModified}`}
-                  className="flex items-center justify-between gap-4 text-[14px]"
-                >
-                  <span className="min-w-0 truncate text-vx-body">{shortFilename(file.name)}</span>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => onRemoveFile(index)}
-                    className="shrink-0 text-[12px] text-vx-muted transition-colors hover:text-white disabled:opacity-40"
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {files.length > 1 ? (
-              <div className="mt-4 flex items-center justify-center gap-3 text-[12px] text-vx-muted">
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => onModeChange("combined")}
-                  className={cn(
-                    "transition-colors",
-                    investigationMode === "combined" ? "text-white" : "hover:text-vx-secondary",
-                  )}
-                >
-                  Merge scans
-                </button>
-                <span>·</span>
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => onModeChange("separate")}
-                  className={cn(
-                    "transition-colors",
-                    investigationMode === "separate" ? "text-white" : "hover:text-vx-secondary",
-                  )}
-                >
-                  Compare separately
-                </button>
-              </div>
-            ) : null}
-          </FadeIn>
+          <div className="mt-8 w-full shrink-0">
+            <EvidenceQueue
+              files={files}
+              investigationMode={investigationMode}
+              disabled={disabled}
+              onRemoveFile={onRemoveFile}
+              onModeChange={onModeChange}
+            />
+          </div>
         ) : null}
+
+        <FadeIn
+          delay={hasFiles ? 0.15 : 0.12}
+          className={cn("w-full shrink-0", hasFiles ? "mt-5" : "mt-10")}
+        >
+          <AddEvidenceButton
+            disabled={disabled}
+            onClick={() => openFilePicker(true)}
+          />
+        </FadeIn>
 
         {error ? (
           <p className="mt-6 text-[13px] text-vx-secondary">{error}</p>
         ) : null}
 
-        <FadeIn delay={hasFiles ? 0.2 : 0.16} className="mt-12 w-full">
+        <FadeIn delay={hasFiles ? 0.2 : 0.16} className="mt-auto w-full shrink-0 pt-8">
           <WorkspaceHomeShortcuts />
-        </FadeIn>
-
-        <FadeIn delay={hasFiles ? 0.28 : 0.24} className="mt-10">
-          <WorkspaceSupportedFormats />
         </FadeIn>
       </div>
     </div>

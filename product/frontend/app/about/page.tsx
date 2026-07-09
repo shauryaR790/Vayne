@@ -1,10 +1,10 @@
-import { AppShell } from "@/components/layout/AppShell";
+import { VaneWorkspaceShell } from "@/components/workspace/vane-workspace-shell";
 import { AboutContent } from "@/components/knowledge/AboutContent";
 
 export default function AboutPage() {
   return (
-    <AppShell activeNav="about">
+    <VaneWorkspaceShell>
       <AboutContent />
-    </AppShell>
+    </VaneWorkspaceShell>
   );
 }
