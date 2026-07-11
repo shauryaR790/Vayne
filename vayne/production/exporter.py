@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from vayne.attack_paths.proof import GraphProof
+from vayne.intelligence import build_investigation_intelligence
 from vayne.models import AttackPath, InvestigationReport
 from vayne.production.analyst_report import render_analyst_report
 from vayne.production.attack_story import generate_attack_story, render_attack_story_md
@@ -106,6 +107,24 @@ def export_production_artifacts(
     artifacts["proof.txt"].write_text(
         render_proof_txt(enriched, graph_proof), encoding="utf-8"
     )
+
+    # Phase 2 — Facts Before LLM (Priority 14). The engine emits its structured
+    # intelligence artifacts; the LLM narrator may only explain these files.
+    intelligence = build_investigation_intelligence(enriched)
+    phase2 = {
+        "facts.json": intelligence["facts"],
+        "confidence.json": intelligence["confidence"],
+        "reasoning.json": intelligence["reasoning"],
+        "evidence_graph.json": intelligence["graph"],
+        "timeline.json": intelligence["timeline"],
+        "recommendations.json": intelligence["recommendations"],
+        "conflicts.json": intelligence["conflicts"],
+        "review.json": intelligence["review"],
+    }
+    for name, payload in phase2.items():
+        target = output_dir / name
+        target.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        artifacts[name] = target
 
     paths.update(artifacts)
     return paths

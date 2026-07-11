@@ -607,6 +607,159 @@ def _metric(score: int, factors: list[dict[str, Any]], question: str) -> dict[st
     }
 
 
+# --------------------------------------------------------------------------- #
+# Engine-first semantic confidence
+#
+# When the VAYNE engine has already produced its evidence-driven, multi-
+# dimensional confidence (observation / exploit / impact / overall + explainable
+# factor contributions), the product layer surfaces THAT as the source of truth
+# instead of re-deriving anything. The output shape is identical to the legacy
+# `_build_semantic_confidence` so the UI is untouched.
+# --------------------------------------------------------------------------- #
+def _factors_to_ui(factors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {"label": str(f.get("label") or ""), "delta": int(f.get("delta") or 0)}
+        for f in factors or []
+    ]
+
+
+def _ui_kind_from_engine(canonical_kind: str, validation: dict, classification: str) -> str:
+    ck = (canonical_kind or "").lower()
+    if ck in ("informational", "network"):
+        return "informational"
+    cu = (classification or "").upper()
+    exploit = str(validation.get("exploitability_status") or "").lower()
+    if "CONFIRMED" in cu or exploit == "confirmed" or validation.get("reproducible"):
+        return "validated_exposure"
+    if (
+        ck == "vulnerability"
+        or validation.get("cve_applicable")
+        or "LIKELY" in cu
+        or "UNCONFIRMED" in cu
+    ):
+        return "correlated_vulnerability"
+    return "service_observation"
+
+
+def _semantic_from_engine(
+    validation: dict,
+    corr: dict,
+    sources: list[str],
+) -> dict[str, Any]:
+    factors = validation.get("confidence_factors") or {}
+    obs_f = _factors_to_ui(factors.get("observation") or [])
+    rel_f = _factors_to_ui(factors.get("reliability") or [])
+    exp_f = _factors_to_ui(factors.get("exploit") or [])
+    imp_f = _factors_to_ui(factors.get("impact") or [])
+
+    canonical = corr.get("canonical_entity") or {}
+    agreement_raw = corr.get("scanner_agreement") or {}
+    version_agreement = corr.get("version_agreement") or {}
+    conflicts = corr.get("conflicts") or []
+
+    kind = _ui_kind_from_engine(
+        str(canonical.get("kind") or ""), validation, str(validation.get("classification") or "")
+    )
+
+    agreed = _dedupe([tool_label(str(t)) for t in (agreement_raw.get("agreed") or [])]) or sources
+    capable = _dedupe([tool_label(str(t)) for t in (agreement_raw.get("capable") or [])]) or agreed
+    ratio = float(agreement_raw.get("ratio") or (len(agreed) / max(len(capable), 1)))
+    agreement_label = str(agreement_raw.get("label") or f"{len(agreed)} / {len(capable)}")
+
+    observation_score = int(validation.get("observation_confidence") or 0)
+    exploit_score = int(validation.get("exploit_confidence") or 0)
+    overall_score = int(
+        validation.get("overall_confidence") or observation_score
+    )
+
+    observation = _metric(
+        observation_score, obs_f, "Does this asset, service, or vulnerability exist?"
+    )
+
+    reliability_score = int(validation.get("reliability_confidence") or 0)
+    reliability = None
+    if rel_f:
+        reliability = _metric(
+            reliability_score, rel_f, "How trustworthy is the evidence behind this finding?"
+        )
+
+    exploit = None
+    if kind != "informational" and exp_f and exploit_score > 0:
+        exploit = _metric(exploit_score, exp_f, "How likely is successful exploitation?")
+
+    correlation = None
+    if len(capable) > 1:
+        corr_factors = [
+            {"label": f"Scanner agreement {agreement_label}", "delta": int(round(ratio * 40))}
+        ]
+        if len(agreed) < len(capable):
+            corr_factors.append(
+                {"label": f"{len(capable) - len(agreed)} capable scanner(s) silent", "delta": 0}
+            )
+        correlation = _metric(
+            _clamp(int(round(ratio * 100))),
+            corr_factors,
+            "Do independent scanners agree on this finding?",
+        )
+
+    display: list[str] = ["observation"]
+    if correlation is not None:
+        display.append("correlation")
+    if exploit is not None and kind in ("correlated_vulnerability", "validated_exposure"):
+        display.append("exploit")
+
+    if "exploit" in display and exploit is not None:
+        primary_metric = "exploit"
+    elif "correlation" in display and len(agreed) > 1:
+        primary_metric = "correlation"
+    else:
+        primary_metric = "observation"
+
+    all_features = obs_f + rel_f + exp_f + imp_f
+
+    evidence_summary = {
+        "scanners": len(agreed),
+        "capable_scanners": len(capable),
+        "independent_observations": len(corr.get("evidence_ids") or corr.get("findings") or []) or 1,
+        "conflicts": len(conflicts),
+        "canonical_entity": str(canonical.get("label") or canonical.get("product") or ""),
+        "version_confidence": 90 if version_agreement.get("agreed") and canonical.get("version") else (
+            40 if not canonical.get("version") else 70
+        ),
+        "version": str(canonical.get("version") or ""),
+        "cpe": str(canonical.get("cpe") or ""),
+        "category": str(canonical.get("kind") or ""),
+    }
+
+    return {
+        "kind": kind,
+        "observation": observation,
+        "reliability": reliability,
+        "correlation": correlation,
+        "exploit": exploit,
+        "impact": {
+            "score": int(validation.get("impact_confidence") or 0),
+            "factors": imp_f[:12],
+            "question": "Does this affect business operations?",
+        },
+        "overall": overall_score,
+        "display": display,
+        # Headline number is the engine's evidence-weighted overall confidence.
+        "primary": {"metric": primary_metric, "score": overall_score},
+        "features": all_features,
+        "evidence_summary": evidence_summary,
+        "scanner_agreement": {
+            "agreed": agreed,
+            "capable": capable,
+            "total": len(capable),
+            "ratio": agreement_label,
+        },
+        "supporting_evidence": [str(s) for s in (validation.get("supporting_evidence") or [])],
+        "contradicting_evidence": [str(s) for s in (validation.get("contradicting_evidence") or [])],
+        "engine": True,
+    }
+
+
 def _build_semantic_confidence(
     *,
     validation: dict,
@@ -778,6 +931,22 @@ def _build_proof(raw: list[dict]) -> list[dict[str, str]]:
     return proof[:8]
 
 
+def _business_from_engine(bi: dict) -> dict[str, Any]:
+    """Map the engine's dynamic business-impact object to the product/UI shape."""
+    return {
+        "attacker_gains": str(bi.get("attacker_gains") or "")[:220],
+        "systems_exposed": str(bi.get("systems_exposed") or "")[:180],
+        "process_affected": str(bi.get("business_process_affected") or "")[:180],
+        "importance": str(bi.get("potential_consequences") or bi.get("summary") or "")[:280],
+        "summary": str(bi.get("summary") or "")[:280],
+        "score": int(bi.get("score") or 0),
+        "factors": [
+            {"label": str(f.get("label") or ""), "delta": int(f.get("delta") or 0)}
+            for f in (bi.get("factors") or [])
+        ][:12],
+    }
+
+
 def _build_business_impact(analyst: dict, *, title: str, host: str, cve: str) -> dict[str, str]:
     impact = str(analyst.get("impact_assessment") or "").strip()
     why = str(analyst.get("why_this_matters") or "").strip()
@@ -859,6 +1028,7 @@ def analyze_findings(
         corr = item.get("correlated") or {}
         validation = item.get("validation") or {}
         analyst = item.get("analyst") or {}
+        intelligence = item.get("intelligence") or {}
         classification = str(validation.get("classification") or "")
         if classification.upper() == "FALSE POSITIVE":
             continue
@@ -884,19 +1054,24 @@ def analyze_findings(
         validated_checks, not_validated_checks = _checklists(validation)
         proof = _build_proof(raw)
         status = _status_label(classification, len(sources))
-        semantic = _build_semantic_confidence(
-            validation=validation,
-            sources=sources,
-            raw=raw,
-            evidence=evidence,
-            title=str(title),
-            host=str(host),
-            severity=severity,
-            classification=classification,
-            cve=str(corr.get("cve") or ""),
-            status=status,
-            available_scanners=scanners_in_run,
-        )
+        # Engine-first: use the engine's evidence-driven confidence when present;
+        # otherwise fall back to the product-side reconstruction (older exports).
+        if validation.get("confidence_factors") or validation.get("overall_confidence"):
+            semantic = _semantic_from_engine(validation, corr, sources)
+        else:
+            semantic = _build_semantic_confidence(
+                validation=validation,
+                sources=sources,
+                raw=raw,
+                evidence=evidence,
+                title=str(title),
+                host=str(host),
+                severity=severity,
+                classification=classification,
+                cve=str(corr.get("cve") or ""),
+                status=status,
+                available_scanners=scanners_in_run,
+            )
         primary_score = int(semantic["primary"]["score"])
         obs_factors = (semantic.get("observation") or {}).get("factors") or []
         agreement = semantic.get("scanner_agreement") or {
@@ -905,9 +1080,20 @@ def analyze_findings(
             "total": max(len(sources), 1),
             "ratio": f"{len(sources)} / {max(len(sources), 1)}",
         }
-        business = _build_business_impact(
-            analyst, title=str(title), host=str(host), cve=str(corr.get("cve") or "")
-        )
+        # Business impact: prefer the engine's dynamic, multi-factor computation.
+        if intelligence.get("business_impact"):
+            business = _business_from_engine(intelligence["business_impact"])
+        else:
+            business = _build_business_impact(
+                analyst, title=str(title), host=str(host), cve=str(corr.get("cve") or "")
+            )
+
+        # Reasoning: prefer the engine's analyst-notebook reasoning when present.
+        engine_reasoning = [
+            str(r) for r in (intelligence.get("reasoning") or []) if str(r).strip()
+        ]
+        if engine_reasoning:
+            reasoning = engine_reasoning
 
         # Unique one-line reason derived from this finding's top positive/negative features.
         feat = semantic.get("features") or obs_factors
@@ -954,6 +1140,12 @@ def analyze_findings(
                 "validated_checks": validated_checks,
                 "not_validated_checks": not_validated_checks,
                 "unique_reason": unique_reason,
+                # Phase 2 engine intelligence (additive; engine is source of truth).
+                "recommendations": intelligence.get("recommendations") or [],
+                "conflicts_detail": intelligence.get("conflicts") or [],
+                "confidence_timeline": intelligence.get("timeline") or [],
+                "service_profile": intelligence.get("service_profile") or {},
+                "self_review": intelligence.get("self_review") or {},
             }
         )
 
@@ -994,7 +1186,7 @@ def analyze_findings(
                     or f"{title} is present and fingerprinted, so exploitation may be feasible.",
                     "current_evidence": "Observation confirmed by scanners; exploit execution not validated.",
                     "required_validation": "Attempt controlled, safe exploit validation in a test window.",
-                    "confidence": machine_conf,
+                    "confidence": primary_score,
                 }
             )
 

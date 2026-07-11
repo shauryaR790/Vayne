@@ -206,19 +206,33 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
         wb = svc.get_workbench(inv_id) or {}
         top_findings = []
         for f in (wb.get("confirmed_findings") or [])[:6]:
+            sem = f.get("confidence") or {}
             top_findings.append(
                 {
                     "title": f.get("title"),
                     "host": f.get("host"),
                     "status": f.get("status"),
                     "confidence": f.get("machine_confidence"),
-                    "semantic_confidence": f.get("confidence"),
+                    "semantic_confidence": sem,
+                    "multi_dimensional_confidence": {
+                        "observation": (sem.get("observation") or {}).get("score"),
+                        "reliability": (sem.get("reliability") or {}).get("score"),
+                        "exploit": (sem.get("exploit") or {}).get("score"),
+                        "impact": (sem.get("impact") or {}).get("score"),
+                        "overall": sem.get("overall"),
+                    },
                     "base_confidence": f.get("base_confidence"),
                     "final_confidence": f.get("final_confidence"),
                     "confidence_factors": f.get("confidence_factors") or [],
                     "proof": f.get("proof") or [],
                     "scanner_agreement": f.get("scanner_agreement"),
                     "business_impact": f.get("business_impact_detail") or f.get("business_impact"),
+                    # Phase 2 engine intelligence — the narrator explains these.
+                    "analyst_reasoning": f.get("reasoning") or [],
+                    "recommendations": f.get("recommendations") or [],
+                    "conflicts": f.get("conflicts_detail") or [],
+                    "confidence_timeline": f.get("confidence_timeline") or [],
+                    "service_profile": f.get("service_profile") or {},
                 }
             )
         workbench_slice = {

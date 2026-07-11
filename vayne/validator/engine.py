@@ -6,6 +6,7 @@ import re
 
 from vayne.attack_paths.confidence_model import FORMULA, compute_confidence
 from vayne.attack_paths.graph_filters import is_inventory_finding
+from vayne.confidence import compute_finding_confidence
 from vayne.models import Asset, Classification, CorrelatedFinding, ValidationResult
 
 AUTH_MARKERS = ("login", "401", "403", "authentication", "unauthorized", "sign in")
@@ -77,7 +78,7 @@ def validate_finding(
     elif auth_required:
         reasoning.append("exploit prerequisites not met")
 
-    reachable = (
+    reachable = bool(
         "public" in text
         or "httpx" in finding.sources
         or (asset and "public" in asset.tags)
@@ -104,6 +105,7 @@ def validate_finding(
         "service_fingerprinted": service_fingerprinted,
         "version_matches": version_matches,
         "cve_applicable": cve_applicable,
+        "auth_required": auth_required,
         "prerequisites_met": prerequisites_met,
         "reachable": reachable,
         "reproducible": reproducible,
@@ -136,6 +138,17 @@ def validate_finding(
     elif classification == Classification.UNCONFIRMED_EXPLOITABILITY:
         reasoning.append("observation confirmed — exploitability unverified")
 
+    # Evidence-driven, multi-dimensional confidence. This is the analyst-facing
+    # source of truth. The legacy `confidence` above is left untouched because
+    # it feeds attack-graph edge scoring (Phase 2), which is out of scope here.
+    conf = compute_finding_confidence(
+        finding,
+        checks,
+        classification=classification.value,
+        exploitability_status=exploitability_status,
+        observation_status=observation_status,
+    )
+
     return ValidationResult(
         host_alive=host_alive,
         port_open=port_open,
@@ -155,6 +168,17 @@ def validate_finding(
         classification=classification,
         observation_status=observation_status,
         exploitability_status=exploitability_status,
+        observation_confidence=conf.observation,
+        reliability_confidence=conf.reliability,
+        exploit_confidence=conf.exploit,
+        impact_confidence=conf.impact,
+        overall_confidence=conf.overall,
+        confidence_factors=conf.factors,
+        confidence_dimensions=conf.dimensions,
+        supporting_evidence=conf.supporting_evidence,
+        contradicting_evidence=conf.contradicting_evidence,
+        missing_evidence=conf.missing_evidence,
+        evidence_quality=conf.evidence_quality,
     )
 
 

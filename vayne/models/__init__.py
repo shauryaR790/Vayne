@@ -152,6 +152,56 @@ class DiscoveredAsset(BaseModel):
     exposures: list[str] = Field(default_factory=list)
 
 
+class CanonicalEntity(BaseModel):
+    """Normalized identity of a finding's subject.
+
+    Built by the correlation engine so unrelated scanner terminology
+    ("Apache httpd", "Apache HTTP", "Apache Server") resolves to a single
+    canonical vendor/product/service. Every downstream conclusion references
+    this instead of comparing raw strings.
+    """
+
+    kind: str = "service"  # service | software | vulnerability | credential | web | network | informational
+    vendor: str = ""
+    product: str = ""
+    service: str = ""
+    version: str = ""
+    cpe: str = ""
+    label: str = ""
+    key: str = ""
+
+
+class ScannerAgreement(BaseModel):
+    """Automatically computed cross-scanner corroboration.
+
+    ``agreed`` are the tools that actually reported this canonical entity;
+    ``capable`` are the tools present in this investigation that *could* have
+    reported it. Reported as ``agreed / capable`` — never vanity ``1 / 1``.
+    """
+
+    agreed: list[str] = Field(default_factory=list)
+    capable: list[str] = Field(default_factory=list)
+    ratio: float = 0.0
+    label: str = ""
+
+
+class VersionAgreement(BaseModel):
+    """Whether scanners agree on the observed version of the entity."""
+
+    observed: list[str] = Field(default_factory=list)
+    agreed: bool = True
+    canonical: str = ""
+    label: str = ""
+
+
+class EvidenceConflict(BaseModel):
+    """A recorded contradiction between scanner observations."""
+
+    kind: str  # severity | version | host | service
+    statements: list[str] = Field(default_factory=list)
+    detail: str = ""
+
+
 class CorrelatedFinding(BaseModel):
     id: str
     title: str
@@ -166,6 +216,14 @@ class CorrelatedFinding(BaseModel):
     confidence: int = 0
     sources: list[str] = Field(default_factory=list)
     findings: list[Finding] = Field(default_factory=list)
+    # --- Correlation engine outputs (additive; empty defaults keep the
+    # exported JSON a strict superset of the prior contract). ---------------
+    canonical_entity: CanonicalEntity | None = None
+    scanner_agreement: ScannerAgreement | None = None
+    version_agreement: VersionAgreement | None = None
+    conflicts: list[EvidenceConflict] = Field(default_factory=list)
+    aliases: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
 
 
 class ValidationResult(BaseModel):
@@ -187,6 +245,22 @@ class ValidationResult(BaseModel):
     classification: Classification = Classification.MANUAL_REVIEW
     observation_status: str = "unknown"
     exploitability_status: str = "unknown"
+    # --- Evidence-driven multi-dimensional confidence (additive). Each score
+    # is 0-100 and emerges from a weighted feature vector — no base scores, no
+    # hardcoded defaults. ``confidence_factors`` maps each dimension to the
+    # ordered list of {label, delta, category} contributions that produced it,
+    # so any UI can answer "why is this N%?" without the LLM. --------------- #
+    observation_confidence: int = 0
+    reliability_confidence: int = 0
+    exploit_confidence: int = 0
+    impact_confidence: int = 0
+    overall_confidence: int = 0
+    confidence_factors: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
+    confidence_dimensions: list[str] = Field(default_factory=list)
+    supporting_evidence: list[str] = Field(default_factory=list)
+    contradicting_evidence: list[str] = Field(default_factory=list)
+    missing_evidence: list[str] = Field(default_factory=list)
+    evidence_quality: dict[str, Any] = Field(default_factory=dict)
 
 
 class AttackPathEdge(BaseModel):
@@ -299,6 +373,11 @@ class InvestigatedFinding(BaseModel):
     analyst: AnalystBrief
     remediation: RemediationTimeline
     exploitability_score: float = 0.0
+    # Phase 2 engine intelligence (additive): per-finding facts, conflicts,
+    # service profile, recommendations, business impact, reasoning, timeline,
+    # and evidence-graph slice. Populated by the intelligence engine; the LLM
+    # only explains this structure.
+    intelligence: dict[str, Any] = Field(default_factory=dict)
 
 
 class InvestigationStats(BaseModel):

@@ -11,6 +11,7 @@ from vayne.attack_paths.discovery import discover_attack_paths
 from vayne.correlator.engine import correlate_assets, correlate_findings
 from vayne.exploitability.scorer import score_exploitability
 from vayne.false_positive.classifier import build_stats
+from vayne.intelligence import build_finding_intelligence
 from vayne.models import Classification, InvestigatedFinding, InvestigationReport
 from vayne.parsers.loader import load_scan_files
 from vayne.remediation.engine import generate_timeline
@@ -190,6 +191,7 @@ class Orchestrator:
             brief = generate_brief(item, validation, item_paths)
             timeline = generate_timeline(item, validation)
             exp_score = score_exploitability(item, validation)
+            intelligence = build_finding_intelligence(item, validation, item_paths)
 
             investigated.append(
                 InvestigatedFinding(
@@ -198,6 +200,7 @@ class Orchestrator:
                     analyst=brief,
                     remediation=timeline,
                     exploitability_score=exp_score,
+                    intelligence=intelligence,
                 )
             )
             time.sleep(0.05)
