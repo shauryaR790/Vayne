@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown } from "lucide-react";
 
@@ -57,6 +57,7 @@ export function CollapsibleSection({
   title,
   children,
   defaultOpen = false,
+  forceOpen,
   aside,
   reveal = 0,
   bodyClassName,
@@ -64,11 +65,18 @@ export function CollapsibleSection({
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  /** When provided, drives open/closed on change (e.g. an Expert-mode toggle),
+   *  while still allowing manual toggling within the same mode. */
+  forceOpen?: boolean;
   aside?: React.ReactNode;
   reveal?: number;
   bodyClassName?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    if (forceOpen !== undefined) setOpen(forceOpen);
+  }, [forceOpen]);
 
   return (
     <motion.section

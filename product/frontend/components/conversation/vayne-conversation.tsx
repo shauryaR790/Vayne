@@ -450,14 +450,9 @@ export function VaneWorkspace({
       ]);
       setAnalystInput("");
 
-      // Deterministic reconstruction for confidence / rejection questions —
-      // prefer workbench facts over an LLM paraphrase when we can answer exactly.
-      const interpreted = interpretAnalystQuestion(question, bundle?.workbench);
-      if (interpreted) {
-        updateAnalystMessage(streamId, interpreted, false);
-        return;
-      }
-
+      // The live LLM answers every question (cybersecurity in general, the
+      // uploaded scan, or this investigation). The deterministic workbench
+      // reconstruction is kept only as an offline fallback (see error handler).
       setBusy(true);
       setThinking(true);
       setThinkingStep(ANALYST_THINKING_STEPS[0]);
@@ -492,7 +487,12 @@ export function VaneWorkspace({
               event.code === "llm_offline" ||
               event.code === "http_error" ||
               event.code === "llm_not_configured";
-            updateAnalystMessage(streamId, offline ? ANALYST_OFFLINE_MESSAGE : event.message, false);
+            // Offline only: fall back to deterministic workbench reconstruction
+            // when it can answer, otherwise the offline notice.
+            const fallback = offline
+              ? interpretAnalystQuestion(question, bundle?.workbench) ?? ANALYST_OFFLINE_MESSAGE
+              : event.message;
+            updateAnalystMessage(streamId, fallback, false);
             setBusy(false);
             return;
           }

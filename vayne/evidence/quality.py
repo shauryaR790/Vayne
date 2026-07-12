@@ -24,6 +24,7 @@ missing data.
 from __future__ import annotations
 
 import re
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -272,8 +273,44 @@ class AggregateQuality:
         }
 
 
+# Bounded memoization: aggregate_quality is recomputed for the same finding set
+# by the confidence, hypothesis, self-challenge, reasoning, and investigation
+# stages. Caching collapses those to a single classification pass, which is the
+# dominant per-finding cost at scale (50k findings / 10k hosts).
+_AGG_CACHE: "OrderedDict[tuple, AggregateQuality]" = OrderedDict()
+_AGG_CACHE_MAX = 20000
+
+
+def _agg_key(findings: list[Finding]) -> tuple:
+    return tuple(
+        (
+            f.id,
+            f.source_tool or "",
+            f.title or "",
+            f.evidence or "",
+            f.description or "",
+            f.service or "",
+            f.timestamp.isoformat() if isinstance(getattr(f, "timestamp", None), datetime) else "",
+        )
+        for f in findings
+    )
+
+
 def aggregate_quality(findings: list[Finding]) -> AggregateQuality:
     """Aggregate the quality of all raw evidence backing a correlated finding."""
+    key = _agg_key(findings)
+    cached = _AGG_CACHE.get(key)
+    if cached is not None:
+        _AGG_CACHE.move_to_end(key)
+        return cached
+    result = _aggregate_quality_uncached(findings)
+    _AGG_CACHE[key] = result
+    if len(_AGG_CACHE) > _AGG_CACHE_MAX:
+        _AGG_CACHE.popitem(last=False)
+    return result
+
+
+def _aggregate_quality_uncached(findings: list[Finding]) -> AggregateQuality:
     items = [classify_evidence(f) for f in findings] or []
     if not items:
         return AggregateQuality(

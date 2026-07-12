@@ -172,10 +172,38 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
     gp = report.get("graph_proof") or {}
     graph_stats = graph.get("statistics") or {}
 
-    proof_path = svc.export_dir(inv_id) / "proof.txt"
+    export_dir = svc.export_dir(inv_id)
+    proof_path = export_dir / "proof.txt"
     proof_excerpt = ""
     if proof_path.exists():
         proof_excerpt = _clip(proof_path.read_text(encoding="utf-8", errors="replace"), _MAX_PROOF)
+
+    # Phase 3 — rejected-path reasoning (why paths were not accepted, what would
+    # validate them). Read from the engine artifact so the narrator explains it.
+    rejected_path_reasoning: list[dict[str, Any]] = []
+    rp_path = export_dir / "rejected_paths.json"
+    if rp_path.exists():
+        try:
+            rp = json.loads(rp_path.read_text(encoding="utf-8", errors="replace"))
+            rejected_path_reasoning = (rp.get("paths") or [])[:_MAX_REJECTED]
+        except (ValueError, OSError):
+            rejected_path_reasoning = []
+
+    # Phase 4 — report-level ground-truth validation + probability calibration
+    # status, so the narrator can state honestly what is confirmed vs inferred.
+    validation_summary: dict[str, Any] = {}
+    calibration_status: dict[str, Any] = {}
+    for name, sink in (("validation.json", "validation"), ("calibration.json", "calibration")):
+        p = export_dir / name
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8", errors="replace"))
+                if sink == "validation":
+                    validation_summary = data
+                else:
+                    calibration_status = data
+            except (ValueError, OSError):
+                pass
 
     validated = [_finding_row(f) for f in (findings.get("validated") or [])[:_MAX_FINDINGS]]
     rejected = [_finding_row(f) for f in (findings.get("rejected") or [])[:_MAX_REJECTED]]
@@ -207,6 +235,7 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
         top_findings = []
         for f in (wb.get("confirmed_findings") or [])[:6]:
             sem = f.get("confidence") or {}
+            inv = f.get("investigation") or {}
             top_findings.append(
                 {
                     "title": f.get("title"),
@@ -233,6 +262,21 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
                     "conflicts": f.get("conflicts_detail") or [],
                     "confidence_timeline": f.get("confidence_timeline") or [],
                     "service_profile": f.get("service_profile") or {},
+                    # Phase 3 autonomous investigation — the source of truth.
+                    "investigation": {
+                        "stages": inv.get("stages") or [],
+                        "hypotheses": inv.get("hypotheses") or [],
+                        "evidence_primitives": inv.get("evidence_primitives") or [],
+                        "self_challenge": inv.get("self_challenge") or {},
+                        "attack_story": inv.get("attack_story") or {},
+                        "investigation_tasks": inv.get("investigation_tasks") or [],
+                        "notebook": inv.get("notebook") or [],
+                        "conclusion": inv.get("conclusion") or "",
+                        "investigation_confidence": inv.get("investigation_confidence") or {},
+                        # Phase 4 — ground-truth validation loop (verified vs
+                        # inferred, and the probes that would confirm it).
+                        "validation_loop": inv.get("validation_loop") or {},
+                    },
                 }
             )
         workbench_slice = {
@@ -291,6 +335,9 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
         "attack_paths": attack_paths,
         "rejected_paths": rejected_paths,
         "rejected_attack_paths": rejected_paths,
+        "rejected_path_reasoning": rejected_path_reasoning,
+        "validation_summary": validation_summary,
+        "calibration_status": calibration_status,
         "confidence_scores": {
             "average_path_confidence": avg_conf,
             "findings": [
@@ -360,6 +407,9 @@ def pack_prompt_context(context: dict[str, Any]) -> dict[str, Any]:
         "rejected_findings": context.get("rejected_findings") or [],
         "attack_paths": context.get("attack_paths") or [],
         "rejected_paths": context.get("rejected_paths") or context.get("rejected_attack_paths") or [],
+        "rejected_path_reasoning": context.get("rejected_path_reasoning") or [],
+        "validation_summary": context.get("validation_summary") or {},
+        "calibration_status": context.get("calibration_status") or {},
         "confidence_scores": context.get("confidence_scores") or {},
         "risk_scores": context.get("risk_scores") or {},
         "business_impact": context.get("business_impact") or [],

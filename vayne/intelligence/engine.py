@@ -12,10 +12,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from vayne.attack_paths.proof import GraphProof
 from vayne.business.impact import compute_business_impact
+from vayne.calibration import default_calibrator
 from vayne.contradiction import build_conflicts
 from vayne.evidence.evidence_graph import build_evidence_graph
 from vayne.evidence.quality import aggregate_quality
+from vayne.investigation import build_investigation, build_rejected_path_investigations
 from vayne.models import AttackPath, CorrelatedFinding, InvestigationReport, ValidationResult
 from vayne.reasoning import build_confidence_timeline, build_reasoning
 from vayne.review.self_review import review_finding, review_investigation
@@ -26,8 +29,16 @@ def build_finding_intelligence(
     correlated: CorrelatedFinding,
     validation: ValidationResult,
     attack_paths: list[AttackPath] | None = None,
+    *,
+    full_investigation: bool = True,
 ) -> dict[str, Any]:
-    """Assemble the full engine intelligence bundle for one finding."""
+    """Assemble the full engine intelligence bundle for one finding.
+
+    ``full_investigation`` controls the Phase 3 autonomous investigation (the
+    heaviest per-finding computation). At scale the orchestrator runs it for the
+    highest-priority findings and skips it for the long tail; the Phase 1/2
+    facts, confidence, conflicts, recommendations and reasoning are always built.
+    """
     attack_paths = attack_paths or []
     profile = get_profile(correlated)
     quality = aggregate_quality(correlated.findings or [])
@@ -79,12 +90,20 @@ def build_finding_intelligence(
         "reasoning": reasoning,
         "timeline": timeline,
     }
+    # Phase 3 — the full autonomous investigation for this finding.
+    if full_investigation:
+        bundle["investigation"] = build_investigation(correlated, validation, attack_paths)
+    else:
+        bundle["investigation"] = {"deferred": True,
+                                   "reason": "Full investigation deferred at scale; "
+                                             "prioritized findings carry the complete investigation."}
     bundle["self_review"] = review_finding(correlated, validation, bundle)
     return bundle
 
 
 def build_investigation_intelligence(
     report: InvestigationReport,
+    graph_proof: GraphProof | None = None,
 ) -> dict[str, Any]:
     """Report-level artifacts (facts.json / confidence.json / ... payloads)."""
     facts: list[dict[str, Any]] = []
@@ -93,6 +112,7 @@ def build_investigation_intelligence(
     timeline: list[dict[str, Any]] = []
     recommendations: list[dict[str, Any]] = []
     conflicts: list[dict[str, Any]] = []
+    investigations: list[dict[str, Any]] = []
 
     graph_inputs: list[tuple[CorrelatedFinding, ValidationResult]] = []
 
@@ -112,8 +132,10 @@ def build_investigation_intelligence(
         )
         for c in intel.get("conflicts", []):
             conflicts.append({"finding_id": fid, **c})
+        investigations.append({"finding_id": fid, **(intel.get("investigation") or {})})
 
     graph = build_evidence_graph(graph_inputs).as_dict()
+    rejected_paths = build_rejected_path_investigations(graph_proof)
 
     artifacts = {
         "facts": {"findings": facts, "count": len(facts)},
@@ -123,6 +145,60 @@ def build_investigation_intelligence(
         "timeline": {"findings": timeline},
         "recommendations": {"findings": recommendations},
         "conflicts": {"conflicts": conflicts, "count": len(conflicts)},
+        "investigations": {"findings": investigations, "count": len(investigations)},
+        "rejected_paths": {"paths": rejected_paths, "count": len(rejected_paths)},
     }
+    # Phase 4 — ground-truth validation summary and calibration status.
+    artifacts["validation"] = _validation_summary(investigations)
+    artifacts["calibration"] = _calibration_status()
     artifacts["review"] = review_investigation(report, artifacts)
     return artifacts
+
+
+def _validation_summary(investigations: list[dict[str, Any]]) -> dict[str, Any]:
+    """Report-level view of what is verified vs inferred, and outstanding probes."""
+    verified: list[dict[str, Any]] = []
+    inferred = 0
+    open_probes = 0
+    for inv in investigations:
+        loop = inv.get("validation_loop") or {}
+        if not loop:
+            continue
+        open_probes += int(loop.get("open_probe_count") or 0)
+        if loop.get("exploit_confirmed"):
+            verification = loop.get("verification") or {}
+            verified.append({
+                "finding_id": inv.get("finding_id"),
+                "method": verification.get("method"),
+                "label": verification.get("label"),
+            })
+        else:
+            inferred += 1
+    return {
+        "verified_findings": verified,
+        "verified_count": len(verified),
+        "inferred_count": inferred,
+        "open_probe_count": open_probes,
+        "note": (
+            "Exploit confidence is confirmed only where authenticated or reproduced "
+            "evidence exists; all other exploit confidence is inferred and the listed "
+            "probes would move it to confirmed."
+        ),
+    }
+
+
+def _calibration_status() -> dict[str, Any]:
+    cal = default_calibrator()
+    data = cal.to_dict()
+    families = data.get("families") or {}
+    return {
+        "is_calibrated": bool(families),
+        "families": {name: fam.get("samples", 0) for name, fam in families.items()},
+        "method": "binned isotonic reliability curve" if families else "identity (uncalibrated heuristic prior)",
+        "note": (
+            "Hypothesis and business-impact probabilities are heuristic priors. "
+            "When labeled outcomes are supplied, the calibrator maps them to "
+            "empirically-observed frequencies; until then values are reported raw "
+            "and flagged uncalibrated."
+        ),
+    }

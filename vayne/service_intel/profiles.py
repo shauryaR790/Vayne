@@ -346,7 +346,12 @@ def get_profile(finding: CorrelatedFinding) -> ServiceProfile:
         for candidate in ("ssh", "smb", "ldap", "mysql", "redis", "mongodb", "postgresql", "ftp"):
             if candidate in svc:
                 return _PROFILES.get(candidate, _GENERIC)
-    return _GENERIC
+    # Phase 4 — no curated profile matched. Instead of a flat generic profile,
+    # synthesize a category-tailored one (web / database / directory / ...), so
+    # obscure services are still investigated in a service-appropriate way.
+    from vayne.service_intel.synthesize import synthesize_profile
+
+    return synthesize_profile(finding)
 
 
 def recommendations_for(

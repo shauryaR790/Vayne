@@ -1146,6 +1146,9 @@ def analyze_findings(
                 "confidence_timeline": intelligence.get("timeline") or [],
                 "service_profile": intelligence.get("service_profile") or {},
                 "self_review": intelligence.get("self_review") or {},
+                # Phase 3 autonomous investigation (stages, hypotheses, evidence
+                # primitives, self-challenge, attack story, tasks, notebook).
+                "investigation": intelligence.get("investigation") or {},
             }
         )
 

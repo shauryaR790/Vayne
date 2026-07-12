@@ -249,6 +249,54 @@ export interface WorkbenchConfirmedFinding {
   not_validated_checks: string[];
   unique_reason?: string;
   evidence_summary?: WorkbenchEvidenceSummary;
+  /** Phase 3/4 autonomous investigation for this finding (source of truth). */
+  investigation?: WorkbenchFindingInvestigation;
+}
+
+/** Phase 4 ground-truth validation loop for a single finding. */
+export interface WorkbenchValidationLoop {
+  exploit_confirmed: boolean;
+  confidence_delta: number;
+  reason: string;
+  open_probe_count?: number;
+  verification?: {
+    strength: number;
+    label: string;
+    method: string;
+    authenticated: boolean;
+    reproduced: boolean;
+    provenance?: string[];
+  };
+  next_probes?: Array<{
+    name: string;
+    method: string;
+    confirms: string;
+    expected_gain: number;
+    steps?: string[];
+  }>;
+}
+
+export interface WorkbenchInvestigationDimension {
+  score: number;
+  reasoning: string;
+  verified?: boolean;
+}
+
+export interface WorkbenchFindingHypothesis {
+  label: string;
+  probability: number;
+  category: string;
+  rationale?: string;
+  supporting_evidence?: string[];
+  contradicting_evidence?: string[];
+}
+
+/** Subset of the engine's per-finding investigation the workbench renders. */
+export interface WorkbenchFindingInvestigation {
+  conclusion?: string;
+  validation_loop?: WorkbenchValidationLoop;
+  investigation_confidence?: Record<string, WorkbenchInvestigationDimension>;
+  hypotheses?: WorkbenchFindingHypothesis[];
 }
 
 export type WorkbenchConfidenceKind =

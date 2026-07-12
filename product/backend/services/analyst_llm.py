@@ -127,7 +127,11 @@ def _build_prompt(
     preset_id: str | None = None,
 ) -> str:
     lines = [
-        "Investigation context (source of truth — answer ONLY from this data):\n",
+        "Investigation context — authoritative for anything about THIS scan "
+        "(findings, hosts, services, versions, confidence, evidence, attack paths, "
+        "conflicts, recommendations, per-finding investigation). Ground all "
+        "scan-specific claims in it and never fabricate scan facts. For general "
+        "cybersecurity questions, use your own expertise:\n",
         _clip_context_json(context),
         "\n\n",
     ]

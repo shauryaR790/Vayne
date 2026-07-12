@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from vayne.calibration import default_calibrator
 from vayne.models import AttackPath, CorrelatedFinding, ValidationResult
 from vayne.service_intel.profiles import ServiceProfile
 
@@ -100,6 +101,7 @@ def compute_business_impact(
 
     score = _clamp(sum(f.delta for f in factors))
     narrative = _narrative(finding, validation, profile, model, internet, blast, score)
+    calibration = default_calibrator().calibrate(score, "business_impact")
 
     return {
         "score": score,
@@ -109,6 +111,7 @@ def compute_business_impact(
         "business_process_affected": narrative["business_process_affected"],
         "potential_consequences": narrative["potential_consequences"],
         "summary": narrative["summary"],
+        "calibration": calibration.as_dict(),
     }
 
 

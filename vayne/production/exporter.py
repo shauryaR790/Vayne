@@ -108,9 +108,10 @@ def export_production_artifacts(
         render_proof_txt(enriched, graph_proof), encoding="utf-8"
     )
 
-    # Phase 2 — Facts Before LLM (Priority 14). The engine emits its structured
-    # intelligence artifacts; the LLM narrator may only explain these files.
-    intelligence = build_investigation_intelligence(enriched)
+    # Phase 2/3 — Facts Before LLM. The engine emits its structured intelligence
+    # artifacts (including the full autonomous investigation and rejected-path
+    # reasoning); the LLM narrator may only explain these files.
+    intelligence = build_investigation_intelligence(enriched, graph_proof)
     phase2 = {
         "facts.json": intelligence["facts"],
         "confidence.json": intelligence["confidence"],
@@ -119,6 +120,11 @@ def export_production_artifacts(
         "timeline.json": intelligence["timeline"],
         "recommendations.json": intelligence["recommendations"],
         "conflicts.json": intelligence["conflicts"],
+        "investigations.json": intelligence["investigations"],
+        "rejected_paths.json": intelligence["rejected_paths"],
+        # Phase 4 — ground-truth validation loop + probability calibration status.
+        "validation.json": intelligence["validation"],
+        "calibration.json": intelligence["calibration"],
         "review.json": intelligence["review"],
     }
     for name, payload in phase2.items():

@@ -17,6 +17,246 @@ export const CONFIDENCE_METRIC_LABEL: Record<WorkbenchConfidenceMetricKey, strin
   exploit: "Exploit",
 };
 
+// --------------------------------------------------------------------------- //
+// Self-explaining vocabulary — the UI teaches itself (Principles 1, 6, 12).
+// Every state / number is paired with a plain-language meaning so a first-time
+// user never sees an unexplained term or a naked percentage.
+// --------------------------------------------------------------------------- //
+export const STATUS_MEANING: Record<
+  WorkbenchConfirmedFinding["status"],
+  { label: string; meaning: string }
+> = {
+  Observed: {
+    label: "Observed",
+    meaning: "Detected by a scanner but not yet independently verified.",
+  },
+  Correlated: {
+    label: "Correlated",
+    meaning: "Confirmed by more than one independent source of evidence.",
+  },
+  Hypothesized: {
+    label: "Hypothesized",
+    meaning: "Inferred from partial evidence; still being tested by the engine.",
+  },
+  Validated: {
+    label: "Validated",
+    meaning: "Evidence confirms this finding is genuine and exploitable.",
+  },
+  Rejected: {
+    label: "Rejected",
+    meaning: "Evidence contradicts this finding; it was not retained.",
+  },
+};
+
+export function statusMeaning(status: WorkbenchConfirmedFinding["status"]) {
+  return STATUS_MEANING[status] ?? STATUS_MEANING.Observed;
+}
+
+/** Plain-language meaning for a confidence dimension at a given score. */
+export function confidenceMeaning(key: WorkbenchConfidenceMetricKey, score: number): string {
+  const band = score >= 80 ? "high" : score >= 55 ? "moderate" : score >= 30 ? "low" : "very low";
+  const subject: Record<WorkbenchConfidenceMetricKey, string> = {
+    observation: "that this service or finding really exists",
+    correlation: "that independent scanners agree on what this is",
+    exploit: "that this could actually be exploited",
+  };
+  return `The engine has ${band} confidence ${subject[key]}.`;
+}
+
+export interface ConfidenceBand {
+  word: string;
+  sentence: string;
+}
+
+/** A number is never shown alone — pair it with a band word + sentence (P4). */
+export function confidenceBand(score: number): ConfidenceBand {
+  if (score >= 80) {
+    return { word: "High confidence", sentence: "Evidence strongly supports this." };
+  }
+  if (score >= 55) {
+    return { word: "Moderate confidence", sentence: "Evidence supports this, but gaps remain." };
+  }
+  if (score >= 30) {
+    return { word: "Low confidence", sentence: "Limited evidence — treat as unconfirmed." };
+  }
+  return { word: "Very low confidence", sentence: "Insufficient evidence." };
+}
+
+/** Evidence that argues against the finding — conflicts & disagreement (P3). */
+export function evidenceAgainst(finding: WorkbenchConfirmedFinding): string[] {
+  const out: string[] = [];
+  const summary = finding.evidence_summary;
+  if (summary && summary.conflicts > 0) {
+    out.push(
+      summary.conflicts === 1
+        ? "One scanner disagrees on version or severity"
+        : `${summary.conflicts} scanner conflicts on version or severity`,
+    );
+  }
+  const agreement = finding.scanner_agreement;
+  if (agreement) {
+    const capable = agreement.capable?.length || 0;
+    const agreed = agreement.agreed?.length || 0;
+    if (capable > 1 && agreed < capable) {
+      out.push(`${capable - agreed} of ${capable} capable scanners did not confirm this`);
+    }
+  }
+  return out.slice(0, 3);
+}
+
+/** "What could change this conclusion?" — honest uncertainty (P10). */
+export function uncertaintyFactors(finding: WorkbenchConfirmedFinding): string[] {
+  const out: string[] = [];
+  const loop = finding.investigation?.validation_loop;
+  if (loop && !loop.exploit_confirmed) {
+    out.push("A failed exploit replay would lower exploit confidence");
+  }
+  for (const c of finding.not_validated_checks || []) {
+    out.push(`A contradiction from ${c.toLowerCase()} would change this`);
+    if (out.length >= 3) break;
+  }
+  if (finding.evidence_summary && finding.evidence_summary.conflicts > 0) {
+    out.push("Resolving the scanner conflict could raise or lower confidence");
+  }
+  if (!out.length) out.push("New contradicting evidence would change this conclusion");
+  return out.slice(0, 4);
+}
+
+export interface RecommendationTask {
+  action: string;
+  expectedResult: string;
+  expectedGain: number | null;
+}
+
+/** Recommendations rendered as executable investigation tasks (P8). */
+export function recommendationTasks(workbench: WorkbenchData): RecommendationTask[] {
+  const missing = missingEvidenceRows(workbench);
+  const matchGain = (action: string): { gain: number | null; topic: string } => {
+    const a = action.toLowerCase();
+    let best: { gain: number | null; topic: string } = { gain: null, topic: "" };
+    for (const m of missing) {
+      const words = m.topic.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+      if (words.some((w) => a.includes(w))) {
+        best = { gain: m.expected_gain || null, topic: m.topic };
+        break;
+      }
+    }
+    return best;
+  };
+  const expectedFor = (action: string, topic: string): string => {
+    const a = action.toLowerCase();
+    if (/replay|reproduc|exploit|poc/.test(a)) return "Confirm the exposure is actually exploitable";
+    if (/auth|credential|login/.test(a)) return "Validate the privilege boundary";
+    if (/log|siem/.test(a)) return "Confirm whether the activity actually occurred";
+    if (/scan|second|re-?scan|verify/.test(a)) return "Independently confirm the observation";
+    return topic ? `Resolve: ${topic.toLowerCase()}` : "Move the finding toward validated";
+  };
+  return (workbench.next_actions || []).slice(0, 8).map((action) => {
+    const { gain, topic } = matchGain(action);
+    return { action, expectedResult: expectedFor(action, topic), expectedGain: gain };
+  });
+}
+
+/** Badge tooltips — hover teaches the user (P5). */
+export const BADGE_MEANING: Record<string, string> = {
+  Observed:
+    "Detected by a scanner but not independently verified. Confidence stays capped until confirmed.",
+  Correlated:
+    "More than one independent source reports the same thing, which raises confidence.",
+  Hypothesized:
+    "Inferred from partial evidence. The engine is still testing this explanation.",
+  Validated:
+    "Evidence confirms the finding is genuine and exploitable — the highest trust state.",
+  Rejected:
+    "Evidence contradicts this finding, so it was not retained.",
+  Confirmed:
+    "Exploitability is proven by authenticated or reproduced evidence in the scan.",
+  Inferred:
+    "Exploitability is reasoned from context, not yet proven by replay or authentication.",
+};
+
+export interface EvidenceCheck {
+  label: string;
+  ok: boolean;
+}
+
+/**
+ * A visual ✓ / ✗ readout of what evidence exists for a finding (Principle 7).
+ * Built from the engine's validated / not-validated checks, scanner agreement,
+ * version confidence, and the Phase-4 validation loop — deduplicated and capped.
+ */
+export function evidenceChecklist(finding: WorkbenchConfirmedFinding): EvidenceCheck[] {
+  const out: EvidenceCheck[] = [];
+  const seen = new Set<string>();
+  const push = (label: string, ok: boolean) => {
+    const key = label.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ label, ok });
+  };
+
+  for (const c of finding.validated_checks || []) push(prettyCheck(c), true);
+  for (const c of finding.not_validated_checks || []) push(prettyCheck(c), false);
+
+  const agreement = finding.scanner_agreement;
+  if (agreement && (agreement.capable?.length || 0) > 1) {
+    push("Second scanner confirmation", (agreement.agreed?.length || 0) >= 2);
+  }
+  const summary = finding.evidence_summary;
+  if (summary?.version_confidence) {
+    push("Version identified", summary.version_confidence >= 60);
+  }
+  const loop = finding.investigation?.validation_loop;
+  if (loop) {
+    push("Exploit reproduced", Boolean(loop.exploit_confirmed));
+    push("Authenticated validation", Boolean(loop.verification?.authenticated));
+  }
+  return out.slice(0, 8);
+}
+
+function prettyCheck(raw: string): string {
+  return raw.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()).trim();
+}
+
+export interface ExploitVerification {
+  confirmed: boolean;
+  label: string;
+  detail: string;
+  probes: Array<{ name: string; gain: number }>;
+}
+
+/**
+ * Verified-vs-inferred exploitability (Phase 4 validation loop). Answers
+ * "could an attacker realistically exploit this?" honestly — never presents
+ * inferred exploitability as proven.
+ */
+export function exploitVerification(finding: WorkbenchConfirmedFinding): ExploitVerification | null {
+  const loop = finding.investigation?.validation_loop;
+  if (!loop) return null;
+  const probes = (loop.next_probes || [])
+    .map((p) => ({ name: p.name, gain: p.expected_gain || 0 }))
+    .slice(0, 4);
+  if (loop.exploit_confirmed) {
+    return {
+      confirmed: true,
+      label: "Exploitability confirmed",
+      detail:
+        loop.verification?.label && loop.reason
+          ? loop.reason
+          : "Verified by authenticated or reproduced evidence in the scan.",
+      probes,
+    };
+  }
+  return {
+    confirmed: false,
+    label: "Exploitability inferred",
+    detail:
+      loop.reason ||
+      "No replay, authenticated re-check, or reproduction has verified this yet.",
+    probes,
+  };
+}
+
 export function semanticConfidence(
   finding: WorkbenchConfirmedFinding,
 ): WorkbenchSemanticConfidence | null {
@@ -232,6 +472,72 @@ export function uniqueWhyItMatters(findings: WorkbenchConfirmedFinding[]): strin
   const texts = [...new Set(findings.map((f) => f.why_it_matters).filter(Boolean))];
   if (texts.length === 1) return texts[0];
   return null;
+}
+
+export interface InvestigationVerdict {
+  headline: string;
+  counts: Array<{ label: string; value: string }>;
+  topFinding: string | null;
+  topHost: string | null;
+}
+
+/** "What did VANE discover?" — the one-glance verdict (Principles 2, 3, 12). */
+export function investigationVerdict(workbench: WorkbenchData): InvestigationVerdict {
+  const findings = workbench.confirmed_findings || [];
+  const top = findings[0] || null;
+  const validatedPaths = workbench.totals?.validated_paths ?? 0;
+  const rejectedPaths = workbench.totals?.rejected_paths ?? 0;
+  const counts: Array<{ label: string; value: string }> = [
+    { label: "Findings retained", value: String(findings.length) },
+    { label: "Evidence sources", value: String(workbench.totals?.sources ?? workbench.evidence_sources.length) },
+    { label: "Attack paths that hold up", value: String(validatedPaths) },
+    { label: "Paths ruled out", value: String(rejectedPaths) },
+  ];
+  return {
+    headline:
+      workbench.executive_summary ||
+      (findings.length
+        ? `VANE retained ${findings.length} finding${findings.length === 1 ? "" : "s"} after discarding what the evidence could not support.`
+        : "VANE completed the investigation and no findings met the evidence threshold."),
+    counts,
+    topFinding: top?.title ?? null,
+    topHost: top?.host ?? null,
+  };
+}
+
+export interface BusinessImpactRow {
+  id: string;
+  title: string;
+  host: string;
+  summary: string;
+  attacker_gains?: string;
+  systems_exposed?: string;
+  process_affected?: string;
+}
+
+/** Business impact of the retained findings — summarizes, never introduces (P8). */
+export function businessImpactRows(workbench: WorkbenchData): BusinessImpactRow[] {
+  const out: BusinessImpactRow[] = [];
+  const seen = new Set<string>();
+  for (const f of workbench.confirmed_findings || []) {
+    const detail = f.business_impact_detail;
+    const summary = detail?.summary || f.business_impact || f.why_it_matters;
+    if (!summary) continue;
+    const key = summary.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      id: f.id,
+      title: f.title,
+      host: f.host || "—",
+      summary,
+      attacker_gains: detail?.attacker_gains,
+      systems_exposed: detail?.systems_exposed,
+      process_affected: detail?.process_affected,
+    });
+    if (out.length >= 4) break;
+  }
+  return out;
 }
 
 export interface InvestigationSummary {

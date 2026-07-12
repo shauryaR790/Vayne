@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 from typing import Callable
@@ -21,6 +22,38 @@ from vayne.validator.engine import format_analyst_status, validate_finding
 
 StageCallback = Callable[[int, str, str], None]
 ThinkingCallback = Callable[[str], None]
+
+# Above this many correlated findings, skip the demo-pacing sleep entirely.
+_PACE_THRESHOLD = 200
+_DEFAULT_MAX_FULL = 750
+
+_SEVERITY_RANK = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
+
+
+def _max_full_investigations() -> int:
+    try:
+        return max(1, int(os.getenv("VAYNE_MAX_FULL_INVESTIGATIONS", str(_DEFAULT_MAX_FULL))))
+    except (TypeError, ValueError):
+        return _DEFAULT_MAX_FULL
+
+
+def _prioritized_ids(correlated: list, validation_map: dict, limit: int) -> set[str]:
+    """IDs that receive the full investigation, ranked by severity then confidence.
+
+    Below the limit every finding qualifies; above it, the highest-priority
+    findings are chosen deterministically so results are stable across runs.
+    """
+    if len(correlated) <= limit:
+        return {item.id for item in correlated}
+
+    def score(item) -> tuple:
+        v = validation_map.get(item.id)
+        sev = _SEVERITY_RANK.get((item.severity or "info").lower(), 0)
+        overall = int(getattr(v, "overall_confidence", 0) or 0) if v else 0
+        return (sev, overall, item.id)
+
+    ranked = sorted(correlated, key=score, reverse=True)
+    return {item.id for item in ranked[:limit]}
 
 STAGES = [
     "Loading scans",
@@ -181,6 +214,14 @@ class Orchestrator:
         else:
             self._think("NO ATTACK PATH DISCOVERED - graph traversal found no entry->target chain.")
 
+        # Scale guard: the full per-finding investigation is the heaviest work.
+        # For large runs we run it for the highest-priority findings and defer it
+        # for the long tail (bounded, deterministic, configurable). The cheaper
+        # facts/confidence/reasoning bundle is always produced for every finding.
+        max_full = _max_full_investigations()
+        full_ids = _prioritized_ids(correlated, validation_map, max_full)
+        pace = len(correlated) <= _PACE_THRESHOLD
+
         for item in correlated:
             validation = validation_map[item.id]
             item_paths = [
@@ -191,7 +232,10 @@ class Orchestrator:
             brief = generate_brief(item, validation, item_paths)
             timeline = generate_timeline(item, validation)
             exp_score = score_exploitability(item, validation)
-            intelligence = build_finding_intelligence(item, validation, item_paths)
+            intelligence = build_finding_intelligence(
+                item, validation, item_paths,
+                full_investigation=item.id in full_ids,
+            )
 
             investigated.append(
                 InvestigatedFinding(
@@ -203,7 +247,8 @@ class Orchestrator:
                     intelligence=intelligence,
                 )
             )
-            time.sleep(0.05)
+            if pace:
+                time.sleep(0.05)
 
         self.on_stage(6, STAGES[5], "Scoring exploitability")
         self._think("Calculating exploitability from validation signals...")

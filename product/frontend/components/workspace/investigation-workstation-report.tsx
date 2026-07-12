@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { GraphExplorer } from "@/components/graph/GraphExplorer";
 import type { ReasoningCheck } from "@/components/graph/GraphEmptyState";
 import {
@@ -22,12 +24,15 @@ import {
 } from "@/components/workspace/workstation-primitives";
 import {
   AttackPathsTimeline,
+  BusinessImpactSection,
   ConfirmedFindingsSection,
   DeveloperDetailsSection,
   EvidenceSection,
-  ExecutiveVerdictSection,
-  InvestigationSummarySection,
+  ExpertModeProvider,
+  InvestigationFlowSection,
+  InvestigationMetadataSection,
   InvestigationTimelineSection,
+  InvestigationVerdictSection,
   MissingEvidenceSection,
   RecommendationsSection,
   RiskOverviewSection,
@@ -289,23 +294,64 @@ export function InvestigationWorkstationReport({
   ];
   const assetRows = [...new Set(findings.map((f) => f.asset))];
   const workbench = bundle.workbench;
+  const [expert, setExpert] = useState(false);
 
   const nextDelay = createReveal();
 
   return (
     <article className={cn("flex w-full min-w-0 flex-col gap-1", className)}>
       {workbench ? (
-        <>
-          <InvestigationSummarySection workbench={workbench} reveal={nextDelay()} />
-          <ExecutiveVerdictSection workbench={workbench} reveal={nextDelay()} />
+        <ExpertModeProvider expert={expert}>
+          {/* Audience toggle — one page, two depths (P11) */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/20 bg-black px-6 py-3">
+            <p
+              className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/45"
+              title="Analyst = plain-language summary. Expert = raw evidence, CVE/CPE, and scanner metadata."
+            >
+              {expert ? "Expert view — full technical detail" : "Analyst view — plain summary"}
+            </p>
+            <div className="flex border border-white/25">
+              <button
+                type="button"
+                onClick={() => setExpert(false)}
+                className={cn(
+                  "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors",
+                  !expert ? "bg-white text-black" : "text-white/55 hover:text-white",
+                )}
+              >
+                Analyst
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpert(true)}
+                className={cn(
+                  "border-l border-white/25 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors",
+                  expert ? "bg-white text-black" : "text-white/55 hover:text-white",
+                )}
+              >
+                Expert
+              </button>
+            </div>
+          </div>
+
+          {/* 1 — What happened? */}
+          <InvestigationVerdictSection workbench={workbench} reveal={nextDelay()} />
+
+          {/* 2 — How the engine got here (the investigation, not a dashboard) */}
+          <InvestigationFlowSection workbench={workbench} reveal={nextDelay()} />
+
+          {/* 3 — The four numbers that drive the decision */}
           <RiskOverviewSection
             workbench={workbench}
             risk={executive.risk}
             confidence={presentation.graphConfidence}
             reveal={nextDelay()}
           />
+
+          {/* 4 — Why is each finding retained? (self-contained: reasoning + proof) */}
           <ConfirmedFindingsSection workbench={workbench} reveal={nextDelay()} />
 
+          {/* 5 — Can an attacker actually use this? */}
           <WorkstationSection
             title="Attack Graph"
             bodyClassName="p-0 min-h-[380px]"
@@ -329,12 +375,23 @@ export function InvestigationWorkstationReport({
             <AttackPathsTimeline workbench={workbench} />
           </WorkstationSection>
 
+          {/* 6 — What is missing / what would change the conclusion? */}
           <MissingEvidenceSection workbench={workbench} reveal={nextDelay()} />
+
+          {/* 7 — What happens if an attacker succeeds? (summarizes, doesn't introduce) */}
+          <BusinessImpactSection workbench={workbench} reveal={nextDelay()} />
+
+          {/* 8 — What should I do next? */}
           <RecommendationsSection workbench={workbench} reveal={nextDelay()} />
+
+          {/* 9 — Replay the investigation as it happened */}
           <InvestigationTimelineSection workbench={workbench} reveal={nextDelay()} />
+
+          {/* 10-12 — Progressive disclosure: evidence, scan metadata, developer details */}
           <EvidenceSection workbench={workbench} reveal={nextDelay()} />
+          <InvestigationMetadataSection workbench={workbench} reveal={nextDelay()} />
           <DeveloperDetailsSection workbench={workbench} reveal={nextDelay()} />
-        </>
+        </ExpertModeProvider>
       ) : (
         <>
           <InvestigationHeader
