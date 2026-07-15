@@ -89,7 +89,7 @@ function StatePill({
       className={cn(
         "border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
         BADGE_MEANING[label] || title ? "cursor-help" : "",
-        active ? "border-white/50 bg-white text-black" : "border-white/20 text-white/35",
+        active ? "border-vx-border-strong bg-vx-text text-vx-app" : "border-vx-border text-vx-muted",
       )}
     >
       {label}
@@ -152,7 +152,7 @@ function ExploitBadge({
 }) {
   if (!verification) return null;
   return (
-    <div className="border border-white/20 bg-black px-3 py-2">
+    <div className="border border-vx-border bg-vx-inset px-3 py-2">
       <div className="flex items-center gap-2">
         <span
           className={cn(
@@ -192,33 +192,33 @@ export function InvestigationVerdictSection({
     <WorkstationSection title="Investigation Verdict" reveal={reveal} large>
       <WorkspaceCard className="p-6">
         <SectionLabel>What VANE discovered</SectionLabel>
-        <p className="mt-3 max-w-[80ch] text-[16px] font-medium leading-[1.7] text-white">
+        <p className="mt-3 max-w-[80ch] text-[16px] font-medium leading-[1.7] text-vx-text">
           {verdict.headline}
         </p>
         {verdict.topFinding ? (
-          <p className="mt-3 text-[12px] text-white/55">
+          <p className="mt-3 text-[12px] text-vx-secondary">
             Highest-priority finding:{" "}
-            <span className="font-bold uppercase tracking-wide text-white/80">
+            <span className="font-bold uppercase tracking-wide text-vx-text">
               {verdict.topFinding}
             </span>
-            {verdict.topHost ? <span className="font-mono text-white/45"> · {verdict.topHost}</span> : null}
+            {verdict.topHost ? <span className="font-mono text-vx-muted"> · {verdict.topHost}</span> : null}
           </p>
         ) : null}
 
-        <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/15 pt-5 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 border-t border-vx-border pt-5 sm:grid-cols-4">
           {verdict.counts.map((c) => (
-            <div key={c.label} className="border border-white/20 bg-black px-3 py-2.5">
-              <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
+            <div key={c.label} className="border border-vx-border bg-vx-inset px-3 py-2.5">
+              <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-vx-muted">
                 {c.label}
               </p>
-              <p className="mt-1 font-mono text-[22px] font-black leading-none text-white">
+              <p className="mt-1 font-mono text-[22px] font-black leading-none text-vx-text">
                 {c.value}
               </p>
             </div>
           ))}
         </div>
 
-        <div className="mt-5 border-t border-white/15 pt-5">
+        <div className="mt-5 border-t border-vx-border pt-5">
           <SectionLabel>How to read a finding&rsquo;s state</SectionLabel>
           <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {legend.map((s) => {
@@ -228,7 +228,7 @@ export function InvestigationVerdictSection({
                   <dt className="shrink-0">
                     <StatePill active label={m.label} />
                   </dt>
-                  <dd className="text-[11px] leading-snug text-white/55">{m.meaning}</dd>
+                  <dd className="text-[11px] leading-snug text-vx-secondary">{m.meaning}</dd>
                 </div>
               );
             })}
@@ -261,7 +261,7 @@ export function InvestigationFlowSection({
 
   return (
     <WorkstationSection title="How This Investigation Was Built" reveal={reveal}>
-      <p className="mb-4 max-w-[72ch] text-[13px] leading-relaxed text-white/55">
+      <p className="mb-4 max-w-[72ch] text-[13px] leading-relaxed text-vx-secondary">
         VANE did not jump to conclusions. It worked through these stages — the same order a human
         investigator would. Each stage below fed the next.
       </p>
@@ -269,16 +269,16 @@ export function InvestigationFlowSection({
         {steps.map((step, i) => (
           <li
             key={step.label}
-            className="flex items-center gap-3 border border-white/20 bg-black px-3 py-2.5"
+            className="flex items-center gap-3 border border-vx-border bg-vx-inset px-3 py-2.5"
           >
-            <span className="font-mono text-[16px] font-black leading-none text-white/40">
+            <span className="font-mono text-[16px] font-black leading-none text-vx-muted">
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span className="flex-1 text-[11px] font-bold uppercase leading-snug tracking-wide text-white/80">
+            <span className="flex-1 text-[11px] font-bold uppercase leading-snug tracking-wide text-vx-text">
               {step.label}
             </span>
             <span
-              className={cn("font-mono text-[13px]", step.done ? "text-white" : "text-white/25")}
+              className={cn("font-mono text-[13px]", step.done ? "text-vx-text" : "text-vx-muted")}
               title={step.done ? "Completed" : "Not reached in this investigation"}
             >
               {step.done ? "✓" : "—"}
@@ -443,7 +443,7 @@ function AnalystFindingCard({
         )}
       >
         {/* Header — what & where */}
-        <div className="border-b border-white/15 p-4">
+        <div className="border-b border-vx-border p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h4 className="text-[13px] font-black uppercase leading-snug tracking-wide text-white">
@@ -474,7 +474,7 @@ function AnalystFindingCard({
 
           {/* Primary confidence — labelled number + meaning (P1) */}
           {primary ? (
-            <div className="mt-3 border-t border-white/10 pt-3">
+            <div className="mt-3 border-t border-vx-border pt-3">
               <MetricWithMeaning
                 label={`${primary.label} confidence`}
                 score={primary.metric.score}
@@ -506,7 +506,7 @@ function AnalystFindingCard({
         </div>
 
         {/* NEXT ACTION — always visible so the card is decision-ready (P2, P8) */}
-        <div className="border-t border-white/10 px-4 py-3">
+        <div className="border-t border-vx-border px-4 py-3">
           <SectionLabel>Next action</SectionLabel>
           <p className="mt-1 line-clamp-2 text-[12px] font-medium leading-snug text-white/85">
             {nextStep}
@@ -514,7 +514,7 @@ function AnalystFindingCard({
         </div>
 
         {open ? (
-          <div className="space-y-5 border-t border-white/15 p-4">
+          <div className="space-y-5 border-t border-vx-border p-4">
             {/* Can an attacker actually exploit this — verified vs inferred (P4) */}
             {exploit ? <ExploitBadge verification={exploit} /> : null}
 
@@ -563,7 +563,7 @@ function AnalystFindingCard({
                 {proof.map((row, i) => (
                   <li
                     key={`${row.source}-${i}`}
-                    className="grid grid-cols-[7rem_1fr] gap-3 border border-white/20 bg-black px-3 py-2"
+                    className="grid grid-cols-[7rem_1fr] gap-3 border border-vx-border bg-vx-inset px-3 py-2"
                   >
                     <span className="text-[11px] font-bold uppercase tracking-wide text-white/70">
                       {row.source}
@@ -600,7 +600,7 @@ function AnalystFindingCard({
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3 border-t border-white/15 pt-3">
+                <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3 border-t border-vx-border pt-3">
                   <p className="text-[12px] font-bold uppercase tracking-wide text-white/60">
                     Agreement {agreementRatio}
                   </p>
@@ -730,7 +730,7 @@ function AnalystFindingCard({
 
             {/* Expert-only technical details — same page serves researchers (P11) */}
             {expert ? (
-              <div className="border-t border-white/15 pt-4">
+              <div className="border-t border-vx-border pt-4">
                 <SectionLabel>Technical details</SectionLabel>
                 <dl className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {[
@@ -741,7 +741,7 @@ function AnalystFindingCard({
                     { label: "Category", value: evidenceMeta?.category || "—" },
                     { label: "Scanners", value: finding.sources.join(", ") || "—" },
                   ].map((row) => (
-                    <div key={row.label} className="border border-white/15 bg-black px-3 py-2">
+                    <div key={row.label} className="border border-vx-border bg-vx-inset px-3 py-2">
                       <dt className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
                         {row.label}
                       </dt>
@@ -760,7 +760,7 @@ function AnalystFindingCard({
                       {finding.evidence.map((e, i) => (
                         <li
                           key={`${e}-${i}`}
-                          className="border border-white/10 bg-black px-3 py-1.5 font-mono text-[11px] leading-snug text-white/60"
+                          className="border border-white/10 bg-vx-app px-3 py-1.5 font-mono text-[11px] leading-snug text-white/60"
                         >
                           {e}
                         </li>
@@ -777,7 +777,7 @@ function AnalystFindingCard({
       <button
         type="button"
         onClick={onToggle}
-        className="mt-auto flex w-full shrink-0 items-center justify-between border-t border-white/15 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white/50 transition-colors hover:text-white"
+        className="mt-auto flex w-full shrink-0 items-center justify-between border-t border-vx-border px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white/50 transition-colors hover:text-white"
       >
         {open ? "Hide reasoning & proof" : "Show reasoning & proof"}
         <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
@@ -918,7 +918,7 @@ function PathSimulationCard({ path }: { path: WorkbenchCandidatePath }) {
         ))}
       </ol>
 
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/15 pt-3">
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-vx-border pt-3">
         <span
           title={
             blocked
@@ -936,7 +936,7 @@ function PathSimulationCard({ path }: { path: WorkbenchCandidatePath }) {
       </div>
 
       {blocked ? (
-        <div className="mt-4 space-y-3 border-t border-white/15 pt-3">
+        <div className="mt-4 space-y-3 border-t border-vx-border pt-3">
           <div>
             <SectionLabel>Why blocked</SectionLabel>
             <ul className="mt-1.5 space-y-1">
@@ -983,7 +983,7 @@ export function AttackPathsTimeline({ workbench }: { workbench: WorkbenchData })
   if (!paths.length) return null;
 
   return (
-    <div className="border-t border-white/15 bg-black px-6 py-6">
+    <div className="border-t border-vx-border bg-vx-app px-6 py-6">
       <div className="mb-4 border-b border-white pb-3">
         <h3 className="text-[12px] font-bold uppercase tracking-[0.15em] text-white">
           Candidate Attack Paths
@@ -1022,7 +1022,7 @@ export function AttackPathsTimeline({ workbench }: { workbench: WorkbenchData })
               {showRejected ? "Hide details" : "Expand"}
             </button>
           </div>
-          <div className="mt-5 space-y-2 border-t border-white/15 pt-4">
+          <div className="mt-5 space-y-2 border-t border-vx-border pt-4">
             <SectionLabel>Reasons</SectionLabel>
             {reasons.map((row) => (
               <div
@@ -1036,7 +1036,7 @@ export function AttackPathsTimeline({ workbench }: { workbench: WorkbenchData })
             ))}
           </div>
           {showRejected ? (
-            <div className="mt-5 grid grid-cols-1 gap-4 border-t border-white/15 pt-4 lg:grid-cols-2">
+            <div className="mt-5 grid grid-cols-1 gap-4 border-t border-vx-border pt-4 lg:grid-cols-2">
               {rejected.map((path, i) => (
                 <PathSimulationCard key={`r-${i}`} path={path} />
               ))}
@@ -1076,7 +1076,7 @@ export function MissingEvidenceSection({
                 +{row.expected_gain || 0}%
               </span>
             </div>
-            <div className="mt-4 space-y-3 border-t border-white/15 pt-4">
+            <div className="mt-4 space-y-3 border-t border-vx-border pt-4">
               <div>
                 <SectionLabel>Reason</SectionLabel>
                 <p className="mt-2 text-[13px] font-medium uppercase text-white/70">{row.reason}</p>
@@ -1127,7 +1127,7 @@ export function BusinessImpactSection({
             <p className="mt-1 font-mono text-[11px] text-white/50">{row.host}</p>
             <p className="mt-3 text-[13px] leading-relaxed text-white/80">{row.summary}</p>
             {row.attacker_gains || row.systems_exposed || row.process_affected ? (
-              <dl className="mt-4 space-y-3 border-t border-white/15 pt-4">
+              <dl className="mt-4 space-y-3 border-t border-vx-border pt-4">
                 {[
                   { label: "Attacker gains", value: row.attacker_gains },
                   { label: "Systems exposed", value: row.systems_exposed },
@@ -1177,7 +1177,7 @@ export function RecommendationsSection({
                 <p className="text-[14px] font-medium leading-relaxed text-white/90">
                   {task.action}
                 </p>
-                <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-white/15 pt-3">
+                <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-vx-border pt-3">
                   <div className="min-w-0">
                     <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
                       Expected result
@@ -1270,7 +1270,7 @@ function ScannerAgreementCard({
             : `${corr.confidence}%`}
         </span>
       </div>
-      <div className="mt-4 space-y-3 border-t border-white/15 pt-4">
+      <div className="mt-4 space-y-3 border-t border-vx-border pt-4">
         <SectionLabel>Scanner agreement</SectionLabel>
         <div className="mt-2 flex flex-wrap gap-3">
           {allScanners.map((s) => (
@@ -1308,14 +1308,14 @@ function EvidenceSourceCard({
         </h4>
         <Badge variant="default">{source.status}</Badge>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-white/15 pt-4 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-vx-border pt-4 sm:grid-cols-4">
         {[
           { label: "Hosts", value: hosts },
           { label: "Findings", value: source.findings },
           { label: "Critical", value: source.critical },
           { label: "Warnings", value: source.high },
         ].map((stat) => (
-          <div key={stat.label} className="border border-white/20 bg-black p-3">
+          <div key={stat.label} className="border border-vx-border bg-vx-inset p-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">
               {stat.label}
             </p>
@@ -1487,13 +1487,13 @@ function FileContributionCard({ file }: { file: WorkbenchFileContribution }) {
   return (
     <WorkspaceCard className="p-5">
       <h4 className="truncate text-[13px] font-black uppercase text-white">{file.file}</h4>
-      <div className="mt-4 grid grid-cols-3 gap-3 border-t border-white/15 pt-4">
+      <div className="mt-4 grid grid-cols-3 gap-3 border-t border-vx-border pt-4">
         {[
           { label: "Findings", value: file.findings },
           { label: "Retained", value: file.retained },
           { label: "Rejected", value: file.rejected },
         ].map((stat) => (
-          <div key={stat.label} className="border border-white/20 bg-black p-3">
+          <div key={stat.label} className="border border-vx-border bg-vx-inset p-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">
               {stat.label}
             </p>

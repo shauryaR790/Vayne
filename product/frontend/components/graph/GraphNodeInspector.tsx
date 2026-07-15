@@ -50,10 +50,10 @@ function InspectorField({
       <p
         className={
           mono
-            ? "mt-2 font-mono text-[14px] font-medium text-white/85"
+            ? "mt-2 font-mono text-[14px] font-medium text-vx-body"
             : large
-              ? "mt-2 text-[18px] font-black uppercase leading-none text-white"
-              : "mt-2 text-[14px] font-medium uppercase text-white/85"
+              ? "mt-2 text-[18px] font-black uppercase leading-none text-vx-text"
+              : "mt-2 text-[14px] font-medium uppercase text-vx-body"
         }
       >
         {value}
@@ -65,7 +65,7 @@ function InspectorField({
 export function GraphNodeInspector({ node }: { node: GraphNode | null }) {
   if (!node) {
     return (
-      <p className="mt-4 text-[14px] leading-relaxed text-white/50">
+      <p className="mt-4 text-[14px] leading-relaxed text-vx-secondary">
         Select a node on the attack path to inspect evidence and confidence.
       </p>
     );
@@ -97,19 +97,19 @@ export function GraphNodeInspector({ node }: { node: GraphNode | null }) {
         />
       </div>
 
-      <div className="border-t border-white/15 pt-4">
+      <div className="border-t border-vx-border pt-4">
         <SectionLabel>Node</SectionLabel>
-        <p className="mt-2 break-all font-mono text-[14px] font-medium leading-relaxed text-white/85">
+        <p className="mt-2 break-all font-mono text-[14px] font-medium leading-relaxed text-vx-body">
           {meta.name}
         </p>
       </div>
 
       {node.evidence?.length ? (
-        <div className="border-t border-white/15 pt-4">
+        <div className="border-t border-vx-border pt-4">
           <SectionLabel>Proof</SectionLabel>
           <ul className="mt-3 max-h-32 space-y-2 overflow-y-auto">
             {node.evidence.slice(0, 5).map((e) => (
-              <li key={e} className="font-mono text-[13px] leading-relaxed text-white/65">
+              <li key={e} className="font-mono text-[13px] leading-relaxed text-vx-secondary">
                 {e}
               </li>
             ))}

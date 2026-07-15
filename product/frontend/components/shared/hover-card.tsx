@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export const hoverCardClasses =
-  "group relative overflow-hidden border border-white/80 bg-black shadow-none transition-[border-color,box-shadow] duration-300 hover:border-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_8px_32px_rgba(0,0,0,0.55)]";
+  "group relative overflow-hidden border border-white/80 bg-vx-app shadow-none transition-[border-color,box-shadow] duration-300 hover:border-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_8px_32px_rgba(0,0,0,0.55)]";
 
 export const hoverCardMotion = {
   whileHover: { y: -3 },

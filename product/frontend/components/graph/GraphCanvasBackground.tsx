@@ -28,7 +28,7 @@ export function GraphCanvasBackground() {
       className="pointer-events-none absolute inset-0"
       aria-hidden
       style={{
-        backgroundColor: "#000",
+        backgroundColor: "var(--vx-app)",
         backgroundImage: `
           linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
           linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),

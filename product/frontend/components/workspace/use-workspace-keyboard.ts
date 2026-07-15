@@ -57,6 +57,12 @@ export function useWorkspaceKeyboard({
         return;
       }
 
+      if (event.key === "/" && !mod && !event.shiftKey) {
+        event.preventDefault();
+        onCommandPalette();
+        return;
+      }
+
       if (event.key === "?" || (event.shiftKey && event.key === "/")) {
         event.preventDefault();
         onShowShortcuts();

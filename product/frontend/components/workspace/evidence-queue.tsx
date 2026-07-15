@@ -54,12 +54,12 @@ export function AddEvidenceButton({
         disabled={disabled}
         onClick={onClick}
         className={cn(
-          "inline-flex items-center gap-2 rounded-[10px] border border-white/[0.1] bg-[#1B1B1B] px-4 py-2.5",
-          "text-[13px] text-vx-secondary transition-colors",
-          "hover:border-white/[0.16] hover:bg-white/[0.04] hover:text-white disabled:opacity-40",
+          "inline-flex items-center gap-2 border border-white/25 bg-black px-5 py-3",
+          "text-[11px] font-bold uppercase tracking-wider text-white/70 transition-colors",
+          "hover:border-white hover:text-white disabled:opacity-40",
         )}
       >
-        <Plus className="size-3.5" strokeWidth={2} />
+        <Plus className="size-3.5" strokeWidth={2.5} />
         Add evidence
       </button>
     </div>

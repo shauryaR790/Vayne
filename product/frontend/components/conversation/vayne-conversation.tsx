@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 
 import { analyzeFiles, AnalyzeError, getApiBase, checkHealth } from "@/lib/api";
 import {
   ANALYST_OFFLINE_MESSAGE,
+  fetchAnalystStatus,
   sanitizeChatHistory,
   streamAnalystChat,
+  streamGeneralChat,
 } from "@/lib/analyst-chat";
 import { loadInvestigationBundle, type InvestigationBundle } from "@/lib/investigation-bundle";
 import { saveRecentInvestigation, recentEntryFromBundle } from "@/lib/recent-investigations";
@@ -49,6 +52,8 @@ import { validateUploadFiles } from "@/lib/upload";
 import { VaneSidebar } from "@/components/workspace/vane-sidebar";
 import { VaneEnginePanel } from "@/components/workspace/vane-engine-panel";
 import { VaneAnalystPanel } from "@/components/workspace/vane-analyst-panel";
+import { CommandPalette } from "@/components/workspace/home/command-palette";
+import { useCommandPaletteItems } from "@/components/workspace/home/use-command-palette-items";
 import { WorkspaceShortcutsOverlay } from "@/components/workspace/workspace-shortcuts-overlay";
 import { useWorkspaceKeyboard } from "@/components/workspace/use-workspace-keyboard";
 import { LOG_PREFIX } from "@/lib/brand";
@@ -106,6 +111,7 @@ export function VaneWorkspace({
   const [thinking, setThinking] = useState(false);
   const [thinkingStep, setThinkingStep] = useState<string | null>(null);
   const [backendOnline, setBackendOnline] = useState(false);
+  const [analystOnline, setAnalystOnline] = useState(false);
   const [error, setError] = useState("");
   const [investigationMode, setInvestigationMode] = useState<InvestigationMode>("combined");
   const [modeExplicit, setModeExplicit] = useState(false);
@@ -114,6 +120,12 @@ export function VaneWorkspace({
   const [hydrated, setHydrated] = useState(false);
   const [enginePhase, setEnginePhase] = useState<"idle" | "running" | "complete">("idle");
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [investigationSessionActive, setInvestigationSessionActive] = useState(false);
+  const [briefingPrompt, setBriefingPrompt] = useState<{
+    messages: StoredChatMessage[];
+    fileCount: number;
+  } | null>(null);
 
   useEffect(() => {
     if (files.length <= 1) {
@@ -127,6 +139,7 @@ export function VaneWorkspace({
   }, [files.length, modeExplicit]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const engineStickRef = useRef(true);
   const analystInputRef = useRef<HTMLTextAreaElement>(null);
   const analystScrollTopRef = useRef(0);
   const streamAbortRef = useRef<AbortController | null>(null);
@@ -146,13 +159,15 @@ export function VaneWorkspace({
 
   const investigationId = bundle?.detail.summary.id;
 
-  const syncUrl = useCallback(
-    (id: string | null) => {
-      if (id) router.replace(`/?id=${id}`, { scroll: false });
-      else router.replace("/", { scroll: false });
-    },
-    [router],
-  );
+  const syncUrl = useCallback((id: string | null) => {
+    // Update the URL bar WITHOUT a router navigation. `router.replace` triggers
+    // a soft navigation that re-suspends useSearchParams() in HomeCanvas, which
+    // flickers (and can remount + reload from session). history.replaceState
+    // keeps the in-memory investigation/chat state intact.
+    if (typeof window === "undefined") return;
+    const url = id ? `/?id=${id}` : "/";
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
 
   const scrollToBottom = useCallback((smooth: boolean) => {
     const el = scrollRef.current;
@@ -236,7 +251,8 @@ export function VaneWorkspace({
     const controller = new AbortController();
     briefingAbortRef.current = controller;
 
-    setAnalystMessages([]);
+    // Do not wipe the conversation — the briefing appends after any prior chat.
+    // The chat only resets on an explicit New Investigation (vayne:new-chat).
     setThinking(true);
 
     try {
@@ -283,6 +299,8 @@ export function VaneWorkspace({
       setThinking(false);
       setEnginePhase("idle");
       setError("");
+      setBriefingPrompt(null);
+      setInvestigationSessionActive(true);
 
       try {
         migrateLegacyConversationSession();
@@ -372,6 +390,7 @@ export function VaneWorkspace({
 
   useEffect(() => {
     checkHealth().then(setBackendOnline);
+    void fetchAnalystStatus().then((status) => setAnalystOnline(Boolean(status?.online)));
     migrateLegacyConversationSession();
 
     if (skipResumeRef.current) {
@@ -404,6 +423,9 @@ export function VaneWorkspace({
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
+      // Track whether the reader is parked at the bottom; only then do we keep
+      // following new content. Scrolling up disables the auto-follow.
+      engineStickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
       if (persistSkipRef.current) return;
       persist({ scrollTop: el.scrollTop });
     };
@@ -413,6 +435,7 @@ export function VaneWorkspace({
 
   useEffect(() => {
     if (skipAutoScrollRef.current) return;
+    if (!engineStickRef.current) return;
     const streaming = messages.some((m) => m.streaming);
     scrollToBottom(!streaming);
   }, [messages, thinking, enginePhase, scrollToBottom]);
@@ -439,8 +462,6 @@ export function VaneWorkspace({
 
   const streamReply = useCallback(
     async (question: string) => {
-      if (!investigationId) return;
-
       const streamId = `reply-${Date.now()}`;
       const history = sanitizeChatHistory(analystMessages);
 
@@ -472,9 +493,14 @@ export function VaneWorkspace({
       let gotTokens = false;
 
       const signal = beginStream();
+      // With an investigation loaded, chat is grounded in its context; with an
+      // empty workspace, VAYNE answers general cybersecurity questions.
+      const stream = investigationId
+        ? streamAnalystChat(investigationId, question, history, { signal })
+        : streamGeneralChat(question, history, { signal });
 
       try {
-        for await (const event of streamAnalystChat(investigationId, question, history, { signal })) {
+        for await (const event of stream) {
           if (signal.aborted) return;
           if (event.type === "thinking") continue;
 
@@ -610,7 +636,11 @@ export function VaneWorkspace({
             ),
           );
         }
-        syncUrl(bundles[0]?.detail.summary.id ?? result.investigation_id);
+        const primaryId = bundles[0]?.detail.summary.id ?? result.investigation_id;
+        // Mark as loaded so the URL change below does NOT re-trigger a full
+        // investigation reload (which would wipe the briefing prompt + chat).
+        loadedResumeIdRef.current = primaryId;
+        syncUrl(primaryId);
 
         const overlap = detectOverlappingAssets(bundles);
         let intro = separateAnalystIntro(bundles.length);
@@ -632,16 +662,20 @@ export function VaneWorkspace({
               `Evidence ${index + 1}`,
           })),
         });
-        void playAnalystBriefing(
-          buildAnalystBriefingMessages(bundles, {
+        setBriefingPrompt({
+          messages: buildAnalystBriefingMessages(bundles, {
             intro,
             sourceLabels: fileNames,
           }),
-        );
+          fileCount: fileNames.length,
+        });
       } else {
         const data = await loadInvestigationBundle(result.investigation_id);
         setBundle(data);
         saveRecentInvestigation(recentEntryFromBundle(data, label));
+        // Mark as loaded so the URL change below does NOT re-trigger a full
+        // investigation reload (which would wipe the briefing prompt + chat).
+        loadedResumeIdRef.current = result.investigation_id;
         syncUrl(result.investigation_id);
 
         const intro = combinedAnalystIntro(fileNames.length);
@@ -653,12 +687,13 @@ export function VaneWorkspace({
           investigationId: result.investigation_id,
           sourceLabel: fileNames.length === 1 ? fileNames[0] : label,
         });
-        void playAnalystBriefing(
-          buildAnalystBriefingMessages([data], {
+        setBriefingPrompt({
+          messages: buildAnalystBriefingMessages([data], {
             intro: intro || undefined,
             sourceLabels: [fileNames.length === 1 ? fileNames[0] : label],
           }),
-        );
+          fileCount: fileNames.length,
+        });
       }
     } catch (e) {
       setError(describeAnalyzeError(e));
@@ -700,6 +735,8 @@ export function VaneWorkspace({
       setThinkingStep(null);
       setEnginePhase("idle");
       setError("");
+      setBriefingPrompt(null);
+      setInvestigationSessionActive(false);
       setActiveInvestigationId(null);
       clearConversationSession();
       router.replace("/", { scroll: false });
@@ -720,7 +757,51 @@ export function VaneWorkspace({
     setError("");
   }, []);
 
-  const showEngineResults = !!bundle || enginePhase !== "idle" || messages.length > 0;
+  const runBriefingPrompt = useCallback(() => {
+    if (!briefingPrompt) return;
+    void playAnalystBriefing(briefingPrompt.messages);
+    setBriefingPrompt(null);
+  }, [briefingPrompt, playAnalystBriefing]);
+
+  const dismissBriefingPrompt = useCallback(() => setBriefingPrompt(null), []);
+
+  const hasInvestigationData =
+    !!bundle || enginePhase !== "idle" || messages.length > 0;
+
+  const focusAnalyst = useCallback(() => {
+    analystInputRef.current?.focus();
+  }, []);
+
+  const beginInvestigationSession = useCallback(
+    (prompt?: string) => {
+      setInvestigationSessionActive(true);
+      window.setTimeout(() => focusAnalyst(), 200);
+
+      if (files.length > 0) {
+        void handleAnalyze();
+      }
+      if (prompt?.trim()) {
+        void streamReply(prompt.trim());
+      }
+    },
+    [files.length, focusAnalyst, handleAnalyze, streamReply],
+  );
+
+  const handleHomeBegin = useCallback(
+    (prompt: string) => {
+      beginInvestigationSession(prompt || undefined);
+    },
+    [beginInvestigationSession],
+  );
+
+  const handleOpenInvestigation = useCallback(
+    (id: string) => {
+      setInvestigationSessionActive(true);
+      void switchToInvestigation(id);
+    },
+    [switchToInvestigation],
+  );
+
   const engineSourceLabels = bundle
     ? [
         bundle.report.target?.split(/[/\\]/).pop() ||
@@ -729,17 +810,25 @@ export function VaneWorkspace({
       ]
     : [];
 
-  const focusAnalyst = useCallback(() => {
-    analystInputRef.current?.focus();
-  }, []);
+  const commandPaletteItems = useCommandPaletteItems({
+    onNewInvestigation: () => window.dispatchEvent(new Event("vayne:new-chat")),
+    onOpenInvestigation: handleOpenInvestigation,
+    onFocusAnalyst: focusAnalyst,
+    onAnalyze: () => void handleAnalyze(),
+    onShowShortcuts: () => setShortcutsOpen(true),
+    onOpenCommandPalette: () => setCommandPaletteOpen(true),
+    onSubmitPrompt: (p) => beginInvestigationSession(p),
+    canAnalyze: files.length > 0 && !busy,
+    paletteOpen: commandPaletteOpen,
+  });
 
   useWorkspaceKeyboard({
-    workspaceEmpty: !showEngineResults,
+    workspaceEmpty: !investigationSessionActive,
     canAnalyze: files.length > 0 && !busy,
     onNewInvestigation: () => window.dispatchEvent(new Event("vayne:new-chat")),
     onAnalyze: () => void handleAnalyze(),
     onFocusAnalyst: focusAnalyst,
-    onCommandPalette: () => router.push("/investigations"),
+    onCommandPalette: () => setCommandPaletteOpen(true),
     onShowShortcuts: () => setShortcutsOpen(true),
   });
 
@@ -747,6 +836,11 @@ export function VaneWorkspace({
     <div className="flex h-screen w-full overflow-hidden bg-vx-app text-white">
       <ResetWorkspaceBootstrap />
       <WorkspaceShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <CommandPalette
+        open={commandPaletteOpen}
+        items={commandPaletteItems}
+        onClose={() => setCommandPaletteOpen(false)}
+      />
 
       <Suspense
         fallback={
@@ -756,66 +850,89 @@ export function VaneWorkspace({
         <VaneSidebar />
       </Suspense>
 
-      <VaneEnginePanel
-        scrollRef={scrollRef}
-        showResults={showEngineResults}
-        busy={busy}
-        backendOnline={backendOnline}
-        error={error}
-        files={files}
-        investigationMode={investigationMode}
-        enginePhase={enginePhase}
-        messages={messages}
-        investigationIds={
-          investigationIds.length
-            ? investigationIds
-            : bundle
-              ? [bundle.detail.summary.id]
-              : []
-        }
-        investigationGroupId={investigationGroupId}
-        sourceLabels={engineSourceLabels}
-        onSelectFiles={(picked) => {
-          setFiles((prev) => {
-            const seen = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
-            const merged = [...prev];
-            for (const file of picked) {
-              const key = `${file.name}:${file.size}:${file.lastModified}`;
-              if (!seen.has(key)) {
-                seen.add(key);
-                merged.push(file);
+      <motion.div
+        className="flex h-screen min-w-0 flex-col border-r border-vx-border bg-vx-app"
+        animate={{
+          flex: investigationSessionActive ? "1 1 55%" : "1 1 100%",
+        }}
+        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+      >
+        <VaneEnginePanel
+          scrollRef={scrollRef}
+          sessionActive={investigationSessionActive}
+          hasInvestigationData={hasInvestigationData}
+          busy={busy}
+          backendOnline={backendOnline}
+          analystOnline={analystOnline}
+          error={error}
+          files={files}
+          enginePhase={enginePhase}
+          messages={messages}
+          investigationIds={
+            investigationIds.length
+              ? investigationIds
+              : bundle
+                ? [bundle.detail.summary.id]
+                : []
+          }
+          investigationGroupId={investigationGroupId}
+          sourceLabels={engineSourceLabels}
+          onSelectFiles={(picked) => {
+            setFiles((prev) => {
+              const seen = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
+              const merged = [...prev];
+              for (const file of picked) {
+                const key = `${file.name}:${file.size}:${file.lastModified}`;
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  merged.push(file);
+                }
               }
-            }
-            return merged;
-          });
-          setError("");
-        }}
-        onRemoveFile={removeFile}
-        onModeChange={(mode) => {
-          setModeExplicit(true);
-          setInvestigationMode(mode);
-        }}
-        onAnalyze={() => void handleAnalyze()}
-      />
+              return merged;
+            });
+            setError("");
+          }}
+          onBeginSession={handleHomeBegin}
+          onOpenInvestigation={handleOpenInvestigation}
+          onFocusAnalyst={focusAnalyst}
+          onNewInvestigation={() => window.dispatchEvent(new Event("vayne:new-chat"))}
+        />
+      </motion.div>
 
-      <VaneAnalystPanel
-        bundle={bundle}
-        messages={analystMessages}
-        input={analystInput}
-        busy={busy}
-        thinking={thinking}
-        thinkingStep={thinkingStep}
-        analystOnline={backendOnline}
-        initialScrollTop={analystScrollTopRef.current}
-        onInputChange={setAnalystInput}
-        onAsk={(q) => void streamReply(q)}
-        onScroll={(top) => {
-          analystScrollTopRef.current = top;
-          persist({ analystScrollTop: top });
-        }}
-        inputRef={analystInputRef}
-        onClearChat={() => setAnalystMessages([])}
-      />
+      <AnimatePresence initial={false}>
+        {investigationSessionActive ? (
+          <motion.div
+            key="analyst-panel"
+            initial={{ width: 0, opacity: 0, x: 16 }}
+            animate={{ width: "25%", opacity: 1, x: 0 }}
+            exit={{ width: 0, opacity: 0, x: 16 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="h-screen min-w-[300px] shrink-0 overflow-hidden"
+          >
+            <VaneAnalystPanel
+              bundle={bundle}
+              messages={analystMessages}
+              input={analystInput}
+              busy={busy}
+              thinking={thinking}
+              thinkingStep={thinkingStep}
+              analystOnline={analystOnline}
+              initialScrollTop={analystScrollTopRef.current}
+              onInputChange={setAnalystInput}
+              onAsk={(q) => void streamReply(q)}
+              onScroll={(top) => {
+                analystScrollTopRef.current = top;
+                persist({ analystScrollTop: top });
+              }}
+              inputRef={analystInputRef}
+              onClearChat={() => setAnalystMessages([])}
+              briefingPrompt={briefingPrompt ? { fileCount: briefingPrompt.fileCount } : null}
+              onGetSummary={runBriefingPrompt}
+              onSkipSummary={dismissBriefingPrompt}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

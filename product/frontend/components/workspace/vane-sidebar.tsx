@@ -128,7 +128,7 @@ export function VaneSidebar() {
       <SidebarDivider />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-4">
-        <p className="mb-2 px-3 text-[13px] font-medium text-vx-muted">Recent Investigations</p>
+        <p className="mb-2 px-3 text-[13px] font-medium text-vx-muted">Investigation History</p>
         <div className="min-h-0 flex-1 overflow-y-auto">
           {items.length ? (
             <div className="flex flex-col gap-1">

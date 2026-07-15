@@ -3,26 +3,36 @@
  *  VANE THEME — edit colors here only
  * ═══════════════════════════════════════════════════════════════════
  *
- *  After changing values, save this file. Dev server hot-reloads CSS.
- *  All workspace UI reads these CSS variables via Tailwind classes:
- *    bg-vx-app, bg-vx-sidebar, bg-vx-panel, bg-vx-elevated
- *    text-vx-text, text-vx-secondary, text-vx-muted, text-vx-body
- *    border-vx-border
+ *  Surfaces:  bg-vx-app, bg-vx-panel, bg-vx-section-body, bg-vx-inset
+ *  Text:      text-vx-text, text-vx-secondary, text-vx-muted, text-vx-body
+ *  Borders:   border-vx-border, border-vx-border-strong
  */
 
 :root {
-  /* Surfaces */
-  --vx-app: #000000;
-  --vx-sidebar: #000000;
-  --vx-panel: #000000;
-  --vx-elevated: #000000;
+  /* Main application (home screen, canvas) */
+  --vx-app: #141414;
+  --vx-sidebar: #181818;
 
-  /* Text */
+  /* Investigation results — headers darkest, bodies lighter */
+  --vx-panel: #0f0f0f;
+  --vx-section-body: #181818;
+  --vx-inset: rgba(255, 255, 255, 0.02);
+  --vx-elevated: #1c1c1c;
+
+  /* Analyst panel */
+  --vx-analyst: #141414;
+  --vx-analyst-composer: #181616;
+
+  /* Text hierarchy */
   --vx-text: #ffffff;
-  --vx-text-secondary: #9ea3ad;
-  --vx-text-muted: #6f747d;
-  --vx-text-body: #d0d3d8;
+  --vx-text-secondary: rgb(255, 255, 255);
+  --vx-text-muted: rgb(255, 255, 255);
+  --vx-text-body: rgb(255, 255, 255);
 
   /* Borders */
   --vx-border: rgba(255, 255, 255, 0.08);
+  --vx-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Accent — active states only */
+  --vx-accent: #5eead4;
 }

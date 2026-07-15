@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown } from "lucide-react";
 
+import { workbenchSurfaceClasses } from "@/components/shared/workspace-card";
 import { cn } from "@/lib/utils";
 
 export function createReveal(step = 0.06, max = 1.2) {
@@ -35,12 +36,12 @@ export function WorkstationSection({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: reveal, ease: [0.22, 1, 0.36, 1] }}
-      className="border-b border-white/20"
+      className="border-b border-vx-border"
     >
-      <div className="flex items-center justify-between gap-3 border-b border-white/20 bg-black px-6 py-4">
+      <div className="flex items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4">
         <h2
           className={cn(
-            "font-bold uppercase tracking-[0.15em] text-white",
+            "font-bold uppercase tracking-[0.15em] text-vx-text",
             large ? "text-[12px]" : "text-[11px]",
           )}
         >
@@ -48,7 +49,15 @@ export function WorkstationSection({
         </h2>
         {aside}
       </div>
-      <div className={cn("min-w-0 bg-vx-app px-6", large ? "py-8" : "py-6", bodyClassName)}>{children}</div>
+      <div
+        className={cn(
+          "min-w-0 bg-vx-section-body px-6 text-vx-body",
+          large ? "py-8" : "py-6",
+          bodyClassName,
+        )}
+      >
+        {children}
+      </div>
     </motion.section>
   );
 }
@@ -65,8 +74,6 @@ export function CollapsibleSection({
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
-  /** When provided, drives open/closed on change (e.g. an Expert-mode toggle),
-   *  while still allowing manual toggling within the same mode. */
   forceOpen?: boolean;
   aside?: React.ReactNode;
   reveal?: number;
@@ -83,14 +90,14 @@ export function CollapsibleSection({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: reveal, ease: "easeOut" }}
-      className="border-b border-white/20"
+      className="border-b border-vx-border"
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 border-b border-white/20 bg-black px-6 py-4 text-left transition-colors hover:bg-white/[0.03]"
+        className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4 text-left transition-colors hover:bg-white/[0.02]"
       >
-        <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/70">
+        <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-vx-text">
           {title}
         </span>
         <span className="flex items-center gap-2">
@@ -112,7 +119,9 @@ export function CollapsibleSection({
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className={cn("bg-vx-app px-6 py-6", bodyClassName)}>{children}</div>
+            <div className={cn("bg-vx-section-body px-6 py-6 text-vx-body", bodyClassName)}>
+              {children}
+            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -135,7 +144,7 @@ export function ExpandToggle({
     <button
       type="button"
       onClick={onClick}
-      className="mt-3 flex items-center gap-2 text-[12px] font-medium text-vx-secondary transition-colors hover:text-white"
+      className="mt-3 flex items-center gap-2 text-[12px] font-medium text-vx-secondary transition-colors hover:text-vx-text"
     >
       <ChevronDown
         className={cn("size-3.5 transition-transform duration-200", open && "rotate-180")}
@@ -159,14 +168,14 @@ export function HeaderMetric({
 }) {
   const display = String(value);
   return (
-    <div className="min-w-0 overflow-hidden border border-vx-border bg-vx-panel px-4 py-3.5">
+    <div className={cn(workbenchSurfaceClasses, "min-w-0 overflow-hidden px-4 py-3.5")}>
       <p className="truncate text-[10px] font-medium uppercase tracking-[0.1em] text-vx-muted">
         {label}
       </p>
       <p
         className={cn(
-          "mt-1 truncate font-semibold",
-          highlight ? "text-[18px] text-white" : "text-[15px] text-vx-body",
+          "mt-1 truncate font-semibold text-vx-text",
+          highlight ? "text-[18px]" : "text-[15px]",
           mono && "font-mono text-[13px]",
         )}
         title={display}

@@ -48,7 +48,7 @@ function isValidatedEdge(e: GraphData["edges"][number]): boolean {
 function computeHighlightNodeIds(
   nodes: GraphNodeType[],
   edges: GraphData["edges"],
-): Set<string> {
+): Set<string> | undefined {
   const onPath = new Set<string>();
   for (const e of edges.filter(isValidatedEdge)) {
     onPath.add(e.source);
@@ -66,7 +66,7 @@ function computeHighlightNodeIds(
       }
     }
   }
-  return onPath;
+  return onPath.size > 0 ? onPath : undefined;
 }
 
 function buildFlowGraph(
@@ -215,15 +215,17 @@ function GraphExplorerInner({
     if (pick) setSelected(pick);
   }, [graph.nodes, highlightIds, isWorkstation, selected]);
 
-  useGraphAnimations(containerRef, flowReady, { hero: isWide });
+  useGraphAnimations(containerRef, flowReady, flowNodes.length, { hero: isWide });
 
   useEffect(() => {
-    if (!flowRef.current || !flowNodes.length) return;
+    if (!flowRef.current || !flowNodes.length || !containerRef.current) return;
+    const { width, height } = containerRef.current.getBoundingClientRect();
+    if (width < 32 || height < 32) return;
     const t = window.setTimeout(() => {
       applyGraphFit(flowRef.current!, flowNodes);
-    }, 80);
+    }, 120);
     return () => window.clearTimeout(t);
-  }, [flowNodes]);
+  }, [flowNodes, flowReady]);
 
   useEffect(() => {
     if (!scrollableEmbed || !flowReady || !containerRef.current || !flowRef.current) return;
@@ -255,10 +257,14 @@ function GraphExplorerInner({
     >
         <div
           ref={containerRef}
-          className={`relative ${graphHeight} ${minHeight} isolate overflow-hidden min-w-0 bg-black ${
-            embedded || isWide
-              ? "border border-white/[0.12] transition-[border-color] duration-300 hover:border-white/[0.22]"
-              : "border border-white"
+          className={`relative ${graphHeight} ${minHeight} isolate overflow-hidden min-w-0 ${
+            isWorkstation ? "bg-vx-app border border-vx-border" : "bg-black"
+          } ${
+            isWorkstation
+              ? ""
+              : embedded || isWide
+                ? "border border-white/[0.12] transition-[border-color] duration-300 hover:border-white/[0.22]"
+                : "border border-white"
           }`}
         >
           {showEmptyState ? (
@@ -267,7 +273,7 @@ function GraphExplorerInner({
             <>
               <GraphCanvasBackground />
 
-              <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+              <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
                 {STORY_COLUMNS.map((label, col) => (
                   <div
                     key={label}
@@ -282,27 +288,29 @@ function GraphExplorerInner({
                 ))}
               </div>
 
-              <ReactFlow
-                nodes={flowNodes}
-                edges={flowEdges}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                onInit={onInit}
-                onNodeClick={onNodeClick}
-                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-                minZoom={0.35}
-                maxZoom={2.5}
-                panOnDrag
-                panOnScroll={!scrollableEmbed}
-                zoomOnScroll={!scrollableEmbed}
-                preventScrolling={!scrollableEmbed}
-                zoomOnPinch
-                nodesDraggable={false}
-                nodesConnectable={false}
-                elementsSelectable
-                proOptions={{ hideAttribution: true }}
-                className="!bg-transparent"
-              >
+              <div className="absolute inset-0 z-[2]">
+                <ReactFlow
+                  nodes={flowNodes}
+                  edges={flowEdges}
+                  nodeTypes={nodeTypes}
+                  edgeTypes={edgeTypes}
+                  onInit={onInit}
+                  onNodeClick={onNodeClick}
+                  defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                  minZoom={0.35}
+                  maxZoom={2.5}
+                  panOnDrag
+                  panOnScroll={!scrollableEmbed}
+                  zoomOnScroll={!scrollableEmbed}
+                  preventScrolling={!scrollableEmbed}
+                  zoomOnPinch
+                  nodesDraggable={false}
+                  nodesConnectable={false}
+                  elementsSelectable
+                  proOptions={{ hideAttribution: true }}
+                  className="!bg-transparent"
+                  style={{ width: "100%", height: "100%" }}
+                >
                 <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden>
                   <defs>
                     <marker
@@ -337,7 +345,8 @@ function GraphExplorerInner({
                     </marker>
                   </defs>
                 </svg>
-              </ReactFlow>
+                </ReactFlow>
+              </div>
             </>
           )}
         </div>
@@ -345,12 +354,18 @@ function GraphExplorerInner({
         <aside
           className={`flex ${
             isWorkstation ? "h-auto min-h-[220px] max-h-none" : isInline ? "h-auto max-h-[200px]" : graphHeight
-          } ${isWorkstation || isInline ? "min-h-0" : minHeight} min-w-0 flex-col bg-black ${
-            embedded || isWide ? "border border-white/30" : "border border-white"
+          } ${isWorkstation || isInline ? "min-h-0" : minHeight} min-w-0 flex-col ${
+            isWorkstation ? "bg-vx-section-body border border-vx-border" : "bg-black"
+          } ${
+            isWorkstation
+              ? ""
+              : embedded || isWide
+                ? "border border-white/30"
+                : "border border-white"
           }`}
         >
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-white/70">
+            <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-vx-muted">
               Inspector
             </p>
             <GraphNodeInspector node={selected} />

@@ -1,22 +1,21 @@
 "use client";
 
-import { HoverCard } from "@/components/shared/hover-card";
 import { cn } from "@/lib/utils";
+
+/** Shared surface styles for investigation workbench cards and tiles. */
+export const workbenchSurfaceClasses =
+  "border border-vx-border bg-vx-inset transition-colors hover:border-vx-border-strong";
 
 export function WorkspaceCard({
   children,
   className,
-  lift = true,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** @deprecated Workbench cards no longer lift */
   lift?: boolean;
 }) {
-  return (
-    <HoverCard className={cn("bg-surface", className)} lift={lift}>
-      {children}
-    </HoverCard>
-  );
+  return <div className={cn(workbenchSurfaceClasses, className)}>{children}</div>;
 }
 
 export function MetricTile({
@@ -31,32 +30,24 @@ export function MetricTile({
   large?: boolean;
 }) {
   return (
-    <HoverCard className="bg-black p-4" lift>
-      <p className="relative text-[12px] font-bold uppercase tracking-[0.14em] text-white/45 transition-colors duration-300 group-hover:text-white/60">
-        {label}
-      </p>
+    <div className={cn(workbenchSurfaceClasses, "p-4")}>
+      <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-vx-muted">{label}</p>
       <p
         className={cn(
-          "relative mt-2 font-black uppercase leading-none transition-colors duration-300 group-hover:text-white",
+          "mt-2 font-black uppercase leading-none text-vx-text",
           large ? "text-4xl" : "text-2xl",
         )}
       >
         {typeof value === "string" ? value.toUpperCase() : value}
       </p>
-      {sub && (
-        <p className="relative mt-1.5 text-[12px] font-bold uppercase text-white/55 transition-colors duration-300 group-hover:text-white/70">
-          {sub}
-        </p>
-      )}
-    </HoverCard>
+      {sub ? <p className="mt-1.5 text-[12px] font-bold uppercase text-vx-secondary">{sub}</p> : null}
+    </div>
   );
 }
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-white/45">
-      {children}
-    </p>
+    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-vx-muted">{children}</p>
   );
 }
 
@@ -68,13 +59,11 @@ export function PageHeader({
   subtitle?: string;
 }) {
   return (
-    <div className="mb-8 border-b border-white pb-6">
+    <div className="mb-8 border-b border-vx-border pb-6">
       <h1 className="vx-page-title">{title}</h1>
-      {subtitle && (
-        <p className="mt-2 text-[11px] font-bold uppercase tracking-wider text-white/50">
-          {subtitle}
-        </p>
-      )}
+      {subtitle ? (
+        <p className="mt-2 text-[11px] font-bold uppercase tracking-wider text-vx-muted">{subtitle}</p>
+      ) : null}
     </div>
   );
 }

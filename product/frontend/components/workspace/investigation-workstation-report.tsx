@@ -82,8 +82,8 @@ function PrimaryAttackVector({
   ];
 
   return (
-    <article className="border border-vx-border bg-vx-panel">
-      <div className="border-b border-vx-border px-5 py-3">
+    <article className="border border-vx-border bg-vx-app">
+      <div className="border-b border-vx-border bg-vx-section-body px-5 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-vx-secondary">
           Primary Attack Vector
         </p>
@@ -133,7 +133,7 @@ function PrimaryAttackVector({
 
 function SecondaryPathCard({ chain, index }: { chain: ValidatedChainPresentation; index: number }) {
   return (
-    <article className="border border-vx-border bg-vx-panel p-4">
+    <article className="border border-vx-border bg-vx-app p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-vx-muted">
         Validated Path #{index + 1}
       </p>
@@ -149,7 +149,7 @@ function SecondaryPathCard({ chain, index }: { chain: ValidatedChainPresentation
 
 function RejectedPathCard({ chain, index }: { chain: RejectedChainPresentation; index: number }) {
   return (
-    <article className="border border-vx-border bg-vx-panel/80 p-4 opacity-90">
+    <article className="border border-vx-border bg-vx-app/80 p-4 opacity-90">
       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-vx-muted">
         Rejected Path #{index + 1}
       </p>
@@ -162,31 +162,31 @@ function RejectedPathCard({ chain, index }: { chain: RejectedChainPresentation; 
 
 function FindingWorkstationCard({ finding }: { finding: FindingCardData }) {
   return (
-    <article className="border border-vx-border bg-vx-panel">
+    <article className="border border-vx-border bg-vx-app">
       <div className="grid gap-px border-b border-vx-border bg-vx-border sm:grid-cols-2">
-        <div className="bg-vx-panel px-4 py-3">
+        <div className="bg-vx-section-body px-4 py-3">
           <p className="text-[10px] uppercase tracking-[0.1em] text-vx-muted">Asset</p>
           <p className="mt-1 text-[14px] font-medium text-white">{finding.asset}</p>
         </div>
-        <div className="bg-vx-panel px-4 py-3">
+        <div className="bg-vx-section-body px-4 py-3">
           <p className="text-[10px] uppercase tracking-[0.1em] text-vx-muted">Finding</p>
           <p className="mt-1 text-[14px] font-medium text-white">{finding.finding}</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-px border-b border-vx-border bg-vx-border sm:grid-cols-4">
-        <div className="bg-vx-panel px-4 py-3">
+        <div className="bg-vx-section-body px-4 py-3">
           <p className="text-[10px] uppercase text-vx-muted">Risk</p>
           <p className="mt-1 text-[14px] text-white">{finding.riskScore}/10</p>
         </div>
-        <div className="bg-vx-panel px-4 py-3">
+        <div className="bg-vx-section-body px-4 py-3">
           <p className="text-[10px] uppercase text-vx-muted">Confidence</p>
           <p className="mt-1 text-[14px] text-white">{finding.confidence}%</p>
         </div>
-        <div className="bg-vx-panel px-4 py-3">
+        <div className="bg-vx-section-body px-4 py-3">
           <p className="text-[10px] uppercase text-vx-muted">Exploitability</p>
           <p className="mt-1 text-[14px] text-white">{finding.exploitability}</p>
         </div>
-        <div className="bg-vx-panel px-4 py-3">
+        <div className="bg-vx-section-body px-4 py-3">
           <p className="text-[10px] uppercase text-vx-muted">Business Impact</p>
           <p className="mt-1 text-[13px] text-white">
             {finding.businessImpact.split("—")[0]?.trim() || finding.businessImpact}
@@ -221,7 +221,7 @@ function EvidenceWorkstationCard({
   reason: string;
 }) {
   return (
-    <article className="border border-vx-border bg-vx-panel p-4">
+    <article className="border border-vx-border bg-vx-app p-4">
       <p className="text-[11px] font-semibold text-vx-secondary">Evidence #{index + 1}</p>
       <dl className="mt-3 space-y-2 text-[13px]">
         <div className="grid grid-cols-[100px_1fr] gap-2">
@@ -303,20 +303,20 @@ export function InvestigationWorkstationReport({
       {workbench ? (
         <ExpertModeProvider expert={expert}>
           {/* Audience toggle — one page, two depths (P11) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/20 bg-black px-6 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-3">
             <p
-              className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/45"
+              className="text-[11px] font-bold uppercase tracking-[0.15em] text-vx-muted"
               title="Analyst = plain-language summary. Expert = raw evidence, CVE/CPE, and scanner metadata."
             >
               {expert ? "Expert view — full technical detail" : "Analyst view — plain summary"}
             </p>
-            <div className="flex border border-white/25">
+            <div className="flex border border-vx-border-strong">
               <button
                 type="button"
                 onClick={() => setExpert(false)}
                 className={cn(
                   "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors",
-                  !expert ? "bg-white text-black" : "text-white/55 hover:text-white",
+                  !expert ? "bg-vx-text text-vx-app" : "text-vx-secondary hover:text-vx-text",
                 )}
               >
                 Analyst
@@ -325,8 +325,8 @@ export function InvestigationWorkstationReport({
                 type="button"
                 onClick={() => setExpert(true)}
                 className={cn(
-                  "border-l border-white/25 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors",
-                  expert ? "bg-white text-black" : "text-white/55 hover:text-white",
+                  "border-l border-vx-border-strong px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors",
+                  expert ? "bg-vx-text text-vx-app" : "text-vx-secondary hover:text-vx-text",
                 )}
               >
                 Expert
@@ -498,7 +498,7 @@ export function InvestigationWorkstationReport({
               {findings.slice(0, 5).map((f) => (
                 <div
                   key={f.id}
-                  className="flex flex-wrap items-baseline justify-between gap-2 border border-vx-border bg-vx-panel px-4 py-3"
+                  className="flex flex-wrap items-baseline justify-between gap-2 border border-vx-border bg-vx-app px-4 py-3"
                 >
                   <span className="text-[14px] text-white">{f.finding}</span>
                   <span className="text-[12px] text-vx-secondary">{f.remediationPriority}</span>
@@ -512,7 +512,7 @@ export function InvestigationWorkstationReport({
               {validatedChains.map((chain) => (
                 <li
                   key={chain.id}
-                  className="border border-vx-border bg-vx-panel px-4 py-3 text-[13px] text-vx-body"
+                  className="border border-vx-border bg-vx-app px-4 py-3 text-[13px] text-vx-body"
                 >
                   <span className="font-medium text-white">Path {chain.id}: </span>
                   {chain.analystNote}
@@ -521,7 +521,7 @@ export function InvestigationWorkstationReport({
               {rejectedChains.map((chain, i) => (
                 <li
                   key={`val-rej-${i}`}
-                  className="border border-vx-border bg-vx-panel/80 px-4 py-3 text-[13px] text-vx-muted"
+                  className="border border-vx-border bg-vx-app/80 px-4 py-3 text-[13px] text-vx-muted"
                 >
                   Rejected: {chain.reason}
                 </li>
@@ -547,7 +547,7 @@ export function InvestigationWorkstationReport({
           <WorkstationSection title="Confidence Breakdown" reveal={nextDelay()}>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {findings.map((f) => (
-                <div key={f.id} className="border border-vx-border bg-vx-panel px-4 py-3">
+                <div key={f.id} className="border border-vx-border bg-vx-app px-4 py-3">
                   <p className="text-[12px] text-vx-muted">{f.finding}</p>
                   <p className="mt-1 text-[18px] font-semibold text-white">{f.confidence}%</p>
                 </div>
@@ -560,7 +560,7 @@ export function InvestigationWorkstationReport({
               {assetRows.map((asset) => {
                 const assetFindings = findings.filter((f) => f.asset === asset);
                 return (
-                  <div key={asset} className="border border-vx-border bg-vx-panel px-4 py-3">
+                  <div key={asset} className="border border-vx-border bg-vx-app px-4 py-3">
                     <p className="text-[14px] font-medium text-white">{asset}</p>
                     <p className="mt-1 text-[12px] text-vx-secondary">
                       {assetFindings.length} finding{assetFindings.length === 1 ? "" : "s"} · max

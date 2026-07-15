@@ -219,6 +219,40 @@ export async function* streamAnalystChat(
   yield* readSseStream(res);
 }
 
+/** General Ask VAYNE chat with no investigation loaded (empty workspace). */
+export async function* streamGeneralChat(
+  message: string,
+  history: ChatTurn[],
+  options?: {
+    reportMode?: ReportMode;
+    presetId?: string;
+    signal?: AbortSignal;
+  },
+): AsyncGenerator<AnalystStreamEvent> {
+  const url = `${getApiBase()}/api/chat`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      history: history
+        .map((turn) => ({ role: turn.role, content: turn.content.trim() }))
+        .filter((turn) => turn.content.length > 0),
+      report_mode: options?.reportMode ?? null,
+      preset_id: options?.presetId ?? null,
+    }),
+    signal: options?.signal,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    yield { type: "error", code: "http_error", message: text || res.statusText };
+    return;
+  }
+
+  yield* readSseStream(res);
+}
+
 export async function* streamInvestigationBrief(
   investigationId: string,
   options?: { signal?: AbortSignal },

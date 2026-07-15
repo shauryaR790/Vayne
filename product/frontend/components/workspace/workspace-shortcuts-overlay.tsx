@@ -1,11 +1,77 @@
 "use client";
 
 import { useEffect } from "react";
+import {
+  Command,
+  CornerDownLeft,
+  FolderOpen,
+  Keyboard,
+  Plus,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 
 import {
   SUPPORTED_FORMATS,
   WORKSPACE_SHORTCUTS,
 } from "@/lib/workspace-shortcuts";
+import { cn } from "@/lib/utils";
+
+const SHORTCUT_ICONS: Record<string, LucideIcon> = {
+  "New Investigation": Plus,
+  "Open Evidence": FolderOpen,
+  "Analyze Selected Evidence": CornerDownLeft,
+  "Ask VANE Analyst": Sparkles,
+  "Command Palette": Command,
+  "Keyboard Shortcuts": Keyboard,
+};
+
+function KeyCombo({ combo }: { combo: string }) {
+  const keys = combo.split("+").map((k) => k.trim());
+  return (
+    <span className="flex shrink-0 items-center gap-1">
+      {keys.map((key, i) => (
+        <span key={`${key}-${i}`} className="flex items-center gap-1">
+          {i > 0 ? <span className="text-[11px] text-vx-muted/60">+</span> : null}
+          <kbd className="border border-white/20 bg-black px-1.5 py-0.5 font-mono text-[11px] leading-none text-vx-secondary">
+            {key}
+          </kbd>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** Polished home shortcut list — icons + kbd chips inside a soft card. */
+function ShortcutCard({ className }: { className?: string }) {
+  return (
+    <div className={cn("mx-auto w-full max-w-[420px]", className)}>
+      <p className="mb-2.5 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+        Shortcuts
+      </p>
+      <div className="border border-white/20 bg-black">
+        {WORKSPACE_SHORTCUTS.map((row) => {
+          const Icon = SHORTCUT_ICONS[row.action] ?? Keyboard;
+          return (
+            <div
+              key={row.shortcut}
+              className="group flex items-center gap-3 border-b border-white/10 px-4 py-2.5 transition-colors last:border-b-0 hover:bg-white/[0.04]"
+            >
+              <Icon
+                className="size-4 shrink-0 text-white/40 transition-colors group-hover:text-white"
+                strokeWidth={2}
+              />
+              <span className="flex-1 text-left text-[12px] font-bold uppercase tracking-wide text-white/60 transition-colors group-hover:text-white">
+                {row.action}
+              </span>
+              <KeyCombo combo={row.shortcut} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function ShortcutTable({ className }: { className?: string }) {
   return (
@@ -63,7 +129,7 @@ export function WorkspaceShortcutsOverlay({
 }
 
 export function WorkspaceHomeShortcuts({ className }: { className?: string }) {
-  return <ShortcutTable className={className} />;
+  return <ShortcutCard className={className} />;
 }
 
 export function WorkspaceSupportedFormats({ className }: { className?: string }) {

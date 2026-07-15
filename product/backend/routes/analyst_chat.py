@@ -50,9 +50,44 @@ async def _brief_stream(inv_id: str, svc: InvestigationService):
         yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
 
+async def _general_stream(body: AnalystChatRequest):
+    """Chat with no investigation loaded — general cybersecurity Q&A.
+
+    The LLM answers from its own expertise; there is no scan context to ground
+    scan-specific claims in, so we pass an empty context and skip caching.
+    """
+    history = [{"role": t.role, "content": t.content} for t in body.history]
+    async for event in stream_analyst_reply(
+        {},
+        body.message.strip(),
+        history,
+        report_mode=body.report_mode,
+        preset_id=body.preset_id,
+        export_dir=None,
+    ):
+        yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+
+_SSE_HEADERS = {
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+}
+
+
 @router.get("/analyst/status")
 async def get_analyst_status():
     return await analyst_status()
+
+
+@router.post("/chat")
+async def general_chat(body: AnalystChatRequest):
+    """Ask VAYNE without an investigation — available from an empty workspace."""
+    return StreamingResponse(
+        _general_stream(body),
+        media_type="text/event-stream",
+        headers=_SSE_HEADERS,
+    )
 
 
 @router.get("/investigation/{inv_id}/brief")
