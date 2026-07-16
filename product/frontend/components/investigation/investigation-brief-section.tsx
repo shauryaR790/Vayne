@@ -9,7 +9,8 @@ import {
 } from "@/lib/analyst-chat";
 import { createStreamBatcher } from "@/lib/stream-buffer";
 import { HoverCard } from "@/components/shared/hover-card";
-import { VayneThinking } from "@/components/shared/vayne-thinking";
+import { CursorLoadingStatus } from "@/components/shared/cursor-loading-status";
+import { AnalystMarkdown } from "@/components/workspace/analyst/analyst-markdown";
 
 export function InvestigationBriefSection({
   bundle,
@@ -104,13 +105,15 @@ export function InvestigationBriefSection({
         </div>
       )}
       <div className="min-h-[120px] px-6 py-6">
-        {thinking && !content ? <VayneThinking label="Thinking" /> : null}
-        <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-white/85 [overflow-wrap:anywhere]">
-          {content}
-          {streaming && content ? (
-            <span className="ml-0.5 inline-block h-4 w-1 bg-white/60" />
-          ) : null}
-        </div>
+        {thinking && !content ? (
+          <CursorLoadingStatus
+            lines={[
+              { label: "Generating investigation brief" },
+              { label: "Waiting for analyst model", dim: true },
+            ]}
+          />
+        ) : null}
+        {content ? <AnalystMarkdown content={content} streaming={streaming} /> : null}
       </div>
     </HoverCard>
   );

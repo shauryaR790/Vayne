@@ -43,6 +43,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { MetricTile, SectionLabel, WorkspaceCard } from "@/components/shared/workspace-card";
+import { AnalystEngineFileBoxes } from "@/components/workspace/analyst/analyst-engine-file-boxes";
+import type { InvestigationBundle } from "@/lib/investigation-bundle";
+import { buildEngineFileInsights } from "@/lib/engine-file-insights";
 import {
   CollapsibleSection,
   ExpandToggle,
@@ -181,12 +184,6 @@ export function InvestigationVerdictSection({
   reveal: number;
 }) {
   const verdict = investigationVerdict(workbench);
-  const legend: WorkbenchConfirmedFinding["status"][] = [
-    "Observed",
-    "Correlated",
-    "Validated",
-    "Rejected",
-  ];
 
   return (
     <WorkstationSection title="Investigation Verdict" reveal={reveal} large>
@@ -216,23 +213,6 @@ export function InvestigationVerdictSection({
               </p>
             </div>
           ))}
-        </div>
-
-        <div className="mt-5 border-t border-vx-border pt-5">
-          <SectionLabel>How to read a finding&rsquo;s state</SectionLabel>
-          <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {legend.map((s) => {
-              const m = statusMeaning(s);
-              return (
-                <div key={s} className="flex items-start gap-2.5">
-                  <dt className="shrink-0">
-                    <StatePill active label={m.label} />
-                  </dt>
-                  <dd className="text-[11px] leading-snug text-vx-secondary">{m.meaning}</dd>
-                </div>
-              );
-            })}
-          </dl>
         </div>
       </WorkspaceCard>
     </WorkstationSection>
@@ -286,6 +266,42 @@ export function InvestigationFlowSection({
           </li>
         ))}
       </ol>
+    </WorkstationSection>
+  );
+}
+
+export function EngineFileDetailsSection({
+  workbench,
+  bundle,
+  sourceLabel,
+  sourceLabels,
+  reveal,
+}: {
+  workbench: WorkbenchData;
+  bundle?: InvestigationBundle;
+  sourceLabel?: string;
+  sourceLabels?: string[];
+  reveal: number;
+}) {
+  const insights = useMemo(
+    () => buildEngineFileInsights(workbench, { bundle, sourceLabel, sourceLabels }),
+    [workbench, bundle, sourceLabel, sourceLabels],
+  );
+
+  if (!insights.length) return null;
+
+  return (
+    <WorkstationSection title="Evidence Files" reveal={reveal} large>
+      <p className="mb-4 max-w-[72ch] text-[13px] leading-relaxed text-vx-secondary">
+        Per-file engine output — what VANE extracted, retained, and rejected from each evidence
+        source.
+      </p>
+      <AnalystEngineFileBoxes
+        workbench={workbench}
+        bundle={bundle}
+        sourceLabel={sourceLabel}
+        sourceLabels={sourceLabels}
+      />
     </WorkstationSection>
   );
 }
@@ -347,14 +363,12 @@ export function InvestigationMetadataSection({
   reveal: number;
 }) {
   const stats = coreStatistics(workbench.statistics);
-  const expert = useExpertMode();
   if (!stats.length) return null;
   return (
     <CollapsibleSection
       title="Investigation Metadata"
       reveal={reveal}
-      defaultOpen={false}
-      forceOpen={expert ? true : undefined}
+      forceOpen
       aside={
         <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">
           scan counts
@@ -1352,14 +1366,12 @@ export function EvidenceSection({
   }, [workbench.file_contributions]);
 
   const scanners = workbench.evidence_sources.map((s) => s.label);
-  const expert = useExpertMode();
 
   return (
     <CollapsibleSection
       title="Evidence Sources"
       reveal={reveal}
-      defaultOpen={false}
-      forceOpen={expert ? true : undefined}
+      forceOpen
       aside={
         <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">
           {workbench.evidence_sources.length} sources
@@ -1407,23 +1419,14 @@ export function DeveloperDetailsSection({
   workbench: WorkbenchData;
   reveal: number;
 }) {
-  const stats = coreStatistics(workbench.statistics);
   const trail = workbench.pipeline.length ? buildFallbackTrail(workbench) : [];
-  const expert = useExpertMode();
   return (
     <CollapsibleSection
       title="Developer Details"
       reveal={reveal}
-      defaultOpen={false}
-      forceOpen={expert ? true : undefined}
+      forceOpen
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {stats.map((s) => (
-            <MetricTile key={s.label} label={s.label} value={s.value} large />
-          ))}
-        </div>
-
         {workbench.hypotheses.length ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {workbench.hypotheses.map((h, i) => (

@@ -10,7 +10,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 CACHE_FILENAME = "analyst_llm_cache.json"
-BRIEF_FILENAME = "investigation_brief.txt"
+BRIEF_FILENAME = "investigation_brief_v3.txt"
 
 # Preset / report keys that should never be regenerated once cached.
 CACHEABLE_KEYS = frozenset({

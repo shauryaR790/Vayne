@@ -401,12 +401,14 @@ export function buildInvestigationPresentation(
 }
 
 export function combinedAnalystIntro(fileCount: number): string {
-  if (fileCount <= 1) return "";
-  return `VAYNE correlated ${fileCount} evidence sources into a single investigation.`;
+  if (fileCount <= 1) return "Let me walk through what turned up in this scan.";
+  return `I pulled ${fileCount} evidence files together — here's how they connect.`;
 }
 
 export function separateAnalystIntro(count: number): string {
-  return `I analyzed ${count} independent environment${count === 1 ? "" : "s"}.`;
+  return count === 1
+    ? "Starting with this environment."
+    : `I ran ${count} separate investigations — I'll take them one at a time.`;
 }
 
 export function avgBundleConfidence(bundle: InvestigationBundle): number {

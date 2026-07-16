@@ -54,6 +54,7 @@ export function VaneEnginePanel({
       <VaneEngineEmpty
         files={files}
         disabled={busy}
+        busy={busy}
         onSelectFiles={onSelectFiles}
         onBeginSession={onBeginSession}
         onOpenInvestigation={onOpenInvestigation}
@@ -62,16 +63,25 @@ export function VaneEnginePanel({
   }
 
   if (!hasInvestigationData) {
+    const analyzingLabel =
+      enginePhase === "running"
+        ? "Analyzing evidence…"
+        : busy
+          ? "Working…"
+          : "Analyzing evidence…";
+
     return (
       <div
         ref={scrollRef}
-        className="flex h-full min-h-0 flex-col overflow-y-auto bg-vx-app [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="relative flex h-full min-h-0 flex-col overflow-y-auto bg-vx-app [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <InvestigationNoEvidence
           onUpload={() => dispatchWorkspaceEvent(OPEN_EVIDENCE_EVENT)}
           onFocusAnalyst={onFocusAnalyst}
           onNewInvestigation={onNewInvestigation}
           onOpenInvestigation={onOpenInvestigation}
+          busy={busy || enginePhase === "running"}
+          analyzingLabel={analyzingLabel}
         />
         {error || offlineError ? (
           <p className="px-8 pb-8 text-center text-[13px] text-red-400/80">{error || offlineError}</p>
@@ -88,6 +98,7 @@ export function VaneEnginePanel({
       investigationIds={investigationIds}
       investigationGroupId={investigationGroupId}
       sourceLabels={sourceLabels}
+      evidenceFileCount={files.length || undefined}
       error={error || offlineError}
     />
   );

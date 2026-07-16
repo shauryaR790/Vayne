@@ -9,15 +9,23 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { GraphData, GraphNode as GraphNodeType } from "@/lib/types";
+import type { GraphData, GraphNode as GraphNodeType, WorkbenchData } from "@/lib/types";
 import { GraphNode } from "./GraphNode";
 import { VayneEdge } from "./VayneEdge";
 import { GraphCanvasBackground } from "./GraphCanvasBackground";
 import { GraphNodeInspector } from "./GraphNodeInspector";
 import { GraphEmptyState, type ReasoningCheck } from "./GraphEmptyState";
+import { AttackPathPlayer } from "./AttackPathPlayer";
+import { useAttackPathPlayback } from "./useAttackPathPlayback";
 import { useGraphAnimations } from "./useGraphAnimations";
 import { computeGraphLayout, normalizeGraphType } from "./layoutEngine";
-import { applyGraphFit, FIT_MAX_ZOOM, FIT_MIN_ZOOM, FIT_PADDING } from "./graphFit";
+import {
+  applyGraphFit,
+  applyWorkstationGraphFit,
+  FIT_MAX_ZOOM,
+  FIT_MIN_ZOOM,
+  FIT_PADDING,
+} from "./graphFit";
 
 const nodeTypes = { vayne: GraphNode };
 const edgeTypes = { vayne: VayneEdge };
@@ -69,12 +77,46 @@ function computeHighlightNodeIds(
   return onPath.size > 0 ? onPath : undefined;
 }
 
+function edgeKey(source: string, target: string): string {
+  return `${source}::${target}`;
+}
+
+interface PlaybackOverlay {
+  revealedNodeIds?: Set<string>;
+  revealedEdgeKeys?: Set<string>;
+  activeNodeId?: string | null;
+  activeEdgeKey?: string | null;
+  /** During cinematic playback, unrevealed nodes are hidden. */
+  cinematic?: boolean;
+}
+
 function buildFlowGraph(
   nodes: GraphNodeType[],
   edges: GraphData["edges"],
   highlightIds?: Set<string>,
+  wide = false,
+  playback?: PlaybackOverlay,
 ): { flowNodes: Node[]; flowEdges: Edge[] } {
-  const layout = computeGraphLayout(nodes, edges);
+  const layout = computeGraphLayout(nodes, edges, { mode: wide ? "wide" : "default" });
+
+  let orphanIndex = 0;
+  for (const node of nodes) {
+    if (layout.positions.has(node.id)) continue;
+    const col = orphanIndex % 4;
+    const row = Math.floor(orphanIndex / 4);
+    layout.positions.set(node.id, {
+      x: 60 + col * 220,
+      y: 60 + row * 120,
+      column: col,
+      secondary: false,
+      animationWave: 2,
+      animationIndex: orphanIndex,
+      width: 200,
+      height: 90,
+    });
+    orphanIndex += 1;
+  }
+
   const visibleIds = new Set(nodes.map((n) => n.id));
 
   const flowNodes: Node[] = nodes
@@ -82,6 +124,15 @@ function buildFlowGraph(
     .map((n) => {
       const pos = layout.positions.get(n.id)!;
       const nodeType = normalizeNodeType(n);
+      const inPlayback = playback?.cinematic && playback.revealedNodeIds;
+      const revealed = inPlayback ? playback.revealedNodeIds!.has(n.id) : true;
+      const playbackHidden = Boolean(inPlayback && !revealed);
+      const playbackActive = inPlayback && playback.activeNodeId === n.id;
+      const onPath = inPlayback
+        ? revealed
+        : highlightIds
+          ? highlightIds.has(n.id)
+          : false;
       return {
         id: n.id,
         type: "vayne",
@@ -92,8 +143,10 @@ function buildFlowGraph(
           secondary: pos.secondary,
           animationWave: pos.animationWave,
           animationIndex: pos.animationIndex,
-          dimmed: highlightIds ? !highlightIds.has(n.id) : false,
-          onPath: highlightIds ? highlightIds.has(n.id) : false,
+          dimmed: inPlayback ? false : highlightIds ? !highlightIds.has(n.id) : false,
+          onPath,
+          playbackHidden,
+          playbackActive,
         },
       };
     });
@@ -118,8 +171,16 @@ function buildFlowGraph(
       String(e.category ?? "").toLowerCase().includes("reject") ||
       String(e.relationship ?? "").toLowerCase().includes("reject");
 
+    const key = edgeKey(e.source, e.target);
+    const inPlayback = playback?.cinematic && playback.revealedEdgeKeys;
+    const revealed = inPlayback ? playback.revealedEdgeKeys!.has(key) : true;
+    const playbackHidden = Boolean(inPlayback && !revealed);
+    const playbackActive = inPlayback && playback.activeEdgeKey === key;
+
     const onPath =
-      highlightIds != null && highlightIds.has(e.source) && highlightIds.has(e.target);
+      inPlayback
+        ? revealed
+        : highlightIds != null && highlightIds.has(e.source) && highlightIds.has(e.target);
 
     flowEdges.push({
       id: `e-${e.source}-${e.target}-${i++}`,
@@ -132,7 +193,9 @@ function buildFlowGraph(
         displayLabel,
         edgeCount: count,
         validated: !rejected && (highlightIds == null || onPath),
-        dimmed: highlightIds != null && !onPath,
+        dimmed: inPlayback ? false : highlightIds != null && !onPath,
+        playbackHidden,
+        playbackActive,
       },
     });
   }
@@ -151,7 +214,7 @@ function GraphExplorerInner({
   context?: GraphExplorerContext;
   embedded?: boolean;
   layout?: "default" | "inline" | "hero" | "workstation";
-  workbench?: unknown;
+  workbench?: WorkbenchData;
 }) {
   const isInline = layout === "inline";
   const isHero = layout === "hero";
@@ -159,14 +222,14 @@ function GraphExplorerInner({
   const isWide = isHero || isWorkstation;
   const scrollableEmbed = embedded || isWorkstation || isInline;
   const graphHeight = isWorkstation
-    ? "h-[640px]"
+    ? "h-[520px]"
     : isHero
       ? "h-[580px]"
       : isInline
         ? "h-[420px]"
         : GRAPH_HEIGHT;
   const minHeight = isWorkstation
-    ? "min-h-[560px]"
+    ? "min-h-[460px]"
     : isHero
       ? "min-h-[520px]"
       : isInline
@@ -178,21 +241,57 @@ function GraphExplorerInner({
   const [selected, setSelected] = useState<GraphNodeType | null>(null);
 
   const filteredNodes = useMemo(() => graph.nodes, [graph.nodes]);
+  const playbackEnabled = isWorkstation && filteredNodes.length > 0;
 
   const nodeIds = new Set(filteredNodes.map((n) => n.id));
   const filteredEdges = graph.edges.filter(
     (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
   );
 
-  const highlightIds = useMemo(
-    () => (isWorkstation ? computeHighlightNodeIds(filteredNodes, filteredEdges) : undefined),
-    [filteredNodes, filteredEdges, isWorkstation],
+  const playback = useAttackPathPlayback({
+    graph,
+    workbench,
+    flowRef,
+    containerRef,
+    enabled: playbackEnabled,
+  });
+
+  const pathHighlightIds = useMemo(
+    () => computeHighlightNodeIds(filteredNodes, filteredEdges) ?? new Set<string>(),
+    [filteredNodes, filteredEdges],
   );
 
-  const { flowNodes, flowEdges } = useMemo(
-    () => buildFlowGraph(filteredNodes, filteredEdges, highlightIds),
-    [filteredNodes, filteredEdges, highlightIds],
-  );
+  const { flowNodes, flowEdges } = useMemo(() => {
+    const overlay: PlaybackOverlay | undefined =
+      playback.playbackActive
+        ? {
+            cinematic: true,
+            revealedNodeIds: playback.revealedNodeIds,
+            revealedEdgeKeys: playback.revealedEdgeKeys,
+            activeNodeId: playback.activeNodeId,
+            activeEdgeKey: playback.activeEdgeKey,
+          }
+        : undefined;
+
+    const highlights =
+      playback.exploreMode || !playbackEnabled
+        ? pathHighlightIds
+        : undefined;
+
+    return buildFlowGraph(filteredNodes, filteredEdges, highlights, isWorkstation, overlay);
+  }, [
+    filteredNodes,
+    filteredEdges,
+    isWorkstation,
+    pathHighlightIds,
+    playbackEnabled,
+    playback.playbackActive,
+    playback.exploreMode,
+    playback.revealedNodeIds,
+    playback.revealedEdgeKeys,
+    playback.activeNodeId,
+    playback.activeEdgeKey,
+  ]);
 
   const onInit = useCallback((instance: ReactFlowInstance) => {
     flowRef.current = instance;
@@ -207,47 +306,97 @@ function GraphExplorerInner({
   );
 
   useEffect(() => {
-    if (!isWorkstation || selected || !graph.nodes.length) return;
-    const pick =
-      graph.nodes.find((n) => highlightIds?.has(n.id) && normalizeNodeType(n) === "vulnerability") ||
-      graph.nodes.find((n) => highlightIds?.has(n.id)) ||
-      graph.nodes[0];
-    if (pick) setSelected(pick);
-  }, [graph.nodes, highlightIds, isWorkstation, selected]);
+    if (!isWorkstation || !graph.nodes.length) return;
+    if (playback.playbackActive && !playback.exploreMode && playback.stepIndex < 0) return;
 
-  useGraphAnimations(containerRef, flowReady, flowNodes.length, { hero: isWide });
+    const activeId =
+      playback.playbackActive && !playback.exploreMode
+        ? playback.activeNodeId
+        : null;
+
+    const pick =
+      (activeId && graph.nodes.find((n) => n.id === activeId)) ||
+      graph.nodes.find((n) => pathHighlightIds.has(n.id) && normalizeNodeType(n) === "vulnerability") ||
+      graph.nodes.find((n) => pathHighlightIds.has(n.id)) ||
+      graph.nodes[0];
+
+    if (pick) setSelected(pick);
+  }, [
+    graph.nodes,
+    pathHighlightIds,
+    isWorkstation,
+    playback.playbackActive,
+    playback.exploreMode,
+    playback.activeNodeId,
+    playback.stepIndex,
+  ]);
+
+  useGraphAnimations(containerRef, flowReady, flowNodes.length, {
+    hero: isWide && (!playbackEnabled || playback.exploreMode),
+  });
 
   useEffect(() => {
     if (!flowRef.current || !flowNodes.length || !containerRef.current) return;
     const { width, height } = containerRef.current.getBoundingClientRect();
     if (width < 32 || height < 32) return;
     const t = window.setTimeout(() => {
-      applyGraphFit(flowRef.current!, flowNodes);
+      if (isWorkstation) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        applyWorkstationGraphFit(flowRef.current!, flowNodes, {
+          width: rect?.width ?? 800,
+          height: rect?.height ?? 480,
+        });
+      } else {
+        applyGraphFit(flowRef.current!, flowNodes);
+      }
     }, 120);
     return () => window.clearTimeout(t);
-  }, [flowNodes, flowReady]);
+  }, [
+    flowNodes,
+    flowReady,
+    graph.nodes.length,
+    graph.edges.length,
+    isWorkstation,
+    playback.playbackActive,
+    playback.exploreMode,
+    playback.phase,
+  ]);
 
   useEffect(() => {
     if (!scrollableEmbed || !flowReady || !containerRef.current || !flowRef.current) return;
 
     const el = containerRef.current;
     const ro = new ResizeObserver(() => {
-      if (!flowNodes.length || !flowRef.current) return;
+      if (!flowNodes.length || !flowRef.current || !containerRef.current) return;
+      if (playback.playbackActive && !playback.exploreMode && playback.phase !== "complete") return;
       window.requestAnimationFrame(() => {
-        flowRef.current?.fitView({
-          nodes: flowNodes.filter((n) => !n.hidden),
-          padding: FIT_PADDING,
-          duration: 0,
-          maxZoom: FIT_MAX_ZOOM,
-          minZoom: FIT_MIN_ZOOM,
-        });
+        const rect = containerRef.current!.getBoundingClientRect();
+        if (isWorkstation) {
+          applyWorkstationGraphFit(flowRef.current!, flowNodes, {
+            width: rect.width,
+            height: rect.height,
+          });
+        } else {
+          flowRef.current?.fitView({
+            nodes: flowNodes.filter((n) => !n.hidden),
+            padding: FIT_PADDING,
+            duration: 0,
+            maxZoom: FIT_MAX_ZOOM,
+            minZoom: FIT_MIN_ZOOM,
+          });
+        }
       });
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [flowNodes, flowReady, scrollableEmbed]);
+  }, [flowNodes, flowReady, scrollableEmbed, isWorkstation, playback.playbackActive, playback.exploreMode, playback.phase]);
 
-  const showEmptyState = Boolean(context && !context.hasPaths && context.emptyChecks?.length);
+  const hasGraphData = filteredNodes.length > 0;
+  const showEmptyState = Boolean(
+    isWorkstation
+      ? !hasGraphData
+      : context && !context.hasPaths && context.emptyChecks?.length && !hasGraphData,
+  );
 
   return (
     <div
@@ -257,8 +406,8 @@ function GraphExplorerInner({
     >
         <div
           ref={containerRef}
-          className={`relative ${graphHeight} ${minHeight} isolate overflow-hidden min-w-0 ${
-            isWorkstation ? "bg-vx-app border border-vx-border" : "bg-black"
+          className={`relative ${graphHeight} ${minHeight} isolate min-w-0 ${
+            isWorkstation ? "overflow-hidden bg-vx-app border border-vx-border" : "overflow-hidden bg-black"
           } ${
             isWorkstation
               ? ""
@@ -268,25 +417,77 @@ function GraphExplorerInner({
           }`}
         >
           {showEmptyState ? (
-            <GraphEmptyState checks={context!.emptyChecks} />
+            <GraphEmptyState
+              checks={
+                context?.emptyChecks?.length
+                  ? context.emptyChecks
+                  : [{ label: "Graph nodes not available yet", ok: false }]
+              }
+            />
           ) : (
             <>
               <GraphCanvasBackground />
 
-              <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
-                {STORY_COLUMNS.map((label, col) => (
-                  <div
-                    key={label}
-                    className="absolute top-3 text-center text-[9px] font-bold uppercase tracking-[0.14em] text-white/25"
-                    style={{
-                      left: 60 + col * 280,
-                      width: 240,
-                    }}
-                  >
-                    {label}
-                  </div>
-                ))}
-              </div>
+              {!isWorkstation ? (
+                <div className="pointer-events-none absolute inset-0 z-[1]" aria-hidden>
+                  {STORY_COLUMNS.map((label, col) => (
+                    <div
+                      key={label}
+                      className="absolute top-3 text-center text-[9px] font-bold uppercase tracking-[0.14em] text-white/25"
+                      style={{
+                        left: 60 + col * 280,
+                        width: 240,
+                      }}
+                    >
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] border-b border-white/[0.06] bg-black/30 px-3 py-2">
+                  {!playback.canPlay ? (
+                    <>
+                      <div className="relative h-4 min-w-[1240px]">
+                        {(
+                          [
+                            ["Entry", 40],
+                            ["Asset", 240],
+                            ["Service", 520],
+                            ["Software", 780],
+                            ["Impact", 1040],
+                          ] as const
+                        ).map(([label, left]) => (
+                          <span
+                            key={label}
+                            className="absolute text-[9px] font-bold uppercase tracking-[0.14em] text-white/30"
+                            style={{ left }}
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="mt-1 text-[10px] text-white/25">Drag to pan · scroll to zoom</p>
+                    </>
+                  ) : null}
+                </div>
+              )}
+
+              {playback.canPlay && playback.script ? (
+                <AttackPathPlayer
+                  phase={playback.phase}
+                  stepIndex={playback.stepIndex < 0 ? 0 : playback.stepIndex}
+                  stepCount={playback.stepCount}
+                  caption={playback.caption}
+                  activeType={playback.activeType}
+                  confidence={playback.script.confidence}
+                  exploreMode={playback.exploreMode}
+                  onPlay={playback.play}
+                  onPause={playback.pause}
+                  onRestart={playback.restart}
+                  onStepForward={playback.stepForward}
+                  onExplore={playback.explore}
+                />
+              ) : null}
 
               <div className="absolute inset-0 z-[2]">
                 <ReactFlow
@@ -297,12 +498,12 @@ function GraphExplorerInner({
                   onInit={onInit}
                   onNodeClick={onNodeClick}
                   defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-                  minZoom={0.35}
+                  minZoom={isWorkstation ? 0.45 : 0.35}
                   maxZoom={2.5}
                   panOnDrag
-                  panOnScroll={!scrollableEmbed}
-                  zoomOnScroll={!scrollableEmbed}
-                  preventScrolling={!scrollableEmbed}
+                  panOnScroll={isWorkstation || !scrollableEmbed}
+                  zoomOnScroll={!isWorkstation && !scrollableEmbed}
+                  preventScrolling={false}
                   zoomOnPinch
                   nodesDraggable={false}
                   nodesConnectable={false}
@@ -386,7 +587,7 @@ export function GraphExplorer({
   context?: GraphExplorerContext;
   embedded?: boolean;
   layout?: "default" | "inline" | "hero" | "workstation";
-  workbench?: unknown;
+  workbench?: WorkbenchData;
 }) {
   return (
     <ReactFlowProvider>

@@ -6,13 +6,14 @@ import { motion } from "motion/react";
 
 import { VaneSidebarBrand } from "@/components/brand/vane-logo";
 import {
-  HOME_RECENTS_MAX,
+  HISTORY_MAX,
   RECENT_INVESTIGATIONS_UPDATED,
   formatInvestigationTimestamp,
-  loadRecentInvestigations,
+  loadInvestigationHistory,
   syncRecentInvestigationsFromApi,
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
+import { SessionAnalyzingBar } from "@/components/workspace/home/session-analyzing-bar";
 import { cn } from "@/lib/utils";
 
 function formatRecentMeta(item: RecentInvestigation): string {
@@ -70,12 +71,12 @@ function RecentInvestigationsBlock({ onOpen }: { onOpen: (id: string) => void })
   const [items, setItems] = useState<RecentInvestigation[]>([]);
 
   const refresh = useCallback(async () => {
-    const synced = await syncRecentInvestigationsFromApi(HOME_RECENTS_MAX);
-    setItems(synced.slice(0, HOME_RECENTS_MAX));
+    const synced = await syncRecentInvestigationsFromApi(HISTORY_MAX);
+    setItems(synced);
   }, []);
 
   useEffect(() => {
-    setItems(loadRecentInvestigations(HOME_RECENTS_MAX));
+    setItems(loadInvestigationHistory(HISTORY_MAX));
     void refresh();
     const onUpdate = () => void refresh();
     window.addEventListener(RECENT_INVESTIGATIONS_UPDATED, onUpdate);
@@ -87,12 +88,13 @@ function RecentInvestigationsBlock({ onOpen }: { onOpen: (id: string) => void })
   return (
     <div className="mt-10 w-full min-w-0 overflow-hidden">
       <div className="mb-2 flex min-w-0 items-center justify-between gap-4">
-        <span className="shrink-0 text-[13px] text-white/45">Recent investigations</span>
-        {items.length >= HOME_RECENTS_MAX ? (
-          <span className="shrink-0 text-[13px] text-white/35">View all ({items.length})</span>
-        ) : null}
+        <span className="shrink-0 text-[13px] text-white/45">
+          Recent investigations
+          <span className="ml-2 text-white/25">({items.length})</span>
+        </span>
       </div>
-      <div className="flex min-w-0 flex-col">
+      <div className="vx-no-scrollbar max-h-[min(280px,36vh)] overflow-y-auto">
+        <div className="flex min-w-0 flex-col">
         {items.map((item) => (
           <button
             key={item.id}
@@ -111,6 +113,7 @@ function RecentInvestigationsBlock({ onOpen }: { onOpen: (id: string) => void })
             </span>
           </button>
         ))}
+        </div>
       </div>
     </div>
   );
@@ -121,14 +124,19 @@ export function InvestigationNoEvidence({
   onFocusAnalyst,
   onNewInvestigation,
   onOpenInvestigation,
+  busy,
+  analyzingLabel,
 }: {
   onUpload: () => void;
   onFocusAnalyst: () => void;
   onNewInvestigation: () => void;
   onOpenInvestigation: (id: string) => void;
+  busy?: boolean;
+  analyzingLabel?: string;
 }) {
   return (
-    <div className="flex min-h-full w-full flex-1 items-center justify-center px-6 py-12">
+    <>
+      <div className="flex min-h-full w-full flex-1 items-center justify-center px-6 py-12">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -147,6 +155,8 @@ export function InvestigationNoEvidence({
 
         <RecentInvestigationsBlock onOpen={onOpenInvestigation} />
       </motion.div>
-    </div>
+      </div>
+      {busy ? <SessionAnalyzingBar label={analyzingLabel} /> : null}
+    </>
   );
 }

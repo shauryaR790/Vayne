@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
-  HOME_RECENTS_MAX,
+  HISTORY_MAX,
   RECENT_INVESTIGATIONS_UPDATED,
   formatInvestigationTimestamp,
-  loadRecentInvestigations,
+  loadInvestigationHistory,
   syncRecentInvestigationsFromApi,
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
@@ -42,12 +42,12 @@ export function RecentInvestigationList({ onOpen }: { onOpen: (id: string) => vo
   const [items, setItems] = useState<RecentInvestigation[]>([]);
 
   const refresh = useCallback(async () => {
-    const synced = await syncRecentInvestigationsFromApi(HOME_RECENTS_MAX);
-    setItems(synced.slice(0, HOME_RECENTS_MAX));
+    const synced = await syncRecentInvestigationsFromApi(HISTORY_MAX);
+    setItems(synced);
   }, []);
 
   useEffect(() => {
-    setItems(loadRecentInvestigations(HOME_RECENTS_MAX));
+    setItems(loadInvestigationHistory(HISTORY_MAX));
     void refresh();
     const onUpdate = () => void refresh();
     window.addEventListener(RECENT_INVESTIGATIONS_UPDATED, onUpdate);
@@ -58,11 +58,16 @@ export function RecentInvestigationList({ onOpen }: { onOpen: (id: string) => vo
 
   return (
     <div>
-      <p className="mb-3 text-[12px] text-white/30">Recent Investigations</p>
-      <div className="flex flex-col">
-        {items.map((item) => (
-          <RecentRow key={item.id} item={item} onOpen={onOpen} />
-        ))}
+      <p className="mb-3 text-[12px] text-white/30">
+        Recent Investigations
+        <span className="ml-2 text-white/20">({items.length})</span>
+      </p>
+      <div className="vx-no-scrollbar max-h-[min(320px,40vh)] overflow-y-auto">
+        <div className="flex flex-col">
+          {items.map((item) => (
+            <RecentRow key={item.id} item={item} onOpen={onOpen} />
+          ))}
+        </div>
       </div>
     </div>
   );

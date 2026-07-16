@@ -65,7 +65,7 @@ export function WorkstationSection({
 export function CollapsibleSection({
   title,
   children,
-  defaultOpen = false,
+  defaultOpen = true,
   forceOpen,
   aside,
   reveal = 0,
@@ -80,6 +80,7 @@ export function CollapsibleSection({
   bodyClassName?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const isOpen = forceOpen ?? open;
 
   useEffect(() => {
     if (forceOpen !== undefined) setOpen(forceOpen);
@@ -92,26 +93,35 @@ export function CollapsibleSection({
       transition={{ duration: 0.3, delay: reveal, ease: "easeOut" }}
       className="border-b border-vx-border"
     >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4 text-left transition-colors hover:bg-white/[0.02]"
-      >
-        <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-vx-text">
-          {title}
-        </span>
-        <span className="flex items-center gap-2">
-          {aside}
-          <ChevronDown
-            className={cn(
-              "size-4 text-vx-muted transition-transform duration-200",
-              open && "rotate-180",
-            )}
-          />
-        </span>
-      </button>
+      {forceOpen ? (
+        <div className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4">
+          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-vx-text">
+            {title}
+          </span>
+          {aside ? <span className="flex items-center gap-2">{aside}</span> : null}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4 text-left transition-colors hover:bg-white/[0.02]"
+        >
+          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-vx-text">
+            {title}
+          </span>
+          <span className="flex items-center gap-2">
+            {aside}
+            <ChevronDown
+              className={cn(
+                "size-4 text-vx-muted transition-transform duration-200",
+                isOpen && "rotate-180",
+              )}
+            />
+          </span>
+        </button>
+      )}
       <AnimatePresence initial={false}>
-        {open ? (
+        {isOpen ? (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}

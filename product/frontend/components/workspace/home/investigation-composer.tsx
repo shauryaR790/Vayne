@@ -1,19 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, ChevronDown, Infinity, Paperclip } from "lucide-react";
+import { ArrowUp, ChevronDown, Infinity, Loader2, Paperclip } from "lucide-react";
 
 import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 
 export function InvestigationComposer({
   disabled,
+  busy,
   stagedFileCount = 0,
   onSelectFiles,
   onBeginSession,
   onUpload,
 }: {
   disabled?: boolean;
+  busy?: boolean;
   stagedFileCount?: number;
   onSelectFiles: (files: File[]) => void;
   onBeginSession: (prompt: string) => void;
@@ -26,6 +28,7 @@ export function InvestigationComposer({
   const [focused, setFocused] = useState(false);
 
   const canSubmit = Boolean(value.trim()) || stagedFileCount > 0;
+  const isLoading = Boolean(busy || disabled);
 
   const submit = useCallback(() => {
     if (!canSubmit || disabled) return;
@@ -147,6 +150,14 @@ export function InvestigationComposer({
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
+            {isLoading ? (
+              <Loader2
+                className="size-4 animate-spin text-white/40"
+                strokeWidth={2}
+                aria-label="Analyzing"
+              />
+            ) : null}
+
             <button
               type="button"
               disabled={disabled}

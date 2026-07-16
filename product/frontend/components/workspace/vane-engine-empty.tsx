@@ -8,6 +8,7 @@ export function VaneEngineEmpty(props: {
   onBeginSession: (prompt: string) => void;
   onOpenInvestigation: (id: string) => void;
   disabled?: boolean;
+  busy?: boolean;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">

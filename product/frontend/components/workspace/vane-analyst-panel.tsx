@@ -8,12 +8,18 @@ import { AnalystPanelHeader } from "@/components/workspace/analyst/analyst-panel
 import { AnalystMessage, AnalystMessageDivider, UserMessage } from "@/components/workspace/analyst/analyst-message";
 import { AnalystThinking } from "@/components/workspace/analyst/analyst-thinking";
 import type { InvestigationBundle } from "@/lib/investigation-bundle";
+import { resolveMessageFileInsights } from "@/lib/engine-file-insights";
+import type { AgentActivityFeed } from "@/lib/analyst-activity";
 import { ANALYST_NAME } from "@/lib/brand";
 import type { StoredChatMessage } from "@/lib/conversation-session";
 import { cn } from "@/lib/utils";
 
 interface AnalystMessageRow extends StoredChatMessage {
   streaming?: boolean;
+  revealedFileInsights?: number;
+  revealedSegments?: number;
+  segmentTexts?: string[];
+  activeThinking?: { label: string; detail?: string } | null;
 }
 
 export function VaneAnalystPanel({
@@ -22,7 +28,7 @@ export function VaneAnalystPanel({
   input,
   busy,
   thinking,
-  thinkingStep,
+  activityFeed,
   onInputChange,
   onAsk,
   onScroll,
@@ -32,13 +38,15 @@ export function VaneAnalystPanel({
   briefingPrompt,
   onGetSummary,
   onSkipSummary,
+  sourceLabel,
+  sourceLabels,
 }: {
   bundle: InvestigationBundle | null;
   messages: AnalystMessageRow[];
   input: string;
   busy: boolean;
   thinking: boolean;
-  thinkingStep?: string | null;
+  activityFeed?: AgentActivityFeed | null;
   analystOnline?: boolean;
   onInputChange: (value: string) => void;
   onAsk: (question: string) => void;
@@ -49,10 +57,12 @@ export function VaneAnalystPanel({
   briefingPrompt?: { fileCount: number } | null;
   onGetSummary?: () => void;
   onSkipSummary?: () => void;
+  sourceLabel?: string;
+  sourceLabels?: string[];
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const restoredScroll = useRef(false);
-  const stickToBottom = useRef(true);
+  const stickToBottom = useRef(false);
 
   useEffect(() => {
     if (restoredScroll.current) return;
@@ -63,15 +73,15 @@ export function VaneAnalystPanel({
   }, [initialScrollTop]);
 
   useEffect(() => {
-    // Only follow new content when the reader is already at the bottom.
-    // Scrolling up to read stops VAYNE from yanking the view back down.
     const el = scrollRef.current;
     if (!el || !stickToBottom.current) return;
+    const streaming = messages.some((m) => m.streaming);
+    if (!streaming && !thinking) return;
     el.scrollTo({ top: el.scrollHeight, behavior: thinking ? "auto" : "smooth" });
-  }, [messages, thinking, thinkingStep, briefingPrompt]);
+  }, [messages, thinking, activityFeed, briefingPrompt]);
 
   const disabled = busy;
-  const empty = !messages.length && !thinking && !thinkingStep && !briefingPrompt;
+  const empty = !messages.length && !thinking && !activityFeed?.lines.length && !briefingPrompt;
   const contextLabel = bundle
     ? bundle.report.name?.trim() || bundle.detail.summary.id || ANALYST_NAME
     : ANALYST_NAME;
@@ -103,30 +113,38 @@ export function VaneAnalystPanel({
           </div>
         ) : null}
 
-        <div className="space-y-5">
+        <div className="space-y-3">
           {messages.map((msg, index) => (
             <div key={msg.id}>
               {index > 0 ? <AnalystMessageDivider /> : null}
               {msg.role === "user" ? (
                 <UserMessage content={msg.content} />
               ) : (
-                <AnalystMessage content={msg.content} streaming={msg.streaming} />
+                <AnalystMessage
+                  content={msg.content}
+                  streaming={msg.streaming}
+                  fileInsights={resolveMessageFileInsights(msg, bundle, sourceLabels)}
+                  revealedFileInsights={msg.revealedFileInsights}
+                  streamSegments={msg.streamSegments}
+                  revealedSegments={msg.revealedSegments}
+                  segmentTexts={msg.segmentTexts}
+                  activeThinking={msg.activeThinking}
+                />
               )}
             </div>
           ))}
         </div>
 
-        {thinkingStep ? (
+        {activityFeed?.lines.length ? (
           <div className={cn(messages.length ? "mt-5" : "mt-0")}>
-            <AnalystThinking step={thinkingStep} />
+            <AnalystThinking feed={activityFeed} />
           </div>
         ) : null}
 
-        {thinking && !thinkingStep ? (
-          <p className="mt-4 font-mono text-[13px] text-vx-muted">
-            <span>{">"}</span> thinking
-            <span className="ml-0.5 inline-block h-[1em] w-[2px] animate-pulse bg-vx-secondary align-middle" />
-          </p>
+        {thinking && !activityFeed?.lines.length ? (
+          <div className={cn(messages.length ? "mt-5" : "mt-0")}>
+            <AnalystThinking step="Thinking" />
+          </div>
         ) : null}
 
         {briefingPrompt && !thinking ? (

@@ -1,10 +1,13 @@
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const http = require("http");
+const { execSync, spawn } = require("child_process");
 
 const { frontendRoot, externalCacheRoot, localNextDir } = require("./paths");
 
 const DEV_PORT = process.env.PORT || "3000";
+const BACKEND_PORT = process.env.VAYNE_BACKEND_PORT || "8000";
+const repoRoot = path.resolve(frontendRoot, "..", "..");
 
 function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
@@ -68,3 +71,55 @@ if (process.env.VAYNE_CLEAN === "1" || isCorruptNextCache(localNextDir)) {
 }
 
 sleep(200);
+
+function checkBackend(timeoutMs = 600) {
+  return new Promise((resolve) => {
+    const req = http.get(
+      `http://127.0.0.1:${BACKEND_PORT}/api/health`,
+      { timeout: timeoutMs },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode === 200);
+      },
+    );
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+async function ensureBackend() {
+  if (process.env.VAYNE_SKIP_BACKEND === "1") return;
+  if (await checkBackend()) return;
+
+  console.log(`Starting VANE backend on http://127.0.0.1:${BACKEND_PORT} …`);
+  const py = process.platform === "win32" ? "python" : "python3";
+  const child = spawn(
+    py,
+    ["-m", "uvicorn", "product.backend.main:app", "--reload", "--port", BACKEND_PORT],
+    {
+      cwd: repoRoot,
+      detached: true,
+      stdio: "ignore",
+      shell: process.platform === "win32",
+    },
+  );
+  child.unref();
+
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    await new Promise((r) => setTimeout(r, 500));
+    if (await checkBackend()) {
+      console.log("VANE backend ready.");
+      return;
+    }
+  }
+
+  console.warn(
+    `Backend did not respond on port ${BACKEND_PORT}. Start manually:\n` +
+      `  python -m uvicorn product.backend.main:app --reload --port ${BACKEND_PORT}`,
+  );
+}
+
+void ensureBackend();

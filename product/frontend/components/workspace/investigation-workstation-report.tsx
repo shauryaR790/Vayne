@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 import { GraphExplorer } from "@/components/graph/GraphExplorer";
 import type { ReasoningCheck } from "@/components/graph/GraphEmptyState";
 import {
@@ -27,6 +25,7 @@ import {
   BusinessImpactSection,
   ConfirmedFindingsSection,
   DeveloperDetailsSection,
+  EngineFileDetailsSection,
   EvidenceSection,
   ExpertModeProvider,
   InvestigationFlowSection,
@@ -294,51 +293,25 @@ export function InvestigationWorkstationReport({
   ];
   const assetRows = [...new Set(findings.map((f) => f.asset))];
   const workbench = bundle.workbench;
-  const [expert, setExpert] = useState(false);
 
   const nextDelay = createReveal();
 
   return (
     <article className={cn("flex w-full min-w-0 flex-col gap-1", className)}>
       {workbench ? (
-        <ExpertModeProvider expert={expert}>
-          {/* Audience toggle — one page, two depths (P11) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-3">
-            <p
-              className="text-[11px] font-bold uppercase tracking-[0.15em] text-vx-muted"
-              title="Analyst = plain-language summary. Expert = raw evidence, CVE/CPE, and scanner metadata."
-            >
-              {expert ? "Expert view — full technical detail" : "Analyst view — plain summary"}
-            </p>
-            <div className="flex border border-vx-border-strong">
-              <button
-                type="button"
-                onClick={() => setExpert(false)}
-                className={cn(
-                  "px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors",
-                  !expert ? "bg-vx-text text-vx-app" : "text-vx-secondary hover:text-vx-text",
-                )}
-              >
-                Analyst
-              </button>
-              <button
-                type="button"
-                onClick={() => setExpert(true)}
-                className={cn(
-                  "border-l border-vx-border-strong px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors",
-                  expert ? "bg-vx-text text-vx-app" : "text-vx-secondary hover:text-vx-text",
-                )}
-              >
-                Expert
-              </button>
-            </div>
-          </div>
-
+        <ExpertModeProvider expert={false}>
           {/* 1 — What happened? */}
           <InvestigationVerdictSection workbench={workbench} reveal={nextDelay()} />
 
           {/* 2 — How the engine got here (the investigation, not a dashboard) */}
           <InvestigationFlowSection workbench={workbench} reveal={nextDelay()} />
+
+          <EngineFileDetailsSection
+            workbench={workbench}
+            bundle={bundle}
+            sourceLabel={sourceLabel}
+            reveal={nextDelay()}
+          />
 
           {/* 3 — The four numbers that drive the decision */}
           <RiskOverviewSection
@@ -354,11 +327,12 @@ export function InvestigationWorkstationReport({
           {/* 5 — Can an attacker actually use this? */}
           <WorkstationSection
             title="Attack Graph"
-            bodyClassName="p-0 min-h-[380px]"
+            bodyClassName="p-0 min-h-[400px]"
             reveal={nextDelay()}
             large
           >
             <GraphExplorer
+              key={`${bundle.detail.summary.id}-${presentation.graph.nodes.length}-${presentation.graph.edges.length}`}
               embedded
               layout="workstation"
               graph={presentation.graph}
@@ -404,6 +378,7 @@ export function InvestigationWorkstationReport({
 
           <WorkstationSection title="Attack Graph" bodyClassName="p-0 min-h-[420px]" reveal={nextDelay()}>
             <GraphExplorer
+              key={`${bundle.detail.summary.id}-${presentation.graph.nodes.length}-${presentation.graph.edges.length}`}
               embedded
               layout="workstation"
               graph={presentation.graph}

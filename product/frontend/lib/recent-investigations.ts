@@ -46,9 +46,14 @@ export type SidebarHistoryGroup = "today" | "yesterday" | "last_week" | "older";
 
 const STORAGE_KEY = "vayne-recent-investigations";
 export const RECENT_INVESTIGATIONS_STORAGE_KEY = STORAGE_KEY;
-export const SIDEBAR_HISTORY_MAX = 20;
-export const SIDEBAR_RECENTS_MAX = 8;
-export const HOME_RECENTS_MAX = 6;
+/** Max investigations kept in local cache — full history, not a “recent” cap. */
+export const HISTORY_MAX = 500;
+/** @deprecated Use HISTORY_MAX */
+export const SIDEBAR_HISTORY_MAX = HISTORY_MAX;
+/** @deprecated Use HISTORY_MAX */
+export const SIDEBAR_RECENTS_MAX = HISTORY_MAX;
+/** @deprecated Use HISTORY_MAX */
+export const HOME_RECENTS_MAX = HISTORY_MAX;
 
 export const RECENT_INVESTIGATIONS_UPDATED = "vayne:recent-investigations-updated";
 
@@ -233,14 +238,25 @@ function dedupeBySourceAndHash(items: RecentInvestigation[]): RecentInvestigatio
 }
 
 function sortRecentFirst(items: RecentInvestigation[]): RecentInvestigation[] {
-  return [...items].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  return [...items].sort((a, b) => {
+    const ta = new Date(a.updatedAt || a.createdAt).getTime();
+    const tb = new Date(b.updatedAt || b.createdAt).getTime();
+    return tb - ta;
+  });
 }
 
+/** Full history — one row per investigation id (re-runs stay visible). */
+export function prepareInvestigationHistory(
+  items: RecentInvestigation[],
+  limit: number = HISTORY_MAX,
+): RecentInvestigation[] {
+  return sortRecentFirst(dedupeById(items)).slice(0, limit);
+}
+
+/** Collapsed “unique findings” view — legacy cards/widgets only. */
 export function prepareInvestigationList(
   items: RecentInvestigation[],
-  limit: number = SIDEBAR_HISTORY_MAX,
+  limit: number = HISTORY_MAX,
 ): RecentInvestigation[] {
   return sortRecentFirst(
     dedupeByContentSignature(
@@ -351,15 +367,18 @@ export async function enrichRecentInvestigation(
   }
 }
 
-export function loadRecentInvestigations(
-  limit: number = SIDEBAR_HISTORY_MAX,
-): RecentInvestigation[] {
+export function loadInvestigationHistory(limit: number = HISTORY_MAX): RecentInvestigation[] {
   const raw = loadRawRecentInvestigations();
-  const prepared = prepareInvestigationList(raw, SIDEBAR_HISTORY_MAX);
+  const prepared = prepareInvestigationHistory(raw, HISTORY_MAX);
   if (JSON.stringify(prepared) !== JSON.stringify(raw)) {
     persistInvestigationList(prepared);
   }
   return prepared.slice(0, limit);
+}
+
+/** @deprecated Use loadInvestigationHistory */
+export function loadRecentInvestigations(limit: number = HISTORY_MAX): RecentInvestigation[] {
+  return loadInvestigationHistory(limit);
 }
 
 function toIsoDate(value: string | Date | undefined): string {
@@ -377,7 +396,8 @@ function listItemToRecent(
   return normalizeEntry({
     ...local,
     id: row.id,
-    title: local?.title,
+    title: local?.title || row.name,
+    name: row.name || local?.name,
     summary: row.summary || local?.summary,
     risk:
       local?.risk ||
@@ -395,47 +415,42 @@ function listItemToRecent(
     criticalCount: row.critical_count,
     surfaceClassification: row.attack_surface_classification,
     avgConfidence: row.avg_confidence,
-    name: local?.title,
     headline: row.summary || local?.summary,
   });
 }
 
-/** Replace local cache with deduplicated backend investigations when API is reachable. */
+/** Sync full investigation history from the backend (fast — no per-row enrich). */
+let syncInFlight: Promise<RecentInvestigation[]> | null = null;
+
 export async function syncRecentInvestigationsFromApi(
-  limit: number = SIDEBAR_HISTORY_MAX,
+  limit: number = HISTORY_MAX,
 ): Promise<RecentInvestigation[]> {
   if (typeof window === "undefined") return [];
 
-  try {
-    const rows = await listInvestigations();
-    if (!rows.length) return loadRecentInvestigations(limit);
+  const run = async (): Promise<RecentInvestigation[]> => {
+    try {
+      const rows = await listInvestigations();
+      if (!rows.length) return loadInvestigationHistory(limit);
 
-    const localById = new Map(loadRawRecentInvestigations().map((item) => [item.id, item]));
-    const merged: RecentInvestigation[] = [];
-
-    for (const row of rows.slice(0, SIDEBAR_HISTORY_MAX)) {
-      const local = localById.get(row.id);
-      const base = listItemToRecent(row, local);
-      const needsEnrich =
-        !base.title ||
-        looksLikeFilename(base.title) ||
-        !base.findingsHash ||
-        !base.summary;
-
-      if (needsEnrich) {
-        merged.push(await enrichRecentInvestigation(base));
-      } else {
-        merged.push(base);
-      }
+      const localById = new Map(loadRawRecentInvestigations().map((item) => [item.id, item]));
+      const merged = rows.map((row) => listItemToRecent(row, localById.get(row.id)));
+      const prepared = prepareInvestigationHistory(merged, HISTORY_MAX);
+      persistInvestigationList(prepared);
+      notifyRecentUpdated();
+      return prepared.slice(0, limit);
+    } catch {
+      return loadInvestigationHistory(limit);
     }
+  };
 
-    const prepared = prepareInvestigationList(merged, SIDEBAR_HISTORY_MAX);
-    persistInvestigationList(prepared);
-    notifyRecentUpdated();
-    return prepared.slice(0, limit);
-  } catch {
-    return loadRecentInvestigations(limit);
+  if (!syncInFlight) {
+    syncInFlight = run().finally(() => {
+      syncInFlight = null;
+    });
   }
+
+  const prepared = await syncInFlight;
+  return prepared.slice(0, limit);
 }
 
 export function saveRecentInvestigation(
@@ -446,9 +461,6 @@ export function saveRecentInvestigation(
 
   const now = new Date().toISOString();
   const normalized = normalizeEntry(entry);
-  const sourceKey = normalized.sourceFile
-    ? normalizeSourceFilename(normalized.sourceFile)
-    : null;
 
   const incoming: RecentInvestigation = {
     ...normalized,
@@ -456,35 +468,9 @@ export function saveRecentInvestigation(
     updatedAt: now,
   };
 
-  const list = loadRawRecentInvestigations().filter((item) => {
-    const row = normalizeEntry(item);
+  const list = loadRawRecentInvestigations().filter((item) => item.id !== incoming.id);
 
-    if (row.id === incoming.id) return false;
-
-    if (incoming.findingsHash && row.findingsHash === incoming.findingsHash) {
-      return false;
-    }
-
-    const incomingSignature = contentSignature(incoming);
-    const rowSignature = contentSignature(row);
-    if (incomingSignature && rowSignature === incomingSignature) {
-      return false;
-    }
-
-    if (
-      sourceKey &&
-      incoming.findingsHash &&
-      row.sourceFile &&
-      normalizeSourceFilename(row.sourceFile) === sourceKey &&
-      row.findingsHash === incoming.findingsHash
-    ) {
-      return false;
-    }
-
-    return true;
-  });
-
-  const next = prepareInvestigationList([incoming, ...list]);
+  const next = prepareInvestigationHistory([incoming, ...list]);
   persistInvestigationList(next);
   notifyRecentUpdated();
 }

@@ -17,6 +17,27 @@ export const LAYOUT = {
   chainGap: 160,
 } as const;
 
+/** Workstation layout — fixed columns, one readable row per service chain. */
+export const WIDE_LAYOUT = {
+  marginTop: 44,
+  marginRight: 64,
+  marginBottom: 48,
+  colGap: 56,
+  colX: {
+    entry: 40,
+    asset: 240,
+    service: 520,
+    software: 780,
+    vulnerability: 1040,
+  },
+  rowHeight: 96,
+  rowGap: 20,
+  assetBlockGap: 32,
+  stackGap: 12,
+} as const;
+
+export type GraphLayoutMode = "default" | "wide";
+
 const COLUMN_BY_TYPE: Record<string, number> = {
   endpoint: 0,
   asset: 1,
@@ -91,6 +112,24 @@ function nodeDimensions(node: GraphNode, secondary: boolean): { width: number; h
 
 function columnX(column: number): number {
   return LAYOUT.marginLeft + column * LAYOUT.columnWidth;
+}
+
+function resolveWideColumnCollisions(boxes: Box[]): void {
+  const byColumn = new Map<number, Box[]>();
+  for (const box of boxes) {
+    if (!byColumn.has(box.column)) byColumn.set(box.column, []);
+    byColumn.get(box.column)!.push(box);
+  }
+
+  for (const colBoxes of byColumn.values()) {
+    colBoxes.sort((a, b) => a.y - b.y || a.x - b.x);
+    for (let i = 1; i < colBoxes.length; i++) {
+      const prev = colBoxes[i - 1];
+      const curr = colBoxes[i];
+      const minY = prev.y + prev.height + WIDE_LAYOUT.stackGap;
+      if (curr.y < minY) curr.y = minY;
+    }
+  }
 }
 
 function resolveColumnCollisions(boxes: Box[]): void {
@@ -176,7 +215,255 @@ function groupAttackChains(
   return chains;
 }
 
-export function computeGraphLayout(nodes: GraphNode[], edges: GraphEdge[]): LayoutResult {
+function computeWideGraphLayout(nodes: GraphNode[], edges: GraphEdge[]): LayoutResult {
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  const boxes: Box[] = [];
+  const secondaryIds = new Set<string>();
+  const waveCounters = new Map<number, number>();
+
+  const primary = nodes.filter((n) => isPrimaryEntry(n));
+  const secondary = nodes.filter((n) => isSecondaryEvidence(n));
+  const core = nodes.filter((n) => !isSecondaryEvidence(n));
+
+  for (const s of secondary) secondaryIds.add(s.id);
+
+  const assetToServices = new Map<string, string[]>();
+  const serviceToSoftware = new Map<string, string[]>();
+  const softwareToVuln = new Map<string, string[]>();
+
+  for (const e of edges) {
+    const src = nodeMap.get(e.source);
+    const tgt = nodeMap.get(e.target);
+    if (!src || !tgt) continue;
+    const st = normalizeType(src);
+    const tt = normalizeType(tgt);
+    if (st === "asset" && tt === "service") {
+      if (!assetToServices.has(e.source)) assetToServices.set(e.source, []);
+      assetToServices.get(e.source)!.push(e.target);
+    }
+    if (st === "service" && tt === "software") {
+      if (!serviceToSoftware.has(e.source)) serviceToSoftware.set(e.source, []);
+      serviceToSoftware.get(e.source)!.push(e.target);
+    }
+    if (st === "software" && tt === "vulnerability") {
+      if (!softwareToVuln.has(e.source)) softwareToVuln.set(e.source, []);
+      softwareToVuln.get(e.source)!.push(e.target);
+    }
+  }
+
+  const assets = core.filter((n) => normalizeType(n) === "asset");
+  const assignedServices = new Set<string>();
+  const assignedSoftware = new Set<string>();
+  const assignedVulns = new Set<string>();
+
+  let cursorY: number = WIDE_LAYOUT.marginTop;
+
+  const placeChainRow = (rowY: number, serviceId: string): number => {
+    const svcNode = nodeMap.get(serviceId);
+    if (!svcNode) return rowY + WIDE_LAYOUT.rowHeight + WIDE_LAYOUT.rowGap;
+
+    assignedServices.add(serviceId);
+    const svcDim = nodeDimensions(svcNode, false);
+    boxes.push({
+      id: serviceId,
+      column: 2,
+      x: WIDE_LAYOUT.colX.service,
+      y: rowY,
+      width: svcDim.width,
+      height: svcDim.height,
+    });
+
+    const swIds = serviceToSoftware.get(serviceId) || [];
+    let swY = rowY;
+    let rowBottom = rowY + svcDim.height;
+
+    for (const swId of swIds) {
+      if (assignedSoftware.has(swId)) continue;
+      assignedSoftware.add(swId);
+      const swNode = nodeMap.get(swId);
+      if (!swNode) continue;
+      const swDim = nodeDimensions(swNode, false);
+      boxes.push({
+        id: swId,
+        column: 3,
+        x: WIDE_LAYOUT.colX.software,
+        y: swY,
+        width: swDim.width,
+        height: swDim.height,
+      });
+      rowBottom = Math.max(rowBottom, swY + swDim.height);
+
+      let vulnOffset = 0;
+      const vIds = softwareToVuln.get(swId) || [];
+      for (const vId of vIds) {
+        if (assignedVulns.has(vId)) continue;
+        assignedVulns.add(vId);
+        const vNode = nodeMap.get(vId);
+        if (!vNode) continue;
+        const vDim = nodeDimensions(vNode, false);
+        boxes.push({
+          id: vId,
+          column: 4,
+          x: WIDE_LAYOUT.colX.vulnerability + vulnOffset,
+          y: swY,
+          width: vDim.width,
+          height: vDim.height,
+        });
+        vulnOffset += vDim.width + WIDE_LAYOUT.colGap;
+        rowBottom = Math.max(rowBottom, swY + vDim.height);
+      }
+
+      swY += swDim.height + WIDE_LAYOUT.stackGap;
+    }
+
+    return rowBottom + WIDE_LAYOUT.rowGap;
+  };
+
+  if (assets.length) {
+    for (const asset of assets) {
+      const svcIds = sortServices(assetToServices.get(asset.id) || [], nodeMap);
+      const blockStartY = cursorY;
+      const blockRows = Math.max(svcIds.length, 1);
+      const blockHeight =
+        blockRows * WIDE_LAYOUT.rowHeight + (blockRows - 1) * WIDE_LAYOUT.rowGap;
+      const assetDim = nodeDimensions(asset, false);
+
+      boxes.push({
+        id: asset.id,
+        column: 1,
+        x: WIDE_LAYOUT.colX.asset,
+        y: blockStartY + blockHeight / 2 - assetDim.height / 2,
+        width: assetDim.width,
+        height: assetDim.height,
+      });
+
+      if (svcIds.length) {
+        let rowY = blockStartY;
+        for (const sid of svcIds) {
+          rowY = placeChainRow(rowY, sid);
+        }
+        cursorY = rowY + WIDE_LAYOUT.assetBlockGap - WIDE_LAYOUT.rowGap;
+      } else {
+        cursorY = blockStartY + blockHeight + WIDE_LAYOUT.assetBlockGap;
+      }
+    }
+  }
+
+  const orphanServices = core.filter(
+    (n) => normalizeType(n) === "service" && !assignedServices.has(n.id),
+  );
+  for (const svc of orphanServices) {
+    cursorY = placeChainRow(cursorY, svc.id);
+  }
+
+  const placed = new Set(boxes.map((b) => b.id));
+  for (const n of core) {
+    if (placed.has(n.id)) continue;
+    const dim = nodeDimensions(n, false);
+    const t = normalizeType(n);
+    const col =
+      t === "asset"
+        ? 1
+        : t === "software"
+          ? 3
+          : t === "vulnerability"
+            ? 4
+            : 2;
+    const x =
+      col === 1
+        ? WIDE_LAYOUT.colX.asset
+        : col === 3
+          ? WIDE_LAYOUT.colX.software
+          : col === 4
+            ? WIDE_LAYOUT.colX.vulnerability
+            : WIDE_LAYOUT.colX.service;
+    boxes.push({
+      id: n.id,
+      column: col,
+      x,
+      y: cursorY,
+      width: dim.width,
+      height: dim.height,
+    });
+    cursorY += WIDE_LAYOUT.rowHeight + WIDE_LAYOUT.rowGap;
+  }
+
+  const contentMid =
+    boxes.length > 0
+      ? (Math.min(...boxes.map((b) => b.y)) + Math.max(...boxes.map((b) => b.y + b.height))) / 2
+      : WIDE_LAYOUT.marginTop + 120;
+
+  for (const entry of primary) {
+    const dim = nodeDimensions(entry, false);
+    boxes.push({
+      id: entry.id,
+      column: 0,
+      x: WIDE_LAYOUT.colX.entry,
+      y: contentMid - dim.height / 2,
+      width: dim.width,
+      height: dim.height,
+    });
+  }
+
+  let secondaryY = cursorY + 16;
+  for (const s of secondary) {
+    const dim = nodeDimensions(s, true);
+    boxes.push({
+      id: s.id,
+      column: 3,
+      x: WIDE_LAYOUT.colX.software,
+      y: secondaryY,
+      width: dim.width,
+      height: dim.height,
+    });
+    secondaryY += dim.height + 12;
+  }
+
+  resolveWideColumnCollisions(boxes);
+
+  const positions = new Map<string, LayoutNodeMeta>();
+  let maxX = 0;
+  let maxY = 0;
+
+  for (const box of boxes) {
+    const node = nodeMap.get(box.id);
+    const secondary = secondaryIds.has(box.id);
+    const t = node ? normalizeType(node) : "unknown";
+    const wave = secondary ? ANIMATION_WAVE.secondary : (ANIMATION_WAVE[t] ?? 2);
+    const idx = waveCounters.get(wave) ?? 0;
+    waveCounters.set(wave, idx + 1);
+
+    positions.set(box.id, {
+      x: box.x,
+      y: box.y,
+      column: box.column,
+      secondary,
+      animationWave: wave,
+      animationIndex: idx,
+      width: box.width,
+      height: box.height,
+    });
+    maxX = Math.max(maxX, box.x + box.width);
+    maxY = Math.max(maxY, box.y + box.height);
+  }
+
+  return {
+    positions,
+    bounds: {
+      width: maxX + WIDE_LAYOUT.marginRight,
+      height: maxY + WIDE_LAYOUT.marginBottom,
+    },
+  };
+}
+
+export function computeGraphLayout(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  options?: { mode?: GraphLayoutMode },
+): LayoutResult {
+  if (options?.mode === "wide") {
+    return computeWideGraphLayout(nodes, edges);
+  }
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
   const boxes: Box[] = [];
   const secondaryIds = new Set<string>();

@@ -1,20 +1,33 @@
 "use client";
 
+import { CursorAgentActivity } from "@/components/shared/cursor-agent-activity";
+import { CursorLoadingStatus } from "@/components/shared/cursor-loading-status";
+import type { AgentActivityFeed } from "@/lib/analyst-activity";
 import { cn } from "@/lib/utils";
 
 export function AnalystThinking({
+  feed,
   step,
   className,
 }: {
-  step: string | null;
+  feed?: AgentActivityFeed | null;
+  /** @deprecated use feed */
+  step?: string | null;
   className?: string;
 }) {
+  if (feed?.lines.length) {
+    return <CursorAgentActivity feed={feed} className={cn(className)} />;
+  }
+
   if (!step) return null;
 
   return (
-    <p className={cn("font-mono text-[13px] text-vx-muted", className)}>
-      <span>{">"}</span> {step}
-      <span className="ml-0.5 inline-block h-[1em] w-[2px] animate-pulse bg-vx-secondary align-middle" />
-    </p>
+    <CursorLoadingStatus
+      className={cn(className)}
+      lines={[
+        { label: step },
+        { label: "Waiting for analyst model", dim: true },
+      ]}
+    />
   );
 }

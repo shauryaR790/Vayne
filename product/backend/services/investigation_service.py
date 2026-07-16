@@ -374,7 +374,7 @@ class InvestigationService:
             .first()
         )
 
-    def list_investigations(self, limit: int = 100) -> list[dict]:
+    def list_investigations(self, limit: int = 500) -> list[dict]:
         rows = (
             self.db.query(InvestigationORM)
             .order_by(

@@ -118,6 +118,129 @@ select option {
     width: 0;
     height: 0;
   }
+
+  .vx-analyst-md .vx-md-inline-code {
+    border-radius: 4px;
+    background: var(--vx-md-code-bg);
+    padding: 0.08em 0.38em;
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 0.9em;
+    font-weight: 400;
+    white-space: break-spaces;
+  }
+
+  .vx-analyst-md .vx-md-code-path {
+    color: var(--vx-md-code-path);
+  }
+
+  .vx-analyst-md .vx-md-code-api {
+    color: var(--vx-md-code-api);
+  }
+
+  .vx-analyst-md .vx-md-code-fn {
+    color: var(--vx-md-code-fn);
+  }
+
+  .vx-analyst-md .vx-md-code-log {
+    color: var(--vx-md-code-log);
+  }
+
+  .vx-analyst-md .vx-md-code-default {
+    color: var(--vx-md-code-default);
+  }
+
+  .vx-analyst-md .vx-md-link {
+    color: rgba(255, 255, 255, 0.82);
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.22);
+    text-underline-offset: 3px;
+  }
+
+  .vx-analyst-md .vx-md-link:hover {
+    color: #fff;
+    text-decoration-color: rgba(255, 255, 255, 0.45);
+  }
+
+  .vx-analyst-md .vx-md-code-block {
+    margin: 0.35rem 0;
+    overflow-x: auto;
+    border-radius: 8px;
+    background: var(--vx-md-block-bg);
+    padding: 0.75rem 0.9rem;
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .vx-analyst-md .vx-md-code-block-inner {
+    display: block;
+    white-space: pre;
+  }
+
+  .vx-analyst-md .vx-md-shell-cmd {
+    color: var(--vx-md-shell-cmd);
+  }
+
+  .vx-analyst-md .vx-md-shell-flag {
+    color: var(--vx-md-shell-flag);
+  }
+
+  .vx-analyst-md .vx-md-shell-path {
+    color: var(--vx-md-shell-path);
+  }
+
+  .vx-analyst-md .vx-md-shell-default {
+    color: var(--vx-md-shell-default);
+  }
+
+  .vx-analyst-md .vx-md-section-divider {
+    margin-top: 0.25rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .vx-analyst-md .vx-md-section h3 {
+    margin-bottom: 0.15rem;
+  }
+
+  .vx-analyst-md .vx-md-number {
+    min-width: 1.35rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .vx-analyst-md .vx-md-bullet {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.58);
+  }
+
+  .vx-analyst-md .vx-md-list {
+    margin: 0.15rem 0 0.35rem;
+    padding-left: 0.15rem;
+  }
+
+  .vx-engine-file-line-add {
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  .vx-engine-file-line-remove {
+    background: rgba(239, 68, 68, 0.12);
+  }
+
+  .vx-engine-file-line-context code {
+    color: rgba(255, 255, 255, 0.62);
+  }
+
+  .vx-engine-file-line-add code {
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .vx-engine-file-line-remove code {
+    color: rgba(255, 255, 255, 0.82);
+  }
 }
 
 .react-flow__node {
@@ -143,12 +266,80 @@ select option {
   font-size: 10px;
 }
 
+@keyframes vx-shimmer-sweep {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+.vx-shimmer-text {
+  display: inline;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.36) 0%,
+    rgba(255, 255, 255, 0.36) 38%,
+    rgba(255, 255, 255, 0.94) 50%,
+    rgba(255, 255, 255, 0.36) 62%,
+    rgba(255, 255, 255, 0.36) 100%
+  );
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: vx-shimmer-sweep 2.2s ease-in-out infinite;
+}
+
+.vx-shimmer-text-dim {
+  display: inline;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.2) 38%,
+    rgba(255, 255, 255, 0.52) 50%,
+    rgba(255, 255, 255, 0.2) 62%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: vx-shimmer-sweep 2.6s ease-in-out infinite;
+}
+
+@keyframes vx-node-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.25);
+  }
+}
+
+.graph-node-playback-active {
+  animation: vx-node-pulse 1.6s ease-in-out infinite;
+}
+
+.react-flow__edge-path.vx-edge-playback {
+  stroke: #fafafa !important;
+  stroke-width: 3px !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
+  stroke-dasharray: 8 6;
+  animation: vx-edge-pulse 0.8s linear forwards;
+}
+
 @keyframes vx-edge-pulse {
   0% {
     stroke-dashoffset: 24;
+    opacity: 0.2;
   }
   100% {
     stroke-dashoffset: 0;
+    opacity: 1;
   }
 }
 

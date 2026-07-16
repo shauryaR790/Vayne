@@ -10,9 +10,10 @@ import { DeveloperMenu } from "@/components/dev/developer-menu";
 import { ANALYST_RESOURCE_NAV, type AnalystNavItem } from "@/lib/analyst-panel-nav";
 import { resetConversationToHome } from "@/lib/conversation-session";
 import {
+  HISTORY_MAX,
   RECENT_INVESTIGATIONS_UPDATED,
-  SIDEBAR_RECENTS_MAX,
-  loadRecentInvestigations,
+  groupInvestigationsForSidebar,
+  loadInvestigationHistory,
   syncRecentInvestigationsFromApi,
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
@@ -54,7 +55,7 @@ function RecentRow({
       type="button"
       onClick={() => onSelect(item.id)}
       className={cn(
-        "w-full truncate rounded-md px-3 py-2.5 text-left text-[16px] transition-colors",
+        "w-full truncate rounded-md px-3 py-2 text-left text-[15px] transition-colors",
         active
           ? "bg-vx-elevated text-white"
           : "text-vx-secondary hover:bg-vx-panel hover:text-white",
@@ -83,12 +84,12 @@ export function VaneSidebar() {
   }, [pathname, searchParams]);
 
   const refresh = useCallback(async () => {
-    const synced = await syncRecentInvestigationsFromApi(SIDEBAR_RECENTS_MAX);
+    const synced = await syncRecentInvestigationsFromApi(HISTORY_MAX);
     setItems(synced);
   }, []);
 
   useEffect(() => {
-    setItems(loadRecentInvestigations(SIDEBAR_RECENTS_MAX));
+    setItems(loadInvestigationHistory(HISTORY_MAX));
     void refresh();
     const onUpdate = () => void refresh();
     window.addEventListener(RECENT_INVESTIGATIONS_UPDATED, onUpdate);
@@ -98,6 +99,8 @@ export function VaneSidebar() {
       window.removeEventListener("focus", onUpdate);
     };
   }, [refresh]);
+
+  const historyGroups = useMemo(() => groupInvestigationsForSidebar(items), [items]);
 
   const startNew = () => {
     resetConversationToHome();
@@ -127,38 +130,6 @@ export function VaneSidebar() {
 
       <SidebarDivider />
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-4">
-        <p className="mb-2 px-3 text-[13px] font-medium text-vx-muted">Investigation History</p>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {items.length ? (
-            <div className="flex flex-col gap-1">
-              {items.map((item) => (
-                <RecentRow
-                  key={item.id}
-                  item={item}
-                  active={activeId === item.id}
-                  onSelect={openInvestigation}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {[
-                "Kerberos Attack Surface Review",
-                "Apache HTTP Service Review",
-                "SMB RCE Investigation",
-              ].map((label) => (
-                <p key={label} className="truncate px-3 py-2.5 text-[16px] text-vx-muted">
-                  {label}
-                </p>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <SidebarDivider />
-
       <nav className="shrink-0 px-3 py-4">
         <div className="flex flex-col gap-1">
           {ANALYST_RESOURCE_NAV.map((item) => (
@@ -170,6 +141,39 @@ export function VaneSidebar() {
           ))}
         </div>
       </nav>
+
+      <SidebarDivider />
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-3">
+        <p className="mb-2 shrink-0 px-3 text-[13px] font-medium text-vx-muted">
+          Investigation History
+        </p>
+        <div className="vx-no-scrollbar min-h-0 flex-1 overflow-y-auto">
+          {items.length ? (
+            <div className="flex flex-col gap-3 pb-2">
+              {historyGroups.map((group) => (
+                <div key={group.key}>
+                  <p className="mb-1 px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-white/30">
+                    {group.label}
+                  </p>
+                  <div className="flex flex-col gap-0.5">
+                    {group.items.map((item) => (
+                      <RecentRow
+                        key={item.id}
+                        item={item}
+                        active={activeId === item.id}
+                        onSelect={openInvestigation}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="px-3 py-2 text-[14px] text-vx-muted">No investigations yet</p>
+          )}
+        </div>
+      </div>
 
       <SidebarDivider />
 

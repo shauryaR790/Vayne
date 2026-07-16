@@ -1,4 +1,6 @@
 import type { MessageAttachment } from "./multi-investigation-message";
+import type { EngineFileInsight } from "./engine-file-insights";
+import type { AnalystStreamSegment } from "./analyst-segments";
 
 export type { MessageAttachment };
 
@@ -18,6 +20,10 @@ export interface StoredChatMessage {
   sourceLabel?: string;
   investigationSources?: InvestigationSourceRef[];
   attachments?: MessageAttachment[];
+  /** Cursor-style per-file engine boxes rendered inside this assistant turn */
+  fileInsights?: EngineFileInsight[];
+  /** Interleaved think / file / text timeline for agent-style rendering */
+  streamSegments?: AnalystStreamSegment[];
 }
 
 export interface ConversationSession {
@@ -83,6 +89,8 @@ export function serializeMessages(
         sourceLabel,
         investigationSources,
         attachments,
+        fileInsights,
+        streamSegments,
       }) => ({
         id,
         role,
@@ -92,6 +100,8 @@ export function serializeMessages(
         ...(sourceLabel ? { sourceLabel } : {}),
         ...(investigationSources?.length ? { investigationSources } : {}),
         ...(attachments?.length ? { attachments } : {}),
+        ...(fileInsights?.length ? { fileInsights } : {}),
+        ...(streamSegments?.length ? { streamSegments } : {}),
       }),
     );
 }

@@ -14,8 +14,8 @@
   --vx-sidebar: #181818;
 
   /* Investigation results — headers darkest, bodies lighter */
-  --vx-panel: #0f0f0f;
-  --vx-section-body: #181818;
+  --vx-panel: #131313;
+  --vx-section-body: #131313;
   --vx-inset: rgba(255, 255, 255, 0.02);
   --vx-elevated: #1c1c1c;
 
@@ -35,4 +35,17 @@
 
   /* Accent — active states only */
   --vx-accent: #5eead4;
+
+  /* Analyst chat — Cursor-style markdown */
+  --vx-md-code-bg: rgba(255, 255, 255, 0.08);
+  --vx-md-code-path: #c4b5fd;
+  --vx-md-code-api: #60a5fa;
+  --vx-md-code-fn: #c4b5fd;
+  --vx-md-code-log: rgba(255, 255, 255, 0.92);
+  --vx-md-code-default: rgba(255, 255, 255, 0.88);
+  --vx-md-block-bg: #1a1a1a;
+  --vx-md-shell-cmd: #e5a060;
+  --vx-md-shell-flag: #f472b6;
+  --vx-md-shell-path: #c4b5fd;
+  --vx-md-shell-default: rgba(255, 255, 255, 0.88);
 }

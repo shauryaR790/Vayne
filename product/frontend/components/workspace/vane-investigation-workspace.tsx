@@ -18,6 +18,7 @@ export function VaneInvestigationWorkspace({
   investigationIds,
   investigationGroupId,
   sourceLabels,
+  evidenceFileCount,
   error,
 }: {
   scrollRef: RefObject<HTMLDivElement>;
@@ -26,6 +27,7 @@ export function VaneInvestigationWorkspace({
   investigationIds: string[];
   investigationGroupId?: string | null;
   sourceLabels?: string[];
+  evidenceFileCount?: number;
   error?: string;
 }) {
   const engineMessages = ensureEngineMessages(messages, investigationIds, {
@@ -78,6 +80,7 @@ export function VaneInvestigationWorkspace({
                 <EngineProgress
                   active={enginePhase === "running"}
                   complete={enginePhase === "complete"}
+                  fileCount={evidenceFileCount}
                 />
               </div>
             </motion.div>

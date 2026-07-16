@@ -4,6 +4,7 @@ import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { formatGraphNodeLabel } from "@/lib/format";
 import { glowForType, nodeSizeForType } from "@/lib/graph-node-styles";
+import { cn } from "@/lib/utils";
 
 function GraphNodeComponent({ data, selected }: NodeProps) {
   const type = String(data.type || "unknown");
@@ -17,22 +18,31 @@ function GraphNodeComponent({ data, selected }: NodeProps) {
   const isPill = type === "endpoint" && !secondary;
   const [hovered, setHovered] = useState(false);
   const active = selected || hovered;
-  const scale = active ? 1.03 : 1;
+  const playbackHidden = Boolean(data.playbackHidden);
+  const playbackActive = Boolean(data.playbackActive);
+  const scale = playbackActive ? 1.04 : active ? 1.03 : 1;
 
-  const boxShadow = active
-    ? `0 0 16px ${glow.color}55, inset 0 0 8px ${glow.color}15`
-    : `0 0 8px ${glow.color}22`;
+  const boxShadow = playbackActive
+    ? `0 0 28px ${glow.color}88, inset 0 0 12px ${glow.color}22`
+    : active
+      ? `0 0 16px ${glow.color}55, inset 0 0 8px ${glow.color}15`
+      : `0 0 8px ${glow.color}22`;
 
   return (
     <div
-      className="graph-node-inner font-mono relative transition-transform duration-200"
+      className={cn(
+        "graph-node-inner font-mono relative transition-transform duration-200",
+        playbackActive && "graph-node-playback-active",
+      )}
       data-wave={data.animationWave ?? 0}
       data-index={data.animationIndex ?? 0}
+      data-node-id={String(data.id ?? "")}
       style={{
         width: size.width,
-        opacity: dimmed ? 0.18 : secondary ? 0.55 : 1,
+        opacity: playbackHidden ? 0 : dimmed ? 0.18 : secondary ? 0.55 : 1,
         transform: `scale(${scale})`,
         transformOrigin: "center center",
+        pointerEvents: playbackHidden ? "none" : undefined,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

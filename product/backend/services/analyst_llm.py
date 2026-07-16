@@ -33,10 +33,10 @@ from vayne.llm.providers.openai_provider import OpenAIProvider, TokenUsage
 logger = logging.getLogger(__name__)
 
 REPORT_MODE_HINTS: dict[str, str] = {
-    "executive": "Format as an executive summary for CEOs and management. Non-technical, business-focused.",
-    "technical": "Format as a technical summary for SOC analysts and penetration testers.",
-    "remediation": "Format as a remediation plan for engineers. Prioritized, actionable steps only.",
-    "audit": "Format for compliance and governance auditors. Evidence citations and control gaps.",
+    "executive": "Format as an executive summary for CEOs and management. Non-technical, business-focused. Use Cursor-style markdown sections.",
+    "technical": "Format as a technical summary for SOC analysts and penetration testers. Use Cursor-style markdown sections.",
+    "remediation": "Format as a remediation plan for engineers. Prioritized, actionable steps only. Use Cursor-style markdown sections.",
+    "audit": "Format for compliance and governance auditors. Evidence citations and control gaps. Use Cursor-style markdown sections.",
 }
 
 PRESET_HINTS: dict[str, str] = {
@@ -78,20 +78,25 @@ async def _llm_reachable() -> bool:
 
 BRIEF_INSTRUCTION = """Interpret this investigation for a peer analyst. Use ONLY facts from the context.
 
-Answer:
-1. What happened (strongest retained exposure)
-2. Why VANE believes it (proof / scanner agreement — cite source + detail)
-3. How certain (confidence and what built it, if factors exist)
-4. What should happen next (highest expected-confidence-gain missing evidence)
+Use Cursor-style markdown (required — not plain paragraphs):
 
-Write like a senior analyst speaking — natural paragraphs, not a generated report dump.
+Optional one-line lead-in, then:
 
-RULES:
-- Interpret, do not summarize the report
-- Never invent facts
-- No ALL CAPS headers, no divider lines, no "Assets: N" label dumps
-- If confidence_factors exist for the top finding, you may show the factor math briefly
+1. First block — what happened / strongest exposure (numbered list, 2–4 items)
+2. Second block — why VANE believes it / evidence (numbered or bullets)
+3. Third block — confidence + what would change it
+4. Fourth block — **Next steps** (bullets)
+
+Section titles on their own line: **What happened**, **Why VANE believes it**, **Confidence**, **Next steps**, etc.
+Use **bold** for key terms. Use `backticks` for hosts, CVEs, services, paths, and scanner names.
+Never invent facts. No ALL CAPS headers or divider lines.
 """
+
+CURSOR_FORMAT_REMINDER = (
+    "OUTPUT FORMAT: Reply in Cursor-style markdown — "
+    "**Section title** lines, numbered lists for ordered points, `-` bullets for actions/evidence, "
+    "`backticks` for technical identifiers. No prose-only walls of text.\n\n"
+)
 
 def estimate_cost_usd(usage: TokenUsage) -> float:
     prompt_cost = (usage.prompt_tokens / 1_000_000) * llm_input_cost_per_m()
@@ -152,6 +157,7 @@ def _build_prompt(
     if preset_id and preset_id in PRESET_HINTS:
         lines.append(f"Action: {PRESET_HINTS[preset_id]}\n\n")
 
+    lines.append(CURSOR_FORMAT_REMINDER)
     lines.append(f"USER: {user_message}\n\nASSISTANT:")
     return "".join(lines)
 
@@ -288,6 +294,7 @@ async def stream_investigation_brief(
     prompt = (
         "Investigation context (source of truth):\n"
         f"{_clip_context_json(context)}\n\n"
+        f"{CURSOR_FORMAT_REMINDER}"
         f"{BRIEF_INSTRUCTION}"
     )
 

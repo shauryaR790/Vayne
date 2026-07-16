@@ -5,6 +5,7 @@ import { RecentInvestigationList } from "@/components/workspace/home/recent-inve
 
 export function InvestigationWorkspaceHome({
   disabled,
+  busy,
   stagedFileCount,
   onSelectFiles,
   onBeginSession,
@@ -12,6 +13,7 @@ export function InvestigationWorkspaceHome({
   onOpenInvestigation,
 }: {
   disabled?: boolean;
+  busy?: boolean;
   stagedFileCount?: number;
   onSelectFiles: (files: File[]) => void;
   onBeginSession: (prompt: string) => void;
@@ -29,6 +31,7 @@ export function InvestigationWorkspaceHome({
 
         <InvestigationComposer
           disabled={disabled}
+          busy={busy}
           stagedFileCount={stagedFileCount}
           onSelectFiles={onSelectFiles}
           onBeginSession={onBeginSession}

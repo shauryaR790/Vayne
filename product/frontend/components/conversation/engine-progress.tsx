@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Check } from "lucide-react";
 
+import {
+  CursorLoadingStatus,
+  type CursorLoadingLine,
+} from "@/components/shared/cursor-loading-status";
 import { ENGINE_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
@@ -15,16 +18,29 @@ const ENGINE_STEPS = [
   "Generating analyst evidence",
 ] as const;
 
-export const ENGINE_STEP_MS = 900;
-export const ENGINE_MIN_DURATION_MS = 6500;
+export const ENGINE_STEP_MS = 650;
+/** Short polish window when analysis finishes quickly — never blocks results. */
+export const ENGINE_MIN_DURATION_MS = 2200;
+export const ENGINE_COMPLETE_MS = 350;
+
+function waitingLabel(step: string): string {
+  const lower = step.toLowerCase();
+  if (lower.includes("parsing")) return "Waiting for correlation engine";
+  if (lower.includes("correlating")) return "Waiting for path validator";
+  if (lower.includes("validating")) return "Waiting for graph builder";
+  if (lower.includes("graph")) return "Waiting for report generator";
+  return "Waiting for engine";
+}
 
 export function EngineProgress({
   active,
   complete,
+  fileCount,
   className,
 }: {
   active: boolean;
   complete?: boolean;
+  fileCount?: number;
   className?: string;
 }) {
   const [step, setStep] = useState(0);
@@ -46,46 +62,30 @@ export function EngineProgress({
 
   if (!active && !complete) return null;
 
-  const visibleStep = complete ? ENGINE_STEPS.length : step;
+  const visibleStep = complete ? ENGINE_STEPS.length - 1 : step;
+  const current = ENGINE_STEPS[visibleStep];
+  const detail =
+    fileCount && fileCount > 0
+      ? `${fileCount} file${fileCount === 1 ? "" : "s"}`
+      : undefined;
+
+  const lines: CursorLoadingLine[] = complete
+    ? [
+        { label: "Investigation complete", detail: ENGINE_NAME },
+        { label: "Opening workspace", dim: true },
+      ]
+    : [
+        { label: current, detail },
+        { label: waitingLabel(current), dim: true },
+      ];
 
   return (
-    <div
-      className={cn(
-        "w-full border border-vx-border bg-vx-panel p-4",
-        className,
-      )}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={cn("w-full px-1 py-1", className)}
     >
-      <p className="mb-3 text-[14px] font-medium text-vx-secondary">{ENGINE_NAME}</p>
-      <ul className="space-y-2">
-        {ENGINE_STEPS.map((label, index) => {
-          const done = index < visibleStep;
-          const current = index === visibleStep && !complete;
-          return (
-            <motion.li
-              key={label}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center gap-2.5 text-[13px]"
-            >
-              <span
-                className={cn(
-                  "flex size-4 shrink-0 items-center justify-center text-[10px]",
-                  done ? "text-white" : current ? "text-vx-body" : "text-vx-secondary",
-                )}
-              >
-                {done ? <Check className="size-3" strokeWidth={2} /> : index + 1}
-              </span>
-              <span
-                className={cn(
-                  done ? "text-white" : current ? "text-vx-body" : "text-vx-secondary",
-                )}
-              >
-                {label}
-              </span>
-            </motion.li>
-          );
-        })}
-      </ul>
-    </div>
+      <CursorLoadingStatus lines={lines} />
+    </motion.div>
   );
 }

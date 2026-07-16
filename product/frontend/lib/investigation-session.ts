@@ -1,4 +1,5 @@
-import { loadInvestigationBundle, type InvestigationBundle } from "./investigation-bundle";
+import { getInvestigation } from "./api";
+import type { InvestigationBundle } from "./investigation-bundle";
 import {
   buildInvestigationCardMetaFromBundle,
   extractSourceFile,
@@ -196,13 +197,8 @@ export function buildInvestigationSessionFromBundle(
 export async function rebuildInvestigationSession(
   investigationId: string,
 ): Promise<InvestigationSession> {
-  const bundle = await loadInvestigationBundle(investigationId);
-  const meta = buildInvestigationCardMetaFromBundle(bundle);
-  const sourceName =
-    meta.sourceFile ||
-    bundle.report.target?.split(/[/\\]/).pop() ||
-    extractSourceFile(undefined, bundle.report) ||
-    "evidence";
+  const detail = await getInvestigation(investigationId);
+  const sourceName = detail.summary.name?.trim() || investigationId;
   const prompt = `Analyze ${sourceName}`;
   const files = attachmentsFromSourceNames([sourceName]);
   const messages: StoredChatMessage[] = [
@@ -222,11 +218,22 @@ export async function rebuildInvestigationSession(
     },
   ];
 
-  return buildInvestigationSessionFromBundle(bundle, {
+  return {
+    id: investigationId,
+    title: sourceName,
+    createdAt: new Date(detail.summary.created_at).getTime() || Date.now(),
+    files,
+    prompt,
     messages,
+    analystMessages: [],
+    investigationGroupId: null,
     investigationIds: [investigationId],
-    sessionId: investigationId,
-  });
+    scrollTop: 0,
+    analystScrollTop: 0,
+    inputDraft: "",
+    analystInputDraft: "",
+    updatedAt: Date.now(),
+  };
 }
 
 export function migrateLegacyConversationSession(): void {

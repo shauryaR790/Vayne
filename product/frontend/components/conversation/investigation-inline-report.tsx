@@ -3,8 +3,49 @@
 import { useEffect, useState } from "react";
 
 import { InvestigationWorkstationReport } from "@/components/workspace/investigation-workstation-report";
-import { loadInvestigationBundle } from "@/lib/investigation-bundle";
+import {
+  CursorLoadingStatus,
+  type CursorLoadingLine,
+} from "@/components/shared/cursor-loading-status";
+import { loadInvestigationBundle, subscribeInvestigationBundle } from "@/lib/investigation-bundle";
+import type { InvestigationBundle } from "@/lib/investigation-bundle";
 import { cn } from "@/lib/utils";
+
+function workspaceLoadingLines(
+  bundle: InvestigationBundle | null,
+  sourceLabel?: string,
+): CursorLoadingLine[] {
+  if (!bundle) {
+    return [
+      { label: "Loading investigation", detail: sourceLabel },
+      { label: "Reading engine exports", dim: true },
+    ];
+  }
+
+  const fileHint =
+    bundle.workbench?.totals.files && bundle.workbench.totals.files > 0
+      ? `${bundle.workbench.totals.files} file${bundle.workbench.totals.files === 1 ? "" : "s"}`
+      : sourceLabel;
+
+  if (!bundle.workbench && bundle.graph.nodes.length === 0) {
+    return [
+      { label: "Parsing evidence", detail: fileHint },
+      { label: "Building workbench", dim: true },
+    ];
+  }
+
+  if (bundle.graph.nodes.length === 0) {
+    return [
+      { label: "Building attack graph", detail: fileHint },
+      { label: "Correlating findings", dim: true },
+    ];
+  }
+
+  return [
+    { label: "Hydrating workspace", detail: sourceLabel },
+    { label: "Waiting for report renderer", dim: true },
+  ];
+}
 
 export function InvestigationInlineReport({
   investigationId,
@@ -17,31 +58,41 @@ export function InvestigationInlineReport({
   sequenceIndex?: number;
   className?: string;
 }) {
-  const [bundle, setBundle] = useState<Awaited<ReturnType<typeof loadInvestigationBundle>> | null>(
-    null,
-  );
+  const [bundle, setBundle] = useState<InvestigationBundle | null>(null);
   const [error, setError] = useState("");
+  const [fetchDone, setFetchDone] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    loadInvestigationBundle(investigationId)
-      .then((data) => {
-        if (!cancelled) setBundle(data);
-      })
+    setBundle(null);
+    setError("");
+    setFetchDone(false);
+
+    const onUpdate = (data: InvestigationBundle) => {
+      if (!cancelled) setBundle(data);
+    };
+
+    const unsubscribe = subscribeInvestigationBundle(investigationId, onUpdate);
+    void loadInvestigationBundle(investigationId)
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        if (!cancelled) setFetchDone(true);
       });
+
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [investigationId, sourceLabel, sequenceIndex]);
 
   if (error) return <p className="px-6 py-4 text-[13px] text-vx-muted">{error}</p>;
 
-  if (!bundle) {
+  if (!fetchDone || !bundle) {
     return (
-      <div className="w-full border-b border-vx-border bg-vx-panel px-6 py-5 text-[14px] text-vx-muted">
-        Loading investigation workspace…
+      <div className="w-full border-b border-vx-border bg-vx-panel px-6 py-5">
+        <CursorLoadingStatus lines={workspaceLoadingLines(bundle, sourceLabel)} />
       </div>
     );
   }

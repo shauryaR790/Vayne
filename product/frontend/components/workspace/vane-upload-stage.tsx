@@ -3,18 +3,21 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import { InvestigationWorkspaceHome } from "@/components/workspace/home/investigation-workspace-home";
+import { SessionAnalyzingBar } from "@/components/workspace/home/session-analyzing-bar";
 import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { OPEN_EVIDENCE_EVENT } from "@/lib/workspace-shortcuts";
 
 export function VaneUploadStage({
   files,
   disabled,
+  busy,
   onSelectFiles,
   onBeginSession,
   onOpenInvestigation,
 }: {
   files: File[];
   disabled?: boolean;
+  busy?: boolean;
   onSelectFiles: (files: File[]) => void;
   onBeginSession: (prompt: string) => void;
   onOpenInvestigation: (id: string) => void;
@@ -63,12 +66,14 @@ export function VaneUploadStage({
       />
       <InvestigationWorkspaceHome
         disabled={disabled}
+        busy={busy || disabled}
         stagedFileCount={files.length}
         onSelectFiles={onSelectFiles}
         onBeginSession={onBeginSession}
         onUpload={() => openFilePicker(true)}
         onOpenInvestigation={onOpenInvestigation}
       />
+      {busy || disabled ? <SessionAnalyzingBar label="Analyzing evidence…" /> : null}
     </div>
   );
 }
