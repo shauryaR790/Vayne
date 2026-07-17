@@ -40,7 +40,7 @@ export const STATUS_MEANING: Record<
   },
   Validated: {
     label: "Validated",
-    meaning: "Evidence confirms this finding is genuine and exploitable.",
+    meaning: "Independent evidence supports that this finding is genuine.",
   },
   Rejected: {
     label: "Rejected",
@@ -50,6 +50,39 @@ export const STATUS_MEANING: Record<
 
 export function statusMeaning(status: WorkbenchConfirmedFinding["status"]) {
   return STATUS_MEANING[status] ?? STATUS_MEANING.Observed;
+}
+
+/** Display status reconciled with exploit confidence — avoids "Validated" when exploit proof is low. */
+export function findingDisplayStatus(finding: WorkbenchConfirmedFinding): {
+  label: string;
+  meaning: string;
+} {
+  const sem = semanticConfidence(finding);
+  const exploitScore =
+    sem?.exploit?.score ??
+    (sem?.primary.metric === "exploit" ? sem.primary.score : null);
+
+  if (
+    (finding.status === "Validated" || finding.status === "Correlated") &&
+    exploitScore != null &&
+    exploitScore < 55
+  ) {
+    return {
+      label: "Needs validation",
+      meaning:
+        "The exposure is documented in evidence, but successful exploitation has not been demonstrated in this environment.",
+    };
+  }
+
+  return statusMeaning(finding.status);
+}
+
+/** Presentation polish for engine-generated prose. */
+export function polishEngineText(text: string): string {
+  const trimmed = text.replace(/\s+/g, " ").trim();
+  if (!trimmed) return trimmed;
+  const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  return /[.!?]$/.test(capitalized) ? capitalized : `${capitalized}.`;
 }
 
 /** Plain-language meaning for a confidence dimension at a given score. */
@@ -62,6 +95,19 @@ export function confidenceMeaning(key: WorkbenchConfidenceMetricKey, score: numb
   };
   return `The engine has ${band} confidence ${subject[key]}.`;
 }
+
+/** One-line definition shown above the score — what this number actually measures. */
+export const CONFIDENCE_METRIC_DEFINITION: Record<WorkbenchConfidenceMetricKey, string> = {
+  observation:
+    "How sure VANE is the top finding exists on the target — from banners, fingerprints, and scanner evidence.",
+  correlation:
+    "How strongly independent scanners agree on the top finding — not whether it exists once, but whether sources match.",
+  exploit:
+    "How sure VANE is the top finding can be exploited in practice — observation alone is not enough for this score.",
+};
+
+export const ATTACK_SURFACE_DEFINITION =
+  "How exposed the environment looks from attack paths VANE explored — path count, blast radius, and path risk. This is potential impact topology, not proof that exploitation succeeded.";
 
 export interface ConfidenceBand {
   word: string;
@@ -106,14 +152,32 @@ export function evidenceAgainst(finding: WorkbenchConfirmedFinding): string[] {
 
 /** "What could change this conclusion?" — honest uncertainty (P10). */
 export function uncertaintyFactors(finding: WorkbenchConfirmedFinding): string[] {
+  const sc = finding.investigation?.self_challenge;
   const out: string[] = [];
+
+  if (sc?.what_would_overturn?.length) {
+    for (const item of sc.what_would_overturn) {
+      if (item?.trim()) out.push(item.trim());
+      if (out.length >= 4) return out;
+    }
+  }
+
+  if (sc?.challenges?.length) {
+    for (const c of sc.challenges) {
+      if (!c.weakens) continue;
+      const line = c.question?.replace(/\?$/, "") || c.answer;
+      if (line && !out.includes(line)) out.push(line);
+      if (out.length >= 4) return out;
+    }
+  }
+
   const loop = finding.investigation?.validation_loop;
   if (loop && !loop.exploit_confirmed) {
     out.push("A failed exploit replay would lower exploit confidence");
   }
   for (const c of finding.not_validated_checks || []) {
-    out.push(`A contradiction from ${c.toLowerCase()} would change this`);
-    if (out.length >= 3) break;
+    out.push(`This could be incorrect if ${prettyCheck(c).toLowerCase()} contradicts the finding`);
+    if (out.length >= 4) break;
   }
   if (finding.evidence_summary && finding.evidence_summary.conflicts > 0) {
     out.push("Resolving the scanner conflict could raise or lower confidence");
@@ -472,6 +536,382 @@ export function uniqueWhyItMatters(findings: WorkbenchConfirmedFinding[]): strin
   const texts = [...new Set(findings.map((f) => f.why_it_matters).filter(Boolean))];
   if (texts.length === 1) return texts[0];
   return null;
+}
+
+export interface ConfidenceContributor {
+  label: string;
+  delta: number;
+}
+
+export interface ConfidenceIncreaseItem {
+  item: string;
+  explanation?: string;
+  gain?: number | null;
+}
+
+/** Phase 3 — structured explainability mapped from engine fields only. */
+export interface FindingExplainability {
+  whatHappened: string;
+  whyBelieve: string[];
+  whatCouldBeWrong: string[];
+  confidenceWouldIncrease: ConfidenceIncreaseItem[];
+  finalConclusion: string;
+}
+
+export function confidenceContributors(
+  finding: WorkbenchConfirmedFinding,
+): { score: number; contributors: ConfidenceContributor[] } {
+  const sem = semanticConfidence(finding);
+  const primary = sem?.primary;
+  const metric =
+    (primary && sem?.[primary.metric]) ||
+    sem?.observation ||
+    null;
+  const score = primary?.score ?? finding.machine_confidence;
+  const contributors: ConfidenceContributor[] = (metric?.factors || finding.confidence_factors || [])
+    .map((f) => ({ label: f.label, delta: f.delta }))
+    .slice(0, 8);
+  return { score, contributors };
+}
+
+export function buildFindingExplainability(finding: WorkbenchConfirmedFinding): FindingExplainability {
+  const inv = finding.investigation;
+  const sc = inv?.self_challenge;
+
+  const proofLine = finding.proof?.[0]?.detail || finding.evidence[0] || "";
+  const whatHappened =
+    inv?.conclusion?.split(/(?<=[.!?])\s+/)[0]?.trim() ||
+    (proofLine
+      ? `${finding.title}${finding.host ? ` on ${finding.host}` : ""} — ${proofLine}`
+      : `${finding.title}${finding.host ? ` was identified on ${finding.host}` : ""}.`);
+  const polishedWhat = polishEngineText(whatHappened);
+
+  const human = inv?.human_reasoning || [];
+  let whyBelieve: string[] = [];
+  if (human.length) {
+    whyBelieve = human.slice(0, 6);
+  } else {
+    for (const c of finding.validated_checks || []) {
+      whyBelieve.push(prettyCheck(c));
+    }
+    if (finding.unique_reason) whyBelieve.unshift(finding.unique_reason);
+    if (!whyBelieve.length) whyBelieve = finding.reasoning.slice(0, 5);
+    whyBelieve = [...new Set(whyBelieve)].slice(0, 6);
+  }
+
+  let whatCouldBeWrong = uncertaintyFactors(finding);
+  if (sc?.challenges?.length) {
+    const fromChallenges = sc.challenges
+      .filter((c) => c.weakens)
+      .map((c) => {
+        const q = c.question?.replace(/\?$/, "").trim();
+        return q ? `${q.charAt(0).toUpperCase()}${q.slice(1)}` : c.answer;
+      })
+      .filter((v): v is string => Boolean(v));
+    if (fromChallenges.length) whatCouldBeWrong = [...new Set([...fromChallenges, ...whatCouldBeWrong])].slice(0, 5);
+  }
+
+  const confidenceWouldIncrease: ConfidenceIncreaseItem[] = [];
+  for (const t of inv?.investigation_tasks || []) {
+    confidenceWouldIncrease.push({
+      item: t.action,
+      explanation: t.detail || t.expected_result,
+      gain: t.expected_gain ?? null,
+    });
+    if (confidenceWouldIncrease.length >= 4) break;
+  }
+  for (const p of inv?.validation_loop?.next_probes || []) {
+    if (confidenceWouldIncrease.some((x) => x.item === p.name)) continue;
+    confidenceWouldIncrease.push({
+      item: p.name,
+      explanation: p.confirms,
+      gain: p.expected_gain ?? null,
+    });
+    if (confidenceWouldIncrease.length >= 5) break;
+  }
+
+  const finalConclusion =
+    inv?.conclusion?.trim() ||
+    sc?.verdict?.trim() ||
+    finding.unique_reason ||
+    finding.reasoning[finding.reasoning.length - 1] ||
+    statusMeaning(finding.status).meaning;
+
+  return {
+    whatHappened: polishedWhat,
+    whyBelieve,
+    whatCouldBeWrong,
+    confidenceWouldIncrease,
+    finalConclusion,
+  };
+}
+
+export interface ExecutiveSummaryPanel {
+  highestPriorityFinding: string;
+  highestPriorityHost: string;
+  overallConfidence: number | null;
+  confidenceLabel: string;
+  confidenceMetric: WorkbenchConfidenceMetricKey;
+  confidenceDefinition: string;
+  confidenceMeaning: string;
+  riskLevel: string;
+  riskDefinition: string;
+  findingSeverity: string | null;
+  recommendedNextAction: string;
+  analystSummary: string;
+}
+
+export type ReadableVerdictTone = "confirmed" | "action" | "clear" | "neutral";
+
+/** Plain-language verdict for the executive summary — one story, numbers optional. */
+export interface ReadableVerdict {
+  statusLabel: string;
+  tone: ReadableVerdictTone;
+  headline: string;
+  summary: string;
+  whatWeKnow: string;
+  stillOpen: string | null;
+  whyRespond: string;
+  nextAction: string;
+  panel: ExecutiveSummaryPanel;
+}
+
+export function buildReadableVerdict(
+  workbench: WorkbenchData,
+  risk: string,
+  graphConfidence: number | null,
+): ReadableVerdict {
+  const panel = executiveSummaryPanel(workbench, risk, graphConfidence);
+  const top = workbench.confirmed_findings[0];
+  const explain = top ? buildFindingExplainability(top) : null;
+
+  if (!top) {
+    return {
+      statusLabel: "No findings",
+      tone: "clear",
+      headline: "Nothing met the retention threshold",
+      summary: panel.analystSummary,
+      whatWeKnow: "VANE finished review but no finding had enough evidence to keep.",
+      stillOpen: null,
+      whyRespond: "No immediate action on retained findings.",
+      nextAction: panel.recommendedNextAction,
+      panel,
+    };
+  }
+
+  const score = panel.overallConfidence;
+  const metric = panel.confidenceMetric;
+  const status = top.status;
+  const severity = (top.severity || "medium").toLowerCase();
+  const isHighImpact = severity === "critical" || severity === "high" || /high|critical/i.test(risk);
+
+  let statusLabel = "Review";
+  let tone: ReadableVerdictTone = "action";
+  let headline = "Finding retained — review recommended";
+
+  if (status === "Validated" || (metric === "exploit" && score != null && score >= 75)) {
+    statusLabel = "Confirmed";
+    tone = "confirmed";
+    headline = "VANE confirmed this exposure";
+  } else if (metric === "exploit" && score != null && score < 55) {
+    statusLabel = "Needs validation";
+    tone = "action";
+    headline = isHighImpact
+      ? "Serious issue found — exploitation not proven yet"
+      : "Exposure found — exploitation not proven yet";
+  } else if (status === "Observed") {
+    statusLabel = "Observed";
+    tone = "action";
+    headline = "Scanner saw it — VANE has not fully validated it";
+  } else if (status === "Correlated") {
+    statusLabel = "Correlated";
+    tone = "action";
+    headline = "Multiple sources agree — next step is validation";
+  }
+
+  const summary =
+    explain?.finalConclusion ||
+    top.unique_reason ||
+    panel.analystSummary;
+
+  const whatWeKnow = explain?.whatHappened || summary;
+
+  let stillOpen: string | null = null;
+  if (metric === "exploit" && score != null && score < 55) {
+    stillOpen =
+      "Whether an attacker can actually exploit this here — no successful replay or authenticated proof yet.";
+  } else if (top.not_validated_checks[0]) {
+    stillOpen = top.not_validated_checks[0];
+  } else if (explain?.whatCouldBeWrong[0]) {
+    stillOpen = explain.whatCouldBeWrong[0];
+  }
+
+  let whyRespond = top.why_it_matters || "";
+  if (!whyRespond && isHighImpact) {
+    whyRespond =
+      `Rated ${top.severity} severity on a reachable asset. Even without exploit proof, the potential impact justifies validating before deprioritizing.`;
+  } else if (!whyRespond) {
+    whyRespond = "Retained because supporting evidence outweighed gaps — validation still recommended.";
+  }
+
+  return {
+    statusLabel,
+    tone,
+    headline,
+    summary,
+    whatWeKnow,
+    stillOpen,
+    whyRespond,
+    nextAction: panel.recommendedNextAction,
+    panel,
+  };
+}
+
+export function executiveSummaryPanel(
+  workbench: WorkbenchData,
+  risk: string,
+  graphConfidence: number | null,
+): ExecutiveSummaryPanel {
+  const top = workbench.confirmed_findings[0];
+  const sem = top ? semanticConfidence(top) : null;
+  const confKey = sem?.primary.metric ?? "observation";
+  const score = sem?.primary.score ?? graphConfidence ?? top?.machine_confidence ?? null;
+  const tasks = recommendationTasks(workbench);
+  const nextAction = tasks[0]?.action || workbench.next_actions[0] || "Review retained findings and validate top exposure.";
+
+  return {
+    highestPriorityFinding: top?.title ?? "No retained findings",
+    highestPriorityHost: top?.host ?? "—",
+    overallConfidence: score,
+    confidenceLabel: score != null ? `${CONFIDENCE_METRIC_LABEL[confKey]} confidence` : "Confidence",
+    confidenceMetric: confKey,
+    confidenceDefinition: CONFIDENCE_METRIC_DEFINITION[confKey],
+    confidenceMeaning: score != null ? confidenceMeaning(confKey, score) : "No findings met the retention threshold.",
+    riskLevel: risk,
+    riskDefinition: ATTACK_SURFACE_DEFINITION,
+    findingSeverity: top?.severity ?? null,
+    recommendedNextAction: nextAction,
+    analystSummary: workbench.executive_summary || investigationVerdict(workbench).headline,
+  };
+}
+
+export interface InvestigationStoryStep {
+  label: string;
+  detail?: string;
+  done: boolean;
+}
+
+/** Chronological investigation story from engine stages when available. */
+export function investigationStorySteps(workbench: WorkbenchData): InvestigationStoryStep[] {
+  const top = workbench.confirmed_findings[0];
+  const engineStages = top?.investigation?.stages;
+  if (engineStages?.length) {
+    return engineStages.map((s) => ({
+      label: s.label,
+      detail: s.detail,
+      done: s.complete !== false,
+    }));
+  }
+
+  const hasHypotheses = workbench.confirmed_findings.some(
+    (f) => (f.investigation?.hypotheses?.length || 0) > 0,
+  );
+  const rejected = workbench.candidate_paths.filter((p) => p.status === "REJECTED").length;
+
+  return [
+    { label: "Evidence collected", done: workbench.evidence_sources.length > 0, detail: `${workbench.totals?.sources ?? workbench.evidence_sources.length} source(s)` },
+    { label: "Services discovered", done: Boolean(workbench.statistics.find((s) => s.label === "Services")), detail: undefined },
+    { label: "Versions confirmed", done: workbench.confirmed_findings.some((f) => f.evidence_summary?.version), detail: undefined },
+    { label: "Correlations built", done: (workbench.totals?.cross_source_matches ?? 0) > 0, detail: `${workbench.totals?.cross_source_matches ?? 0} cross-source match(es)` },
+    { label: "Hypotheses created", done: hasHypotheses, detail: undefined },
+    { label: "Alternative explanations rejected", done: rejected > 0 || hasHypotheses, detail: rejected ? `${rejected} path(s) ruled out` : undefined },
+    { label: "Final conclusion", done: workbench.confirmed_findings.length > 0, detail: top?.investigation?.conclusion?.slice(0, 120) },
+  ];
+}
+
+export interface EvidenceTimelineStep {
+  label: string;
+  detail?: string;
+  delta?: number;
+  source?: string;
+}
+
+/** Per-finding or investigation-wide evidence → confidence chain (Phase 3 §4). */
+export function evidenceTimelineSteps(
+  workbench: WorkbenchData,
+  finding?: WorkbenchConfirmedFinding,
+): EvidenceTimelineStep[] {
+  const target = finding ?? workbench.confirmed_findings[0];
+  const evolution =
+    target?.confidence_timeline ||
+    target?.investigation?.confidence_evolution ||
+    [];
+  if (evolution.length) {
+    return evolution.map((e) => ({
+      label: e.event,
+      detail: e.detail,
+      delta: e.delta,
+      source: e.kind,
+    }));
+  }
+
+  const steps: EvidenceTimelineStep[] = [];
+  const sources = target?.sources?.length
+    ? target.sources
+    : workbench.evidence_sources.map((s) => s.label);
+  for (const src of sources.slice(0, 1)) {
+    steps.push({ label: src, detail: "Scanner evidence ingested" });
+  }
+  for (const row of target?.proof || []) {
+    steps.push({ label: "Banner collected", detail: row.detail, source: row.source });
+  }
+  if (target?.evidence_summary?.version) {
+    steps.push({ label: "Version parsed", detail: target.evidence_summary.version });
+  }
+  if (target?.validated_checks?.length) {
+    steps.push({
+      label: "Fingerprint matched",
+      detail: prettyCheck(target.validated_checks[0]),
+    });
+  }
+  if (target?.scanner_agreement?.agreed?.length) {
+    steps.push({
+      label: "Confidence increased",
+      detail: `${target.scanner_agreement.agreed.length} scanner(s) agree`,
+      delta: undefined,
+    });
+  }
+  if (target) {
+    steps.push({
+      label: "Finding retained",
+      detail: target.unique_reason || statusMeaning(target.status).meaning,
+    });
+  }
+
+  const trail = workbench.evidence_trail || [];
+  if (!steps.length && trail.length) {
+    return trail.map((e) => ({ label: e.event, detail: e.detail, source: e.kind }));
+  }
+  return steps;
+}
+
+export interface MissingEvidenceChecklistItem {
+  topic: string;
+  whyItMatters: string;
+  confidenceChange: string;
+  checked: boolean;
+}
+
+/** Investigation checklist from engine missing-evidence rows (Phase 3 §6). */
+export function missingEvidenceChecklist(workbench: WorkbenchData): MissingEvidenceChecklistItem[] {
+  return missingEvidenceRows(workbench).map((row) => ({
+    topic: row.topic,
+    whyItMatters: row.reason || row.evidence_needed,
+    confidenceChange: row.expected_gain
+      ? `Would add roughly +${row.expected_gain}% to relevant confidence if confirmed`
+      : "Would strengthen the conclusion if obtained",
+    checked: false,
+  }));
 }
 
 export interface InvestigationVerdict {

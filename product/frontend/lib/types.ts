@@ -251,6 +251,7 @@ export interface WorkbenchConfirmedFinding {
   evidence_summary?: WorkbenchEvidenceSummary;
   /** Phase 3/4 autonomous investigation for this finding (source of truth). */
   investigation?: WorkbenchFindingInvestigation;
+  confidence_timeline?: WorkbenchConfidenceEvolution[];
 }
 
 /** Phase 4 ground-truth validation loop for a single finding. */
@@ -291,12 +292,51 @@ export interface WorkbenchFindingHypothesis {
   contradicting_evidence?: string[];
 }
 
+export interface WorkbenchSelfChallenge {
+  challenges?: Array<{
+    question?: string;
+    answer?: string;
+    weakens?: boolean;
+    confidence_effect?: number;
+  }>;
+  what_would_overturn?: string[];
+  verdict?: string;
+  net_confidence_effect?: number;
+}
+
+export interface WorkbenchInvestigationStage {
+  label: string;
+  detail?: string;
+  complete?: boolean;
+}
+
+export interface WorkbenchInvestigationTask {
+  action: string;
+  detail?: string;
+  expected_result?: string;
+  expected_gain?: number;
+}
+
+export interface WorkbenchConfidenceEvolution {
+  event: string;
+  confidence?: number;
+  delta?: number;
+  detail?: string;
+  kind?: string;
+}
+
 /** Subset of the engine's per-finding investigation the workbench renders. */
 export interface WorkbenchFindingInvestigation {
   conclusion?: string;
+  human_reasoning?: string[];
+  stages?: WorkbenchInvestigationStage[];
+  confidence_evolution?: WorkbenchConfidenceEvolution[];
+  self_challenge?: WorkbenchSelfChallenge;
+  investigation_tasks?: WorkbenchInvestigationTask[];
   validation_loop?: WorkbenchValidationLoop;
   investigation_confidence?: Record<string, WorkbenchInvestigationDimension>;
   hypotheses?: WorkbenchFindingHypothesis[];
+  attack_story?: Record<string, string>;
 }
 
 export type WorkbenchConfidenceKind =

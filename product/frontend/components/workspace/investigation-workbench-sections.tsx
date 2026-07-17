@@ -22,24 +22,41 @@ import type {
 } from "@/lib/types";
 import {
   BADGE_MEANING,
+  buildFindingExplainability,
+  buildReadableVerdict,
+  type ReadableVerdictTone,
   businessImpactRows,
-  confidenceBand,
+  confidenceContributors,
   confidenceMeaning,
   coreStatistics,
   displayedConfidenceMetrics,
   evidenceAgainst,
   evidenceChecklist,
+  evidenceTimelineSteps,
   exploitVerification,
+  findingDisplayStatus,
+  investigationStorySteps,
   investigationVerdict,
-  missingEvidenceRows,
+  missingEvidenceChecklist,
   normalizeFailureReason,
+  polishEngineText,
   recommendationTasks,
   riskOverviewMetrics,
   semanticConfidence,
   statusMeaning,
   summarizePathFailures,
-  uncertaintyFactors,
 } from "@/lib/workbench-report-helpers";
+import {
+  sectionContextAtGlance,
+  sectionContextAttackGraph,
+  sectionContextEvidenceTimeline,
+  sectionContextExecutiveSummary,
+  sectionContextFindings,
+  sectionContextInvestigationStory,
+  sectionContextMissingEvidence,
+  sectionContextRecommendations,
+} from "@/lib/section-ask-context";
+import { SectionAskAside } from "@/components/workspace/investigation-report-ask";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { MetricTile, SectionLabel, WorkspaceCard } from "@/components/shared/workspace-card";
@@ -100,36 +117,6 @@ function StatePill({
   );
 }
 
-/** A confidence dimension: label → number → band word → meaning (P1, P4). */
-function MetricWithMeaning({
-  label,
-  score,
-  meaning,
-  large,
-}: {
-  label: string;
-  score: number;
-  meaning: string;
-  large?: boolean;
-}) {
-  const band = confidenceBand(score);
-  return (
-    <div>
-      <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">{label}</p>
-      <div className="mt-1 flex items-baseline gap-2">
-        <span className={cn("font-black leading-none text-white", large ? "text-[28px]" : "text-[18px]")}>
-          {score}%
-        </span>
-        <span className="text-[11px] font-bold uppercase tracking-wide text-white/70">
-          {band.word}
-        </span>
-      </div>
-      <p className="mt-1 text-[10px] leading-snug text-white/50">{band.sentence}</p>
-      {meaning ? <p className="mt-0.5 text-[10px] leading-snug text-white/40">{meaning}</p> : null}
-    </div>
-  );
-}
-
 /** Visual ✓ / ✗ evidence readout (P7). */
 function EvidenceChecklist({ items }: { items: { label: string; ok: boolean }[] }) {
   if (!items.length) return null;
@@ -173,6 +160,199 @@ function ExploitBadge({
       </div>
       <p className="mt-1.5 text-[11px] leading-snug text-white/55">{verification.detail}</p>
     </div>
+  );
+}
+
+function ConfidenceBar({
+  score,
+  contributors,
+  compact,
+}: {
+  score: number;
+  contributors: Array<{ label: string; delta: number }>;
+  compact?: boolean;
+}) {
+  const filled = Math.max(0, Math.min(10, Math.round(score / 10)));
+  return (
+    <div>
+      <div className="flex items-end gap-3">
+        <span
+          className={cn(
+            "font-black leading-none text-white",
+            compact ? "text-[18px]" : "text-[28px]",
+          )}
+        >
+          {score}%
+        </span>
+        <div className="mb-1 flex gap-0.5">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <span
+              key={i}
+              className={cn("w-2", compact ? "h-2" : "h-3", i < filled ? "bg-white" : "bg-white/15")}
+            />
+          ))}
+        </div>
+      </div>
+      {contributors.length ? (
+        <div className="mt-3 space-y-1">
+          <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white">Contributors</p>
+          {contributors.map((c) => (
+            <div key={c.label} className="flex items-center justify-between gap-3 text-[12px]">
+              <span className="text-white">{c.label}</span>
+              <span className="font-mono font-bold text-white">
+                {c.delta >= 0 ? `+${c.delta}` : c.delta}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ExplainabilityBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <SectionLabel>{title}</SectionLabel>
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+}
+
+function BulletList({ items, prefix }: { items: string[]; prefix?: string }) {
+  if (!items.length) return null;
+  return (
+    <ul className="space-y-1.5">
+      {items.map((item) => (
+        <li key={item} className="flex gap-2 text-[13px] leading-relaxed text-white">
+          <span className="shrink-0 text-white">{prefix ?? "•"}</span>
+          <span>{polishEngineText(item)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function VerdictStatusPill({ label, tone }: { label: string; tone: ReadableVerdictTone }) {
+  return (
+    <span
+      className={cn(
+        "inline-block border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide",
+        tone === "confirmed" && "border-white bg-white text-black",
+        tone === "action" && "border-amber-500/50 text-amber-200",
+        tone === "clear" && "border-white/30 text-white/50",
+        tone === "neutral" && "border-white/40 text-white/70",
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+export function ExecutiveSummarySection({
+  workbench,
+  risk,
+  confidence,
+  reveal,
+}: {
+  workbench: WorkbenchData;
+  risk: string;
+  confidence: number | null;
+  reveal: number;
+}) {
+  const verdict = buildReadableVerdict(workbench, risk, confidence);
+  const top = workbench.confirmed_findings[0];
+  const { contributors } = top ? confidenceContributors(top) : { contributors: [] };
+  const [showNumbers, setShowNumbers] = useState(false);
+  const panel = verdict.panel;
+
+  return (
+    <WorkstationSection
+      title="Executive Summary"
+      reveal={reveal}
+      large
+      aside={
+        <SectionAskAside
+          sectionTitle="Executive Summary"
+          engineContext={sectionContextExecutiveSummary(workbench, risk, confidence)}
+        />
+      }
+    >
+      <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white">
+        The bottom line first — what VANE found, what remains open, and the recommended next step.
+      </p>
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <VerdictStatusPill label={verdict.statusLabel} tone={verdict.tone} />
+          <h3 className="max-w-[48ch] text-[20px] font-bold leading-snug text-white">{verdict.headline}</h3>
+          <p className="max-w-[72ch] text-[15px] leading-relaxed text-white">{verdict.summary}</p>
+        </div>
+
+        {top ? (
+          <div className="border-t border-vx-border pt-4">
+            <p className="text-[13px] font-bold text-white">{panel.highestPriorityFinding}</p>
+            {panel.highestPriorityHost !== "—" ? (
+              <p className="mt-0.5 font-mono text-[11px] text-white">{panel.highestPriorityHost}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 border-t border-vx-border pt-5 md:grid-cols-3">
+          <div>
+            <SectionLabel>What VANE knows</SectionLabel>
+            <p className="mt-2 text-[13px] leading-relaxed text-white">{verdict.whatWeKnow}</p>
+          </div>
+          <div>
+            <SectionLabel>{verdict.stillOpen ? "What remains open" : "Status"}</SectionLabel>
+            <p className="mt-2 text-[13px] leading-relaxed text-white">
+              {verdict.stillOpen ?? "No outstanding validation gaps were flagged for the priority finding."}
+            </p>
+          </div>
+          <div>
+            <SectionLabel>Why this warrants attention</SectionLabel>
+            <p className="mt-2 text-[13px] leading-relaxed text-white">{verdict.whyRespond}</p>
+          </div>
+        </div>
+
+        <div className="border-t border-vx-border pt-5">
+          <SectionLabel>Recommended next step</SectionLabel>
+          <p className="mt-2 text-[15px] font-medium leading-relaxed text-white">{verdict.nextAction}</p>
+        </div>
+
+        {panel.overallConfidence != null ? (
+          <div className="border-t border-vx-border pt-4">
+            <button
+              type="button"
+              onClick={() => setShowNumbers((v) => !v)}
+              className="flex w-full items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-white hover:text-white/90"
+            >
+              {showNumbers ? "Hide confidence breakdown" : "Show confidence breakdown"}
+              <ChevronDown className={cn("size-4 transition-transform", showNumbers && "rotate-180")} />
+            </button>
+            {showNumbers ? (
+              <div className="mt-4 space-y-4 border border-vx-border bg-vx-inset p-4">
+                <p className="text-[12px] leading-relaxed text-white">
+                  Technical scores for analysts. {panel.confidenceLabel} reflects{" "}
+                  {panel.confidenceMetric === "exploit"
+                    ? "demonstrated exploitability"
+                    : panel.confidenceMetric === "correlation"
+                      ? "cross-scanner agreement"
+                      : "observed presence"}
+                  . Attack surface ({panel.riskLevel}) reflects reachable impact if paths hold.
+                </p>
+                <ConfidenceBar score={panel.overallConfidence} contributors={contributors} compact />
+                <p className="text-[12px] text-white">{panel.confidenceMeaning}</p>
+                {panel.findingSeverity ? (
+                  <p className="text-[12px] text-white">
+                    Finding severity: {panel.findingSeverity} · Attack surface: {panel.riskLevel}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </WorkstationSection>
   );
 }
 
@@ -226,45 +406,43 @@ export function InvestigationFlowSection({
   workbench: WorkbenchData;
   reveal: number;
 }) {
-  const hasHypotheses = workbench.confirmed_findings.some(
-    (f) => (f.investigation?.hypotheses?.length || 0) > 0,
-  );
-  const steps: { label: string; done: boolean }[] = [
-    { label: "Evidence collected", done: workbench.evidence_sources.length > 0 },
-    { label: "Observations created", done: workbench.confirmed_findings.length > 0 },
-    { label: "Alternatives tested", done: hasHypotheses || workbench.confirmed_findings.length > 0 },
-    { label: "Confidence calculated", done: workbench.confirmed_findings.length > 0 },
-    { label: "Attack paths evaluated", done: workbench.candidate_paths.length > 0 },
-    { label: "Business impact estimated", done: businessImpactRows(workbench).length > 0 },
-    { label: "Recommendations generated", done: workbench.next_actions.length > 0 },
-  ];
+  const steps = investigationStorySteps(workbench);
 
   return (
-    <WorkstationSection title="How This Investigation Was Built" reveal={reveal}>
-      <p className="mb-4 max-w-[72ch] text-[13px] leading-relaxed text-vx-secondary">
-        VANE did not jump to conclusions. It worked through these stages — the same order a human
-        investigator would. Each stage below fed the next.
+    <WorkstationSection
+      title="Investigation Story"
+      reveal={reveal}
+      large
+      aside={
+        <SectionAskAside
+          sectionTitle="Investigation Story"
+          engineContext={sectionContextInvestigationStory(workbench)}
+        />
+      }
+    >
+      <p className="mb-4 max-w-[72ch] text-[13px] leading-relaxed text-white">
+        How VANE reached its conclusions — from raw scanner output through correlation, validation,
+        and final retention.
       </p>
-      <ol className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {steps.map((step, i) => (
-          <li
-            key={step.label}
-            className="flex items-center gap-3 border border-vx-border bg-vx-inset px-3 py-2.5"
-          >
-            <span className="font-mono text-[16px] font-black leading-none text-vx-muted">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <span className="flex-1 text-[11px] font-bold uppercase leading-snug tracking-wide text-vx-text">
-              {step.label}
-            </span>
-            <span
-              className={cn("font-mono text-[13px]", step.done ? "text-vx-text" : "text-vx-muted")}
-              title={step.done ? "Completed" : "Not reached in this investigation"}
-            >
-              {step.done ? "✓" : "—"}
-            </span>
-          </li>
-        ))}
+      <ol className="divide-y divide-vx-border border-y border-vx-border">
+          {steps.map((step, i) => (
+            <li key={`${step.label}-${i}`} className="flex gap-4 px-5 py-4">
+              <div className="flex w-6 shrink-0 flex-col items-center pt-1">
+                <span className={cn("size-2 rounded-full", step.done ? "bg-white" : "bg-white/40")} />
+                {i < steps.length - 1 ? (
+                  <span className="mt-2 text-[12px] text-white">↓</span>
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-bold uppercase tracking-wide text-white">{step.label}</p>
+                {step.detail ? (
+                  <p className="mt-1 text-[13px] leading-relaxed text-white">
+                    {polishEngineText(step.detail)}
+                  </p>
+                ) : null}
+              </div>
+            </li>
+          ))}
       </ol>
     </WorkstationSection>
   );
@@ -334,19 +512,25 @@ export function RiskOverviewSection({
   // Decision-relevant only. Everything else lives in Investigation Metadata (P1).
   const decision = metrics.filter((m) => m.highlight || m.label === "Paths");
   return (
-    <WorkstationSection title="At a Glance" reveal={reveal} large>
-      <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white/55">
-        The four numbers that drive the decision. Each tile says what it measures — nothing here
-        needs prior knowledge of VANE. Scan counts and parser stats live under Investigation
-        Metadata at the bottom.
-      </p>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <WorkstationSection
+      title="At a Glance"
+      reveal={reveal}
+      large
+      aside={
+        <SectionAskAside
+          sectionTitle="At a Glance"
+          engineContext={sectionContextAtGlance(workbench, risk, confidence)}
+        />
+      }
+    >
+      <div className="grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
         {decision.map((m) => (
           <MetricTile
             key={m.label}
             label={m.label}
             value={m.value}
             large
+            flat
             sub={RISK_TILE_MEANING[m.label] ?? "Key metric"}
           />
         ))}
@@ -400,7 +584,9 @@ function AnalystFindingCard({
   onToggle: () => void;
 }) {
   const expert = useExpertMode();
-  const state = statusMeaning(finding.status);
+  const explain = buildFindingExplainability(finding);
+  const { score, contributors } = confidenceContributors(finding);
+  const state = findingDisplayStatus(finding);
   const proof = finding.proof?.length
     ? finding.proof
     : finding.sources.map((s) => ({
@@ -415,7 +601,6 @@ function AnalystFindingCard({
   const supporting = checklist.filter((c) => c.ok);
   const missing = checklist.filter((c) => !c.ok);
   const against = evidenceAgainst(finding);
-  const uncertainty = uncertaintyFactors(finding);
   const exploit = exploitVerification(finding);
   const hypotheses = (finding.investigation?.hypotheses || []).slice(0, 3);
   const evidenceMeta = finding.evidence_summary;
@@ -437,11 +622,11 @@ function AnalystFindingCard({
   const showBusinessImpact =
     sem?.kind !== "informational" &&
     Boolean(impact?.summary || finding.business_impact || finding.why_it_matters);
-  const whyRetained = finding.unique_reason || finding.reasoning[0] || "";
   const nextStep =
+    explain.confidenceWouldIncrease[0]?.item ||
     exploit?.probes[0]?.name ||
     finding.not_validated_checks[0] ||
-    "Reproduce the exposure to raise exploit confidence.";
+    "Validate exploitability through controlled reproduction.";
 
   return (
     <WorkspaceCard
@@ -463,7 +648,7 @@ function AnalystFindingCard({
               <h4 className="text-[13px] font-black uppercase leading-snug tracking-wide text-white">
                 {finding.title}
               </h4>
-              <p className="mt-1 truncate font-mono text-[11px] text-white/50">
+              <p className="mt-1 truncate font-mono text-[11px] text-white">
                 {finding.host || "—"}
               </p>
               {expert ? (
@@ -483,53 +668,68 @@ function AnalystFindingCard({
           {/* State + meaning (P1, P6) */}
           <div className="mt-3 flex items-center gap-2">
             <StatePill active label={state.label} />
-            <p className="text-[11px] leading-snug text-white/55">{state.meaning}</p>
+            <p className="text-[11px] leading-snug text-white">{state.meaning}</p>
           </div>
 
-          {/* Primary confidence — labelled number + meaning (P1) */}
-          {primary ? (
-            <div className="mt-3 border-t border-vx-border pt-3">
-              <MetricWithMeaning
-                label={`${primary.label} confidence`}
-                score={primary.metric.score}
-                meaning={confidenceMeaning(primary.key, primary.metric.score)}
-                large
-              />
-            </div>
-          ) : null}
+          <p className="mt-3 border-t border-vx-border pt-3 text-[13px] leading-relaxed text-white line-clamp-3">
+            {polishEngineText(explain.finalConclusion)}
+          </p>
         </div>
 
-        {/* WHY (supporting) vs WHAT'S MISSING — scannable lists, not prose (P2, P3) */}
-        <div className="grid grid-cols-2 gap-4 p-4">
-          <div>
-            <SectionLabel>Why</SectionLabel>
-            {supporting.length ? (
-              <EvidenceChecklist items={supporting.slice(0, 4)} />
-            ) : (
-              <p className="mt-2 text-[11px] text-white/40">Awaiting supporting evidence</p>
-            )}
-          </div>
-          <div>
-            <SectionLabel>Missing</SectionLabel>
-            {missing.length ? (
-              <EvidenceChecklist items={missing.slice(0, 4)} />
-            ) : (
-              <p className="mt-2 text-[11px] text-white/40">Nothing outstanding</p>
-            )}
-          </div>
-        </div>
-
-        {/* NEXT ACTION — always visible so the card is decision-ready (P2, P8) */}
         <div className="border-t border-vx-border px-4 py-3">
-          <SectionLabel>Next action</SectionLabel>
-          <p className="mt-1 line-clamp-2 text-[12px] font-medium leading-snug text-white/85">
+          <SectionLabel>Next step</SectionLabel>
+          <p className="mt-1 line-clamp-2 text-[12px] font-medium leading-snug text-white">
             {nextStep}
           </p>
         </div>
 
         {open ? (
           <div className="space-y-5 border-t border-vx-border p-4">
-            {/* Can an attacker actually exploit this — verified vs inferred (P4) */}
+            <ExplainabilityBlock title="What happened">
+              <p className="text-[13px] leading-relaxed text-white">{polishEngineText(explain.whatHappened)}</p>
+            </ExplainabilityBlock>
+
+            {primary ? (
+              <div>
+                <SectionLabel>{primary.label} confidence</SectionLabel>
+                <div className="mt-2">
+                  <ConfidenceBar score={score} contributors={contributors} compact />
+                  <p className="mt-2 text-[12px] leading-snug text-white">
+                    {confidenceMeaning(primary.key, primary.metric.score)}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            <ExplainabilityBlock title="Why VANE retained this finding">
+              <BulletList items={explain.whyBelieve} />
+            </ExplainabilityBlock>
+
+            <ExplainabilityBlock title="What could make this wrong">
+              <BulletList items={explain.whatCouldBeWrong} prefix="?" />
+            </ExplainabilityBlock>
+
+            {explain.confidenceWouldIncrease.length ? (
+              <ExplainabilityBlock title="Confidence would increase if">
+                <ul className="space-y-2">
+                  {explain.confidenceWouldIncrease.map((item) => (
+                    <li key={item.item} className="text-[13px] leading-relaxed text-white">
+                      <span className="font-medium">{item.item}</span>
+                      {item.explanation ? (
+                        <span> — {polishEngineText(item.explanation)}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </ExplainabilityBlock>
+            ) : null}
+
+            <ExplainabilityBlock title="Final conclusion">
+              <p className="text-[14px] leading-relaxed text-white">
+                {polishEngineText(explain.finalConclusion)}
+              </p>
+            </ExplainabilityBlock>
+
             {exploit ? <ExploitBadge verification={exploit} /> : null}
 
             {/* Evidence against — surface disagreement openly (P3) */}
@@ -547,30 +747,6 @@ function AnalystFindingCard({
               </div>
             ) : null}
 
-            {/* Why retained — the analyst's one-line judgement */}
-            {whyRetained ? (
-              <div>
-                <SectionLabel>Why it was retained</SectionLabel>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-white/70">{whyRetained}</p>
-              </div>
-            ) : null}
-
-            {/* Reasoning — analyst notebook */}
-            {finding.reasoning.length ? (
-              <div>
-                <SectionLabel>Reasoning</SectionLabel>
-                <ul className="mt-2 space-y-1.5">
-                  {finding.reasoning.map((r, i) => (
-                    <li key={`${r}-${i}`} className="flex gap-2 text-[13px] leading-relaxed text-white/70">
-                      <span className="text-white/30">—</span>
-                      <span>{r}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {/* Proof — raw evidence per source */}
             <div>
               <SectionLabel>Proof</SectionLabel>
               <ul className="mt-3 space-y-2">
@@ -630,37 +806,18 @@ function AnalystFindingCard({
             {/* Confidence breakdown — every number explained (P1) */}
             {metrics.map(({ key, label, metric }) => (
               <div key={`breakdown-${key}`}>
-                <SectionLabel>{label} Confidence</SectionLabel>
+                <SectionLabel>{label} confidence</SectionLabel>
                 <p className="mt-1 text-[11px] text-white/45">{metric.question}</p>
                 <p className="mt-1 text-[11px] leading-snug text-white/55">
                   {confidenceMeaning(key, metric.score)}
                 </p>
-                <p className="mt-2 text-[28px] font-black leading-none text-white">{metric.score}%</p>
-                <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">
-                  Built from
-                </p>
-                <ul className="mt-2 space-y-1.5">
-                  {metric.factors.map((f, i) => (
-                    <li
-                      key={`${f.label}-${i}`}
-                      className="flex items-center justify-between gap-3 text-[13px]"
-                    >
-                      <span className="text-white/70">{f.label}</span>
-                      <span
-                        className={cn(
-                          "font-mono font-bold",
-                          f.delta >= 0 ? "text-white" : "text-white/50",
-                        )}
-                      >
-                        {f.delta >= 0 ? `+${f.delta}` : f.delta}
-                      </span>
-                    </li>
-                  ))}
-                  <li className="flex items-center justify-between gap-3 border-t border-white/20 pt-2 text-[13px] font-bold">
-                    <span className="uppercase tracking-wide text-white">Total</span>
-                    <span className="font-mono text-white">{metric.score}%</span>
-                  </li>
-                </ul>
+                <div className="mt-3">
+                  <ConfidenceBar
+                    score={metric.score}
+                    contributors={metric.factors.map((f) => ({ label: f.label, delta: f.delta }))}
+                    compact
+                  />
+                </div>
               </div>
             ))}
 
@@ -727,22 +884,6 @@ function AnalystFindingCard({
               </div>
             ) : null}
 
-            {/* What could change this — never hide uncertainty (P10) */}
-            {uncertainty.length ? (
-              <div>
-                <SectionLabel>What could change this conclusion</SectionLabel>
-                <ul className="mt-2 space-y-1">
-                  {uncertainty.map((u) => (
-                    <li key={u} className="flex gap-2 text-[12px] leading-snug text-white/55">
-                      <span className="text-white/30">—</span>
-                      <span>{u}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {/* Expert-only technical details — same page serves researchers (P11) */}
             {expert ? (
               <div className="border-t border-vx-border pt-4">
                 <SectionLabel>Technical details</SectionLabel>
@@ -791,9 +932,9 @@ function AnalystFindingCard({
       <button
         type="button"
         onClick={onToggle}
-        className="mt-auto flex w-full shrink-0 items-center justify-between border-t border-vx-border px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white/50 transition-colors hover:text-white"
+        className="mt-auto flex w-full shrink-0 items-center justify-between border-t border-vx-border px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white transition-colors hover:text-white/90"
       >
-        {open ? "Hide reasoning & proof" : "Show reasoning & proof"}
+        {open ? "Hide full reasoning" : "Show full reasoning"}
         <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
       </button>
     </WorkspaceCard>
@@ -808,7 +949,9 @@ export function ConfirmedFindingsSection({
   reveal: number;
 }) {
   const [showAll, setShowAll] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(
+    () => workbench.confirmed_findings[0]?.id ?? null,
+  );
   const findings = workbench.confirmed_findings;
   const visible = showAll ? findings : findings.slice(0, 6);
   const allScanners = workbench.evidence_sources.map((s) => s.label);
@@ -821,7 +964,7 @@ export function ConfirmedFindingsSection({
     let leftH = 0;
     let rightH = 0;
     for (const finding of visible) {
-      const h = openId === finding.id ? 2 : 1;
+      const h = openId === finding.id ? 2.5 : 1;
       if (leftH <= rightH) {
         left.push(finding);
         leftH += h;
@@ -848,7 +991,7 @@ export function ConfirmedFindingsSection({
           exit={{ opacity: 0, scale: 0.98 }}
           className={cn(
             "min-h-0 w-full",
-            isOpen ? "h-[calc(var(--finding-closed)*2+var(--finding-gap))]" : "h-[var(--finding-closed)]",
+            isOpen ? "h-[calc(var(--finding-closed)*2.5+var(--finding-gap))]" : "h-[var(--finding-closed)]",
           )}
           transition={{
             layout: { type: "spring", stiffness: 400, damping: 36 },
@@ -871,22 +1014,27 @@ export function ConfirmedFindingsSection({
       reveal={reveal}
       large
       aside={
-        <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">
-          {findings.length} retained
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-white">
+            {findings.length} retained
+          </span>
+          <SectionAskAside
+            sectionTitle="Confirmed Findings"
+            engineContext={sectionContextFindings(workbench)}
+          />
+        </div>
       }
     >
-      <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white/55">
-        Each card answers, on its own: what it is, where, how certain the engine is, what evidence
-        exists and what is missing, and what to do next. Highest priority first. Open a card for the
-        full reasoning and proof.
+      <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white">
+        Full reasoning for each retained finding. The highest-priority card is expanded by default
+        — open any card for evidence, confidence scores, and proof.
       </p>
       <LayoutGroup id="confirmed-findings">
         <div
           className="flex flex-col gap-4 md:flex-row md:items-start"
           style={
             {
-              "--finding-closed": "20rem",
+              "--finding-closed": "17rem",
               "--finding-gap": "1rem",
             } as CSSProperties
           }
@@ -1062,6 +1210,70 @@ export function AttackPathsTimeline({ workbench }: { workbench: WorkbenchData })
   );
 }
 
+export function EvidenceTimelineSection({
+  workbench,
+  reveal,
+}: {
+  workbench: WorkbenchData;
+  reveal: number;
+}) {
+  const top = workbench.confirmed_findings[0];
+  const steps = useMemo(
+    () => (top ? evidenceTimelineSteps(workbench, top) : evidenceTimelineSteps(workbench)),
+    [workbench, top],
+  );
+  if (!steps.length) return null;
+
+  return (
+    <WorkstationSection
+      title="Evidence Timeline"
+      reveal={reveal}
+      large
+      aside={
+        <SectionAskAside
+          sectionTitle="Evidence Timeline"
+          engineContext={sectionContextEvidenceTimeline(workbench)}
+        />
+      }
+    >
+      <p className="mb-4 max-w-[72ch] text-[13px] leading-relaxed text-white">
+        How confidence was built for the highest-priority finding — from initial scanner signal
+        through to retention.
+        {top ? <span> ({top.title})</span> : null}
+      </p>
+      <ol className="divide-y divide-vx-border border-y border-vx-border">
+        {steps.map((step, i) => (
+          <li key={`${step.label}-${i}`} className="flex gap-4 py-4">
+              <div className="flex w-6 shrink-0 flex-col items-center pt-1">
+                <span className="size-2 rounded-full bg-white" />
+                {i < steps.length - 1 ? (
+                  <span className="mt-2 text-[12px] text-white">↓</span>
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-[13px] font-bold uppercase tracking-wide text-white">
+                    {step.label}
+                  </p>
+                  {step.delta != null ? (
+                    <span className="font-mono text-[12px] font-bold text-white">
+                      {step.delta >= 0 ? `+${step.delta}` : step.delta}
+                    </span>
+                  ) : null}
+                </div>
+                {step.detail ? (
+                  <p className="mt-1 text-[12px] leading-relaxed text-white">
+                    {polishEngineText(step.detail)}
+                  </p>
+                ) : null}
+              </div>
+            </li>
+          ))}
+      </ol>
+    </WorkstationSection>
+  );
+}
+
 export function MissingEvidenceSection({
   workbench,
   reveal,
@@ -1069,43 +1281,36 @@ export function MissingEvidenceSection({
   workbench: WorkbenchData;
   reveal: number;
 }) {
-  const rows = useMemo(() => missingEvidenceRows(workbench), [workbench]);
-  if (!rows.length) return null;
+  const items = useMemo(() => missingEvidenceChecklist(workbench), [workbench]);
+  if (!items.length) return null;
 
   return (
-    <WorkstationSection title="Missing Evidence" reveal={reveal} large>
-      <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white/55">
-        What the engine could not confirm — and how much confidence each piece would add if you go
-        and get it. This is why some findings stayed at &ldquo;Observed&rdquo; rather than
-        &ldquo;Validated.&rdquo;
-      </p>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {rows.map((row, i) => (
-          <WorkspaceCard key={`${row.topic}-${i}`} className="p-5">
-            <div className="flex items-start justify-between gap-3">
-              <h4 className="text-[14px] font-black uppercase tracking-wide text-white">
-                {row.topic}
-              </h4>
-              <span className="font-mono text-[20px] font-black text-white">
-                +{row.expected_gain || 0}%
-              </span>
-            </div>
-            <div className="mt-4 space-y-3 border-t border-vx-border pt-4">
-              <div>
-                <SectionLabel>Reason</SectionLabel>
-                <p className="mt-2 text-[13px] font-medium uppercase text-white/70">{row.reason}</p>
-              </div>
-              <div>
-                <SectionLabel>Evidence needed</SectionLabel>
-                <p className="mt-2 text-[13px] leading-relaxed text-white/65">
-                  {row.evidence_needed}
-                </p>
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">
-                Expected confidence increase
+    <WorkstationSection
+      title="Missing Evidence"
+      reveal={reveal}
+      large
+      aside={
+        <SectionAskAside
+          sectionTitle="Missing Evidence"
+          engineContext={sectionContextMissingEvidence(workbench)}
+        />
+      }
+    >
+      <div className="divide-y divide-vx-border border-y border-vx-border">
+        {items.map((item, i) => (
+          <div key={`${item.topic}-${i}`} className="flex gap-4 py-4">
+            <span className="mt-0.5 shrink-0 font-mono text-[16px] text-white" aria-hidden>
+              ☐
+            </span>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-[14px] font-bold text-white">{item.topic}</h4>
+              <p className="mt-2 text-[13px] leading-relaxed text-white">
+                <span className="font-medium">Why it matters: </span>
+                {item.whyItMatters}
               </p>
+              <p className="mt-2 text-[12px] leading-relaxed text-white">{item.confidenceChange}</p>
             </div>
-          </WorkspaceCard>
+          </div>
         ))}
       </div>
     </WorkstationSection>
@@ -1175,45 +1380,45 @@ export function RecommendationsSection({
   const tasks = recommendationTasks(workbench);
   if (!tasks.length) return null;
   return (
-    <WorkstationSection title="Recommendations" reveal={reveal} large>
-      <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white/55">
-        Concrete next tasks, ordered by how much they move the investigation forward. Each lists
-        what running it should tell you. P1 is the single most valuable action.
-      </p>
-      <div className="grid grid-cols-1 gap-4">
+    <WorkstationSection
+      title="Recommendations"
+      reveal={reveal}
+      large
+      aside={
+        <SectionAskAside
+          sectionTitle="Recommendations"
+          engineContext={sectionContextRecommendations(workbench)}
+        />
+      }
+    >
+      <div className="divide-y divide-vx-border border-y border-vx-border">
         {tasks.map((task, i) => (
-          <WorkspaceCard key={`${task.action}-${i}`} className="p-5">
-            <div className="flex items-start gap-4">
-              <span className="shrink-0 border border-white/40 px-2 py-1 text-[10px] font-bold uppercase text-white">
-                P{i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-medium leading-relaxed text-white/90">
-                  {task.action}
-                </p>
-                <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-vx-border pt-3">
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
-                      Expected result
+          <div key={`${task.action}-${i}`} className="flex items-start gap-4 py-5">
+            <span className="shrink-0 border border-white/40 px-2 py-1 text-[10px] font-bold uppercase text-white">
+              P{i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-medium leading-relaxed text-white">{task.action}</p>
+              <div className="mt-3 flex flex-wrap items-end justify-between gap-3 pt-1">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white">
+                    Expected result
+                  </p>
+                  <p className="mt-0.5 text-[12px] leading-snug text-white">{task.expectedResult}</p>
+                </div>
+                {task.expectedGain ? (
+                  <div className="shrink-0 text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white">
+                      Confidence gain
                     </p>
-                    <p className="mt-0.5 text-[12px] leading-snug text-white/70">
-                      {task.expectedResult}
+                    <p className="mt-0.5 font-mono text-[18px] font-black leading-none text-white">
+                      +{task.expectedGain}%
                     </p>
                   </div>
-                  {task.expectedGain ? (
-                    <div className="shrink-0 text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
-                        Confidence gain
-                      </p>
-                      <p className="mt-0.5 font-mono text-[18px] font-black leading-none text-white">
-                        +{task.expectedGain}%
-                      </p>
-                    </div>
-                  ) : null}
-                </div>
+                ) : null}
               </div>
             </div>
-          </WorkspaceCard>
+          </div>
         ))}
       </div>
     </WorkstationSection>
@@ -1421,12 +1626,8 @@ export function DeveloperDetailsSection({
 }) {
   const trail = workbench.pipeline.length ? buildFallbackTrail(workbench) : [];
   return (
-    <CollapsibleSection
-      title="Developer Details"
-      reveal={reveal}
-      forceOpen
-    >
-      <div className="space-y-6">
+    <CollapsibleSection title="Developer Details" reveal={reveal} defaultOpen={false}>
+      <div className="space-y-4">
         {workbench.hypotheses.length ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {workbench.hypotheses.map((h, i) => (
@@ -1439,47 +1640,35 @@ export function DeveloperDetailsSection({
         ) : null}
 
         {workbench.file_contributions.length ? (
-          <div>
-            <div className="mb-4 border-b border-white pb-3">
-              <h3 className="text-[12px] font-bold uppercase tracking-[0.15em]">
-                File contribution
-              </h3>
-            </div>
+          <CollapsibleSection title="File Contribution" defaultOpen={false}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {workbench.file_contributions.map((f, i) => (
                 <FileContributionCard key={i} file={f} />
               ))}
             </div>
-          </div>
+          </CollapsibleSection>
         ) : null}
 
         {trail.length ? (
-          <div>
-            <div className="mb-4 border-b border-white pb-3">
-              <h3 className="text-[12px] font-bold uppercase tracking-[0.15em]">
-                Parser pipeline
-              </h3>
-            </div>
-            <WorkspaceCard className="p-0">
-              <ol className="divide-y divide-white/15">
-                {trail.map((event, i) => (
-                  <li key={`${event.event}-${i}`} className="flex gap-4 px-5 py-3">
-                    <span className="w-16 shrink-0 font-mono text-[11px] font-bold text-white/45">
-                      {event.time || "—"}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-bold uppercase tracking-wide text-white/80">
-                        {event.event}
-                      </p>
-                      {event.detail ? (
-                        <p className="mt-1 text-[12px] text-white/45">{event.detail}</p>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </WorkspaceCard>
-          </div>
+          <CollapsibleSection title="Parser Pipeline" defaultOpen={false}>
+            <ol className="divide-y divide-vx-border border-y border-vx-border">
+              {trail.map((event, i) => (
+                <li key={`${event.event}-${i}`} className="flex gap-4 py-3">
+                  <span className="w-16 shrink-0 font-mono text-[11px] font-bold text-white">
+                    {event.time || "—"}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-bold uppercase tracking-wide text-white">
+                      {event.event}
+                    </p>
+                    {event.detail ? (
+                      <p className="mt-1 text-[12px] text-white">{event.detail}</p>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </CollapsibleSection>
         ) : null}
       </div>
     </CollapsibleSection>

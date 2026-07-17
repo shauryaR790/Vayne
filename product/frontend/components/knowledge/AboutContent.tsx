@@ -1,6 +1,6 @@
 "use client";
 
-import { KnowledgeLead, KnowledgeSection, ManifestoBlock, TerminalBlock } from "./primitives";
+import { KnowledgeLead, KnowledgeSection, KnowledgeSeeAlso, ManifestoBlock, TerminalBlock } from "./primitives";
 import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
 
 const TOC = [
@@ -17,6 +17,9 @@ export function AboutContent() {
       classification="MANIFESTO // FOUNDING DOCTRINE"
       sections={TOC}
     >
+      <div className="mb-10">
+        <KnowledgeSeeAlso />
+      </div>
       <KnowledgeSectionWrap id="why">
         <KnowledgeSection id="why-exists" title="Why VAYNE Exists">
           <KnowledgeLead>

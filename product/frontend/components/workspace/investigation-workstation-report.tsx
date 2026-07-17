@@ -27,15 +27,18 @@ import {
   DeveloperDetailsSection,
   EngineFileDetailsSection,
   EvidenceSection,
+  EvidenceTimelineSection,
+  ExecutiveSummarySection,
   ExpertModeProvider,
   InvestigationFlowSection,
   InvestigationMetadataSection,
   InvestigationTimelineSection,
-  InvestigationVerdictSection,
   MissingEvidenceSection,
   RecommendationsSection,
   RiskOverviewSection,
 } from "@/components/workspace/investigation-workbench-sections";
+import { SectionAskAside } from "@/components/workspace/investigation-report-ask";
+import { sectionContextAttackGraph } from "@/lib/section-ask-context";
 
 function InvestigationHeader({
   presentation,
@@ -300,20 +303,6 @@ export function InvestigationWorkstationReport({
     <article className={cn("flex w-full min-w-0 flex-col gap-1", className)}>
       {workbench ? (
         <ExpertModeProvider expert={false}>
-          {/* 1 — What happened? */}
-          <InvestigationVerdictSection workbench={workbench} reveal={nextDelay()} />
-
-          {/* 2 — How the engine got here (the investigation, not a dashboard) */}
-          <InvestigationFlowSection workbench={workbench} reveal={nextDelay()} />
-
-          <EngineFileDetailsSection
-            workbench={workbench}
-            bundle={bundle}
-            sourceLabel={sourceLabel}
-            reveal={nextDelay()}
-          />
-
-          {/* 3 — The four numbers that drive the decision */}
           <RiskOverviewSection
             workbench={workbench}
             risk={executive.risk}
@@ -321,15 +310,35 @@ export function InvestigationWorkstationReport({
             reveal={nextDelay()}
           />
 
-          {/* 4 — Why is each finding retained? (self-contained: reasoning + proof) */}
+          <ExecutiveSummarySection
+            workbench={workbench}
+            risk={executive.risk}
+            confidence={presentation.graphConfidence}
+            reveal={nextDelay()}
+          />
+
+          <InvestigationFlowSection workbench={workbench} reveal={nextDelay()} />
+
           <ConfirmedFindingsSection workbench={workbench} reveal={nextDelay()} />
 
-          {/* 5 — Can an attacker actually use this? */}
+          <EvidenceTimelineSection workbench={workbench} reveal={nextDelay()} />
+
+          <MissingEvidenceSection workbench={workbench} reveal={nextDelay()} />
+
+          <RecommendationsSection workbench={workbench} reveal={nextDelay()} />
+
+          {/* Attack graph — interactive chart + path cards below it */}
           <WorkstationSection
             title="Attack Graph"
             bodyClassName="p-0 min-h-[400px]"
             reveal={nextDelay()}
             large
+            aside={
+              <SectionAskAside
+                sectionTitle="Attack Graph"
+                engineContext={sectionContextAttackGraph(workbench)}
+              />
+            }
           >
             <GraphExplorer
               key={`${bundle.detail.summary.id}-${presentation.graph.nodes.length}-${presentation.graph.edges.length}`}
@@ -349,19 +358,17 @@ export function InvestigationWorkstationReport({
             <AttackPathsTimeline workbench={workbench} />
           </WorkstationSection>
 
-          {/* 6 — What is missing / what would change the conclusion? */}
-          <MissingEvidenceSection workbench={workbench} reveal={nextDelay()} />
-
-          {/* 7 — What happens if an attacker succeeds? (summarizes, doesn't introduce) */}
           <BusinessImpactSection workbench={workbench} reveal={nextDelay()} />
 
-          {/* 8 — What should I do next? */}
-          <RecommendationsSection workbench={workbench} reveal={nextDelay()} />
-
-          {/* 9 — Replay the investigation as it happened */}
           <InvestigationTimelineSection workbench={workbench} reveal={nextDelay()} />
 
-          {/* 10-12 — Progressive disclosure: evidence, scan metadata, developer details */}
+          <EngineFileDetailsSection
+            workbench={workbench}
+            bundle={bundle}
+            sourceLabel={sourceLabel}
+            reveal={nextDelay()}
+          />
+
           <EvidenceSection workbench={workbench} reveal={nextDelay()} />
           <InvestigationMetadataSection workbench={workbench} reveal={nextDelay()} />
           <DeveloperDetailsSection workbench={workbench} reveal={nextDelay()} />

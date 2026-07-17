@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { HoverCard } from "@/components/shared/hover-card";
 import { cn } from "@/lib/utils";
 
@@ -20,13 +22,13 @@ export function KnowledgeSection({
       className={cn("scroll-mt-24 border-t border-white/15 py-12 first:border-t-0 first:pt-0", className)}
     >
       <h2 className="text-[13px] font-black uppercase tracking-[0.18em] text-white">{title}</h2>
-      <div className="mt-6 space-y-5 text-[14px] leading-relaxed text-white/70">{children}</div>
+      <div className="mt-6 space-y-5 text-[14px] leading-relaxed text-white">{children}</div>
     </section>
   );
 }
 
 export function KnowledgeLead({ children }: { children: React.ReactNode }) {
-  return <p className="text-[15px] leading-relaxed text-white/85">{children}</p>;
+  return <p className="text-[15px] leading-relaxed text-white">{children}</p>;
 }
 
 export function TerminalBlock({ children }: { children: string }) {
@@ -241,5 +243,23 @@ export function ManifestoBlock({ children }: { children: React.ReactNode }) {
     <blockquote className="border-l-2 border-white px-6 py-2 text-[15px] leading-relaxed text-white/80">
       {children}
     </blockquote>
+  );
+}
+
+export function KnowledgeSeeAlso({
+  href = "/tutorial",
+  label = "Investigation Tutorial",
+}: {
+  href?: string;
+  label?: string;
+}) {
+  return (
+    <p className="rounded border border-white/15 bg-white/[0.03] px-4 py-3 text-[13px] leading-relaxed text-white">
+      New to the workspace? Read the{" "}
+      <Link href={href} className="font-bold text-white underline underline-offset-2 hover:text-white/90">
+        {label}
+      </Link>{" "}
+      for a walkthrough of every panel, score, and control in the investigation report.
+    </p>
   );
 }

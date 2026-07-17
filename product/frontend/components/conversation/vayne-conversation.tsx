@@ -61,6 +61,10 @@ import { validateUploadFiles } from "@/lib/upload";
 import { VaneSidebar } from "@/components/workspace/vane-sidebar";
 import { VaneEnginePanel } from "@/components/workspace/vane-engine-panel";
 import { VaneAnalystPanel } from "@/components/workspace/vane-analyst-panel";
+import {
+  InvestigationReportAskProvider,
+  buildSectionAskPrompt,
+} from "@/components/workspace/investigation-report-ask";
 import { CommandPalette } from "@/components/workspace/home/command-palette";
 import { useCommandPaletteItems } from "@/components/workspace/home/use-command-palette-items";
 import { WorkspaceShortcutsOverlay } from "@/components/workspace/workspace-shortcuts-overlay";
@@ -838,6 +842,15 @@ export function VaneWorkspace({
     analystInputRef.current?.focus();
   }, []);
 
+  const askAboutSection = useCallback(
+    (sectionTitle: string, engineContext: string) => {
+      setInvestigationSessionActive(true);
+      window.setTimeout(() => focusAnalyst(), 200);
+      void streamReply(buildSectionAskPrompt(sectionTitle, engineContext));
+    },
+    [focusAnalyst, streamReply],
+  );
+
   const beginInvestigationSession = useCallback(
     (prompt?: string) => {
       setInvestigationSessionActive(true);
@@ -935,46 +948,48 @@ export function VaneWorkspace({
         }}
         transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
       >
-        <VaneEnginePanel
-          scrollRef={scrollRef}
-          sessionActive={investigationSessionActive}
-          hasInvestigationData={hasInvestigationData}
-          busy={busy}
-          backendOnline={backendOnline}
-          analystOnline={analystOnline}
-          error={error}
-          files={files}
-          enginePhase={enginePhase}
-          messages={messages}
-          investigationIds={
-            investigationIds.length
-              ? investigationIds
-              : bundle
-                ? [bundle.detail.summary.id]
-                : []
-          }
-          investigationGroupId={investigationGroupId}
-          sourceLabels={engineSourceLabels}
-          onSelectFiles={(picked) => {
-            setFiles((prev) => {
-              const seen = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
-              const merged = [...prev];
-              for (const file of picked) {
-                const key = `${file.name}:${file.size}:${file.lastModified}`;
-                if (!seen.has(key)) {
-                  seen.add(key);
-                  merged.push(file);
+        <InvestigationReportAskProvider askSection={askAboutSection}>
+          <VaneEnginePanel
+            scrollRef={scrollRef}
+            sessionActive={investigationSessionActive}
+            hasInvestigationData={hasInvestigationData}
+            busy={busy}
+            backendOnline={backendOnline}
+            analystOnline={analystOnline}
+            error={error}
+            files={files}
+            enginePhase={enginePhase}
+            messages={messages}
+            investigationIds={
+              investigationIds.length
+                ? investigationIds
+                : bundle
+                  ? [bundle.detail.summary.id]
+                  : []
+            }
+            investigationGroupId={investigationGroupId}
+            sourceLabels={engineSourceLabels}
+            onSelectFiles={(picked) => {
+              setFiles((prev) => {
+                const seen = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
+                const merged = [...prev];
+                for (const file of picked) {
+                  const key = `${file.name}:${file.size}:${file.lastModified}`;
+                  if (!seen.has(key)) {
+                    seen.add(key);
+                    merged.push(file);
+                  }
                 }
-              }
-              return merged;
-            });
-            setError("");
-          }}
-          onBeginSession={handleHomeBegin}
-          onOpenInvestigation={handleOpenInvestigation}
-          onFocusAnalyst={focusAnalyst}
-          onNewInvestigation={() => window.dispatchEvent(new Event("vayne:new-chat"))}
-        />
+                return merged;
+              });
+              setError("");
+            }}
+            onBeginSession={handleHomeBegin}
+            onOpenInvestigation={handleOpenInvestigation}
+            onFocusAnalyst={focusAnalyst}
+            onNewInvestigation={() => window.dispatchEvent(new Event("vayne:new-chat"))}
+          />
+        </InvestigationReportAskProvider>
       </motion.div>
 
       <AnimatePresence initial={false}>

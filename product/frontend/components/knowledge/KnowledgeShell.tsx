@@ -32,24 +32,24 @@ export function KnowledgeShell({
   return (
     <div ref={ref} className="mx-auto w-full max-w-[1200px] px-5 py-8 lg:px-8">
       <header className="mb-10 border-b border-white pb-8">
-        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-white">
           {classification}
         </p>
-        <h1 className="vx-page-title mt-4">{title}</h1>
-        <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-white/55">{subtitle}</p>
+        <h1 className="vx-page-title mt-4 text-white">{title}</h1>
+        <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-white">{subtitle}</p>
       </header>
 
       <div className="flex gap-10 lg:gap-14">
         <aside className="hidden w-44 shrink-0 lg:block">
           <nav className="sticky top-20 space-y-1">
-            <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.18em] text-white/35">
+            <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.18em] text-white">
               Contents
             </p>
             {sections.map((s) => (
               <a
                 key={s.id}
                 href={`#${s.id}`}
-                className="block border-l border-transparent py-1.5 pl-3 text-[10px] font-bold uppercase tracking-wider text-white/45 transition-colors hover:border-white/50 hover:text-white"
+                className="block border-l border-transparent py-1.5 pl-3 text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:border-white/50"
               >
                 {s.label}
               </a>

@@ -1,6 +1,6 @@
 "use client";
 
-import { KnowledgeLead, KnowledgeSection, RoadmapColumn } from "./primitives";
+import { KnowledgeLead, KnowledgeSection, KnowledgeSeeAlso, RoadmapColumn } from "./primitives";
 import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
 
 const TOC = [
@@ -18,6 +18,9 @@ export function RoadmapContent() {
       classification="ROADMAP // STRATEGIC"
       sections={TOC}
     >
+      <div className="mb-10">
+        <KnowledgeSeeAlso />
+      </div>
       <KnowledgeSectionWrap id="shipped">
         <KnowledgeSection id="shipped-capabilities" title="Shipped">
           <KnowledgeLead>
@@ -33,6 +36,7 @@ export function RoadmapContent() {
               "Proof Mode",
               "Investigation Reports",
               "Analyst Workspace",
+              "Investigation Tutorial",
             ]}
           />
         </KnowledgeSection>

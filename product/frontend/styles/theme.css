@@ -23,11 +23,11 @@
   --vx-analyst: #141414;
   --vx-analyst-composer: #181616;
 
-  /* Text hierarchy */
+  /* Text hierarchy — solid white across the product */
   --vx-text: #ffffff;
-  --vx-text-secondary: rgb(255, 255, 255);
-  --vx-text-muted: rgb(255, 255, 255);
-  --vx-text-body: rgb(255, 255, 255);
+  --vx-text-secondary: #ffffff;
+  --vx-text-muted: #ffffff;
+  --vx-text-body: #ffffff;
 
   /* Borders */
   --vx-border: rgba(255, 255, 255, 0.08);
@@ -36,16 +36,16 @@
   /* Accent — active states only */
   --vx-accent: #5eead4;
 
-  /* Analyst chat — Cursor-style markdown */
+  /* Analyst chat — markdown (solid white copy) */
   --vx-md-code-bg: rgba(255, 255, 255, 0.08);
-  --vx-md-code-path: #c4b5fd;
-  --vx-md-code-api: #60a5fa;
-  --vx-md-code-fn: #c4b5fd;
-  --vx-md-code-log: rgba(255, 255, 255, 0.92);
-  --vx-md-code-default: rgba(255, 255, 255, 0.88);
+  --vx-md-code-path: #ffffff;
+  --vx-md-code-api: #ffffff;
+  --vx-md-code-fn: #ffffff;
+  --vx-md-code-log: #ffffff;
+  --vx-md-code-default: #ffffff;
   --vx-md-block-bg: #1a1a1a;
-  --vx-md-shell-cmd: #e5a060;
-  --vx-md-shell-flag: #f472b6;
-  --vx-md-shell-path: #c4b5fd;
-  --vx-md-shell-default: rgba(255, 255, 255, 0.88);
+  --vx-md-shell-cmd: #ffffff;
+  --vx-md-shell-flag: #ffffff;
+  --vx-md-shell-path: #ffffff;
+  --vx-md-shell-default: #ffffff;
 }

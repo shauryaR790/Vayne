@@ -23,31 +23,33 @@ export function MetricTile({
   value,
   sub,
   large,
+  flat,
 }: {
   label: string;
   value: string | number;
   sub?: string;
   large?: boolean;
+  flat?: boolean;
 }) {
   return (
-    <div className={cn(workbenchSurfaceClasses, "p-4")}>
-      <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-vx-muted">{label}</p>
+    <div className={cn(!flat && workbenchSurfaceClasses, flat ? "py-2" : "p-4")}>
+      <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-white">{label}</p>
       <p
         className={cn(
-          "mt-2 font-black uppercase leading-none text-vx-text",
+          "mt-2 font-black uppercase leading-none text-white",
           large ? "text-4xl" : "text-2xl",
         )}
       >
         {typeof value === "string" ? value.toUpperCase() : value}
       </p>
-      {sub ? <p className="mt-1.5 text-[12px] font-bold uppercase text-vx-secondary">{sub}</p> : null}
+      {sub ? <p className="mt-1.5 text-[12px] font-bold uppercase text-white">{sub}</p> : null}
     </div>
   );
 }
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-vx-muted">{children}</p>
+    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white">{children}</p>
   );
 }
 

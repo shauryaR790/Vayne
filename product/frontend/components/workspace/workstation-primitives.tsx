@@ -41,7 +41,7 @@ export function WorkstationSection({
       <div className="flex items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4">
         <h2
           className={cn(
-            "font-bold uppercase tracking-[0.15em] text-vx-text",
+            "font-bold uppercase tracking-[0.15em] text-white",
             large ? "text-[12px]" : "text-[11px]",
           )}
         >
@@ -51,7 +51,7 @@ export function WorkstationSection({
       </div>
       <div
         className={cn(
-          "min-w-0 bg-vx-section-body px-6 text-vx-body",
+          "min-w-0 bg-vx-section-body px-6 text-white",
           large ? "py-8" : "py-6",
           bodyClassName,
         )}
@@ -95,7 +95,7 @@ export function CollapsibleSection({
     >
       {forceOpen ? (
         <div className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4">
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-vx-text">
+          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
             {title}
           </span>
           {aside ? <span className="flex items-center gap-2">{aside}</span> : null}
@@ -106,14 +106,14 @@ export function CollapsibleSection({
           onClick={() => setOpen((v) => !v)}
           className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4 text-left transition-colors hover:bg-white/[0.02]"
         >
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-vx-text">
+          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
             {title}
           </span>
           <span className="flex items-center gap-2">
             {aside}
             <ChevronDown
               className={cn(
-                "size-4 text-vx-muted transition-transform duration-200",
+                "size-4 text-white transition-transform duration-200",
                 isOpen && "rotate-180",
               )}
             />
@@ -129,7 +129,7 @@ export function CollapsibleSection({
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className={cn("bg-vx-section-body px-6 py-6 text-vx-body", bodyClassName)}>
+            <div className={cn("bg-vx-section-body px-6 py-6 text-white", bodyClassName)}>
               {children}
             </div>
           </motion.div>
@@ -154,13 +154,13 @@ export function ExpandToggle({
     <button
       type="button"
       onClick={onClick}
-      className="mt-3 flex items-center gap-2 text-[12px] font-medium text-vx-secondary transition-colors hover:text-vx-text"
+      className="mt-3 flex items-center gap-2 text-[12px] font-medium text-white transition-colors hover:text-white"
     >
       <ChevronDown
         className={cn("size-3.5 transition-transform duration-200", open && "rotate-180")}
       />
       {label}
-      {count != null ? <span className="text-vx-muted">({count})</span> : null}
+      {count != null ? <span className="text-white">({count})</span> : null}
     </button>
   );
 }
@@ -179,12 +179,12 @@ export function HeaderMetric({
   const display = String(value);
   return (
     <div className={cn(workbenchSurfaceClasses, "min-w-0 overflow-hidden px-4 py-3.5")}>
-      <p className="truncate text-[10px] font-medium uppercase tracking-[0.1em] text-vx-muted">
+      <p className="truncate text-[10px] font-medium uppercase tracking-[0.1em] text-white">
         {label}
       </p>
       <p
         className={cn(
-          "mt-1 truncate font-semibold text-vx-text",
+          "mt-1 truncate font-semibold text-white",
           highlight ? "text-[18px]" : "text-[15px]",
           mono && "font-mono text-[13px]",
         )}

@@ -23,10 +23,49 @@ body {
 
 body {
   background-color: var(--vx-app);
-  color: var(--color-foreground);
+  color: #ffffff;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+@layer base {
+  ::placeholder {
+    color: rgba(255, 255, 255, 0.75);
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  /* Site-wide: normalize faded / muted text utilities to solid white */
+  [class*="text-white/"],
+  .text-vx-muted,
+  .text-vx-secondary,
+  .text-vx-body,
+  .text-muted-foreground,
+  .text-vercel-muted,
+  .text-vercel-warning,
+  .text-vercel-danger,
+  .text-vercel-info,
+  .text-vercel-cyan,
+  .text-vercel-success,
+  [class*="text-gray-"],
+  [class*="text-zinc-"],
+  [class*="text-neutral-"],
+  [class*="text-slate-"],
+  [class*="text-stone-"],
+  [class*="text-emerald-"],
+  [class*="text-red-"],
+  [class*="text-amber-"],
+  [class*="text-sky-"],
+  [class*="text-violet-"],
+  [class*="text-orange-"],
+  [class*="text-pink-"],
+  [class*="text-blue-"],
+  [class*="text-green-"],
+  [class*="text-yellow-"] {
+    color: #ffffff !important;
+  }
 }
 
 * {
@@ -93,11 +132,11 @@ select option {
 
 @layer components {
   .vx-page-title {
-    @apply text-brutal text-2xl font-black uppercase tracking-[0.06em] sm:text-3xl lg:text-4xl;
+    @apply text-brutal text-2xl font-black uppercase tracking-[0.06em] text-white sm:text-3xl lg:text-4xl;
   }
 
   .vx-section-title {
-    @apply text-[12px] font-bold uppercase tracking-[0.15em];
+    @apply text-[12px] font-bold uppercase tracking-[0.15em] text-white;
   }
 
   .vx-panel {
@@ -105,7 +144,7 @@ select option {
   }
 
   .vx-label {
-    @apply text-[12px] font-bold uppercase tracking-[0.18em] text-vx-secondary;
+    @apply text-[12px] font-bold uppercase tracking-[0.18em] text-white;
   }
 
   .vx-no-scrollbar,
@@ -150,15 +189,15 @@ select option {
   }
 
   .vx-analyst-md .vx-md-link {
-    color: rgba(255, 255, 255, 0.82);
+    color: #ffffff;
     text-decoration: underline;
-    text-decoration-color: rgba(255, 255, 255, 0.22);
+    text-decoration-color: rgba(255, 255, 255, 0.35);
     text-underline-offset: 3px;
   }
 
   .vx-analyst-md .vx-md-link:hover {
-    color: #fff;
-    text-decoration-color: rgba(255, 255, 255, 0.45);
+    color: #ffffff;
+    text-decoration-color: rgba(255, 255, 255, 0.65);
   }
 
   .vx-analyst-md .vx-md-code-block {
@@ -207,14 +246,14 @@ select option {
     min-width: 1.35rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: rgba(255, 255, 255, 0.72);
+    color: #ffffff;
   }
 
   .vx-analyst-md .vx-md-bullet {
     width: 6px;
     height: 6px;
     border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.58);
+    background: #ffffff;
   }
 
   .vx-analyst-md .vx-md-list {
@@ -231,15 +270,15 @@ select option {
   }
 
   .vx-engine-file-line-context code {
-    color: rgba(255, 255, 255, 0.62);
+    color: #ffffff;
   }
 
   .vx-engine-file-line-add code {
-    color: rgba(255, 255, 255, 0.88);
+    color: #ffffff;
   }
 
   .vx-engine-file-line-remove code {
-    color: rgba(255, 255, 255, 0.82);
+    color: #ffffff;
   }
 }
 

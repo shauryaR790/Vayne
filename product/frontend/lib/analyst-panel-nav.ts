@@ -30,8 +30,9 @@ export const ANALYST_WORKSPACE_NAV: AnalystNavItem[] = [
 ];
 
 export const ANALYST_RESOURCE_NAV: AnalystNavItem[] = [
-  { id: "playbooks", label: "Playbooks", href: "/playbooks", icon: BookOpen },
-  { id: "methodology", label: "How to Use", href: "/methodology", icon: Workflow },
+  { id: "tutorial", label: "Tutorial", href: "/tutorial", icon: BookOpen },
+  { id: "playbooks", label: "Playbooks", href: "/playbooks", icon: Workflow },
+  { id: "methodology", label: "Methodology", href: "/methodology", icon: GitBranch },
   { id: "research", label: "Research", href: "/research", icon: Telescope },
   { id: "roadmap", label: "Roadmap", href: "/roadmap", icon: Map },
   { id: "about", label: "About VANE", href: "/about", icon: Info },

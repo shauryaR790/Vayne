@@ -6,9 +6,9 @@ export const FIT_DURATION = 800;
 export const FIT_MAX_ZOOM = 1.4;
 export const FIT_MIN_ZOOM = 0.7;
 
-export const WORKSTATION_FIT_PADDING = 0.12;
-export const WORKSTATION_FIT_MAX_ZOOM = 1;
-export const WORKSTATION_FIT_MIN_ZOOM = 0.72;
+export const WORKSTATION_FIT_PADDING = 0.08;
+export const WORKSTATION_FIT_MAX_ZOOM = 0.5;
+export const WORKSTATION_FIT_MIN_ZOOM = 0.28;
 
 /** Fit all visible nodes to viewport with animated centering. */
 export function applyGraphFit(
@@ -48,16 +48,19 @@ export function applyWorkstationGraphFit(
     })();
 
   const padY = viewport.height * WORKSTATION_FIT_PADDING;
-  const padX = 28;
+  const padX = 24;
+  const zoomByHeight = (viewport.height - padY * 2) / Math.max(bounds.height, 1);
   const zoom = Math.min(
     WORKSTATION_FIT_MAX_ZOOM,
-    Math.max(
-      WORKSTATION_FIT_MIN_ZOOM,
-      (viewport.height - padY * 2) / Math.max(bounds.height, 1),
-    ),
+    Math.max(WORKSTATION_FIT_MIN_ZOOM, zoomByHeight),
   );
 
-  const x = padX - bounds.x * zoom;
+  const contentWidth = bounds.width * zoom;
+  const viewInnerW = viewport.width - padX * 2;
+  const x =
+    contentWidth > viewInnerW
+      ? padX - bounds.x * zoom
+      : padX + (viewInnerW - contentWidth) / 2 - bounds.x * zoom;
   const y = padY + (viewport.height - padY * 2 - bounds.height * zoom) / 2 - bounds.y * zoom;
 
   instance.setViewport({ x, y, zoom }, { duration: FIT_DURATION });

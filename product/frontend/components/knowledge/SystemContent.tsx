@@ -1,6 +1,6 @@
 "use client";
 
-import { EngineStatus, KnowledgeLead, KnowledgeSection, MetricReadout } from "./primitives";
+import { EngineStatus, KnowledgeLead, KnowledgeSection, KnowledgeSeeAlso, MetricReadout } from "./primitives";
 import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
 
 const TOC = [
@@ -37,6 +37,9 @@ export function SystemContent() {
       classification="SYSTEM // OPERATIONAL STATUS"
       sections={TOC}
     >
+      <div className="mb-10">
+        <KnowledgeSeeAlso />
+      </div>
       <KnowledgeSectionWrap id="status">
         <KnowledgeSection id="engine-status" title="Engine Status">
           <KnowledgeLead>

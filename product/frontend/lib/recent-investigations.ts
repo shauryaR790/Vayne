@@ -105,20 +105,26 @@ export function formatInvestigationTimestamp(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
 
-  const group = getInvestigationDateGroup(iso);
-  if (group === "yesterday") return "Yesterday";
-
-  const ms = Date.now() - date.getTime();
+  const ms = Math.max(0, Date.now() - date.getTime());
   const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
 
   const hours = Math.floor(mins / 60);
-  if (group === "today") return `${hours}h ago`;
+  if (hours < 24) return `${hours}h`;
 
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+  if (days < 7) return `${days}d`;
+
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w`;
+
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** @deprecated Use formatInvestigationTimestamp */
+export function formatInvestigationHistoryTime(iso: string): string {
+  return formatInvestigationTimestamp(iso);
 }
 
 function hostFromReport(report: InvestigationReport): string | undefined {
@@ -391,7 +397,8 @@ function listItemToRecent(
   row: Awaited<ReturnType<typeof listInvestigations>>[number],
   local?: RecentInvestigation,
 ): RecentInvestigation {
-  const createdAt = toIsoDate(row.updated_at || row.created_at);
+  const createdAt = toIsoDate(row.created_at || row.updated_at);
+  const updatedAt = toIsoDate(row.updated_at || row.created_at);
   const sourceFile = row.source_filename || local?.sourceFile;
   return normalizeEntry({
     ...local,
@@ -406,7 +413,7 @@ function listItemToRecent(
         criticalCount: row.critical_count,
       }),
     createdAt,
-    updatedAt: createdAt,
+    updatedAt,
     sourceFile,
     pathCount: row.path_count,
     findingsCount: row.findings_retained,
@@ -501,7 +508,7 @@ const SIDEBAR_GROUP_ORDER: SidebarHistoryGroup[] = [
 export const SIDEBAR_GROUP_LABELS: Record<SidebarHistoryGroup, string> = {
   today: "Today",
   yesterday: "Yesterday",
-  last_week: "Last week",
+  last_week: "Previous 7 days",
   older: "Older",
 };
 

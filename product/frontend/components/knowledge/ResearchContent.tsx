@@ -6,6 +6,7 @@ import {
   FlowDiagram,
   KnowledgeLead,
   KnowledgeSection,
+  KnowledgeSeeAlso,
   TerminalBlock,
 } from "./primitives";
 import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
@@ -25,6 +26,9 @@ export function ResearchContent() {
       classification="INTEL // THREAT RESEARCH"
       sections={TOC}
     >
+      <div className="mb-10">
+        <KnowledgeSeeAlso />
+      </div>
       <KnowledgeSectionWrap id="threat-research">
         <KnowledgeSection id="threat-intel" title="Threat Research">
           <KnowledgeLead>

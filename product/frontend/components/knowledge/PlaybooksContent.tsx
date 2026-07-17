@@ -8,6 +8,7 @@ import {
   ImpactTier,
   KnowledgeLead,
   KnowledgeSection,
+  KnowledgeSeeAlso,
   PromptList,
   TerminalBlock,
 } from "./primitives";
@@ -30,6 +31,9 @@ export function PlaybooksContent() {
       classification="PLAYBOOK // ANALYST TRAINING"
       sections={TOC}
     >
+      <div className="mb-10">
+        <KnowledgeSeeAlso />
+      </div>
       <KnowledgeSectionWrap id="intro">
         <KnowledgeSection id="intro-analysis" title="Introduction to VAYNE Analysis">
           <KnowledgeLead>

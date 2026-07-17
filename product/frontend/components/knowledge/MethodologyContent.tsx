@@ -5,6 +5,7 @@ import {
   FlowDiagram,
   KnowledgeLead,
   KnowledgeSection,
+  KnowledgeSeeAlso,
   TerminalBlock,
 } from "./primitives";
 import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
@@ -28,6 +29,9 @@ export function MethodologyContent() {
       classification="METHOD // ATTACK REASONING DOCTRINE"
       sections={TOC}
     >
+      <div className="mb-10">
+        <KnowledgeSeeAlso />
+      </div>
       <KnowledgeSectionWrap id="reasoning-model">
         <KnowledgeSection id="attack-reasoning" title="VAYNE Attack Reasoning Model">
           <KnowledgeLead>
