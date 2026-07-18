@@ -56,6 +56,34 @@ function splitNarrativeSections(narrative: string): string[] {
     .filter(Boolean);
 }
 
+function parseSectionBlock(section: string): { title: string; body: string } | null {
+  const trimmed = section.trim();
+  const match = trimmed.match(/^\*\*([^*]+)\*\*\s*\n?([\s\S]*)$/);
+  if (!match) return null;
+  return { title: match[1].trim(), body: match[2].trim() };
+}
+
+/** Push prose chunks — section heading only on the first chunk. */
+function appendSectionChunks(
+  segments: AnalystStreamSegment[],
+  sectionText: string,
+  fallbackTitle: string,
+  maxChars: number,
+) {
+  const parsed = parseSectionBlock(sectionText);
+  const title = parsed?.title ?? fallbackTitle;
+  const body = (parsed?.body ?? sectionText).trim();
+  const chunks = chunkProse(body, maxChars);
+  if (!chunks.length) return;
+
+  chunks.forEach((chunk, index) => {
+    segments.push({
+      type: "text",
+      content: index === 0 ? `**${title}**\n${chunk}` : chunk,
+    });
+  });
+}
+
 function certaintySnippet(wb: WorkbenchData): string {
   const top = wb.confirmed_findings[0];
   if (!top) return "**How certain**\nNo retained finding.";
@@ -130,12 +158,7 @@ export function buildBriefingSegments(
     segments.push({ type: "file", fileIndex: 0 });
   }
 
-  for (const chunk of chunkProse(whatHappened, 220)) {
-    segments.push({
-      type: "text",
-      content: chunk.startsWith("**") ? chunk : `**What happened**\n${chunk}`,
-    });
-  }
+  appendSectionChunks(segments, whatHappened || "", "What happened", 220);
 
   for (let i = 1; i < fileInsights.length; i++) {
     const file = fileInsights[i];
@@ -152,28 +175,14 @@ export function buildBriefingSegments(
   }
 
   const whyBody = whySection || `**Why VANE believes it**\n${buildWhySection(wb)}`;
-  for (const chunk of chunkProse(whyBody, 260)) {
-    segments.push({
-      type: "text",
-      content: chunk.startsWith("**") ? chunk : `**Why VANE believes it**\n${chunk}`,
-    });
-  }
+  appendSectionChunks(segments, whyBody, "Why VANE believes it", 260);
 
   segments.push({ type: "think", label: "Weighing confidence" });
-  for (const chunk of chunkProse(certaintySnippet(wb), 220)) {
-    segments.push({ type: "text", content: chunk });
-  }
+  appendSectionChunks(segments, certaintySnippet(wb), "How certain", 220);
 
-  for (const chunk of chunkProse(missingSection, 220)) {
-    segments.push({
-      type: "text",
-      content: chunk.startsWith("**") ? chunk : `**Missing evidence**\n${chunk}`,
-    });
-  }
+  appendSectionChunks(segments, missingSection, "Missing evidence", 220);
 
-  for (const chunk of chunkProse(nextStepSnippet(wb), 200)) {
-    segments.push({ type: "text", content: chunk });
-  }
+  appendSectionChunks(segments, nextStepSnippet(wb), "What should happen next", 200);
 
   return segments;
 }

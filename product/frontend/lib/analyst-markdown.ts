@@ -22,7 +22,25 @@ const NUMBERED_RE = /^\d+[.)]\s+(.+)$/;
 
 /** Coerce common LLM plain-text patterns into parseable markdown. */
 export function normalizeAnalystMarkdown(raw: string): string {
-  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  let text = raw.replace(/\r\n/g, "\n");
+
+  // Inline section labels (single paragraph) → proper markdown sections
+  const promotions: [RegExp, string][] = [
+    [/\sWhat happened:\s+/gi, "\n\n**What happened**\n"],
+    [/\sWhy I believe it:\s+/gi, "\n\n**Why VANE believes it**\n"],
+    [/\sWhy VANE believes it:\s+/gi, "\n\n**Why VANE believes it**\n"],
+    [/\sCertainty:\s+/gi, "\n\n**How certain**\n"],
+    [/\sHow certain:\s+/gi, "\n\n**How certain**\n"],
+    [/\sNext steps:\s+/gi, "\n\n**Next steps**\n"],
+    [/\sNext:\s+/gi, "\n\n**Next steps**\n"],
+    [/\sMissing evidence:\s+/gi, "\n\n**Missing evidence**\n"],
+  ];
+  for (const [pattern, replacement] of promotions) {
+    text = text.replace(pattern, replacement);
+  }
+  text = text.replace(/^What happened:\s*/im, "**What happened**\n");
+
+  const lines = text.split("\n");
   const out: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
@@ -138,6 +156,7 @@ function parseBlocks(lines: string[]): BlockNode[] {
   let paragraph: string[] = [];
   let bullets: string[] = [];
   let numbered: string[] = [];
+  let lastSectionTitle = "";
 
   const flushParagraph = () => {
     const text = paragraph.join("\n").trim();
@@ -174,7 +193,11 @@ function parseBlocks(lines: string[]): BlockNode[] {
       flushBullets();
       flushNumbered();
       flushParagraph();
-      blocks.push({ type: "section", title: boldSection[1].trim() });
+      const title = boldSection[1].trim();
+      if (title.toLowerCase() !== lastSectionTitle.toLowerCase()) {
+        blocks.push({ type: "section", title });
+        lastSectionTitle = title;
+      }
       continue;
     }
 
@@ -183,10 +206,11 @@ function parseBlocks(lines: string[]): BlockNode[] {
       flushBullets();
       flushNumbered();
       flushParagraph();
-      blocks.push({
-        type: "section",
-        title: boldSectionInline[1].slice(2, -2).trim(),
-      });
+      const title = boldSectionInline[1].slice(2, -2).trim();
+      if (title.toLowerCase() !== lastSectionTitle.toLowerCase()) {
+        blocks.push({ type: "section", title });
+        lastSectionTitle = title;
+      }
       blocks.push({ type: "paragraph", inline: parseInline(boldSectionInline[2].trim()) });
       continue;
     }
@@ -196,7 +220,11 @@ function parseBlocks(lines: string[]): BlockNode[] {
       flushBullets();
       flushNumbered();
       flushParagraph();
-      blocks.push({ type: "section", title: hashSection[1].trim() });
+      const title = hashSection[1].trim();
+      if (title.toLowerCase() !== lastSectionTitle.toLowerCase()) {
+        blocks.push({ type: "section", title });
+        lastSectionTitle = title;
+      }
       continue;
     }
 

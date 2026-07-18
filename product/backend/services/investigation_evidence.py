@@ -1459,32 +1459,27 @@ def build_executive_summary(
     primary_score = primary.get("score", top.get("machine_confidence"))
 
     parts: list[str] = [
-        f"What happened: {top['title']} on {host} is the strongest retained exposure "
+        f"{top['title']} on {host} is the strongest retained exposure "
         f"({primary_score}% {primary_label} confidence, {top['status'].lower()})."
         f"{proof_bit}"
     ]
 
     if cross_source_matches:
         parts.append(
-            f"Why I believe it: {cross_source_matches} finding"
+            f"{cross_source_matches} finding"
             f"{'' if cross_source_matches == 1 else 's'} were independently corroborated across "
             f"{source_count} scanner{'s' if source_count != 1 else ''}, which raised confidence "
             f"above single-source observation."
         )
     else:
         parts.append(
-            f"Why I believe it: evidence currently rests on "
+            "Evidence currently rests on "
             f"{len(top.get('sources') or []) or 1} scanner source"
-            f"{'' if len(top.get('sources') or []) == 1 else 's'} — agreement is limited."
+            f"{'' if len(top.get('sources') or []) == 1 else 's'} — cross-source agreement is limited."
         )
 
     if classification:
-        parts.append(f"Certainty: overall risk classified {classification.upper()}.")
-
-    parts.append(
-        "Next: close the highest-value missing evidence before asserting exploitation beyond "
-        "initial access — lateral movement and privilege escalation remain unverified."
-    )
+        parts.append(f"Overall attack surface risk is classified {classification.upper()}.")
 
     return " ".join(parts)
 

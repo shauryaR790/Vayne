@@ -87,7 +87,8 @@ Optional one-line lead-in, then:
 3. Third block — confidence + what would change it
 4. Fourth block — **Next steps** (bullets)
 
-Section titles on their own line: **What happened**, **Why VANE believes it**, **Confidence**, **Next steps**, etc.
+Section titles on their own line — use each title once: **What happened**, **Why VANE believes it**, **How certain**, **Missing evidence**, **Next steps**.
+Do not repeat the same section title. Do not embed labels like "What happened:" inside body text.
 Use **bold** for key terms. Use `backticks` for hosts, CVEs, services, paths, and scanner names.
 Never invent facts. No ALL CAPS headers or divider lines.
 """
