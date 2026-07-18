@@ -5,6 +5,7 @@ import { VaneUploadStage } from "@/components/workspace/vane-upload-stage";
 export function VaneEngineEmpty(props: {
   files: File[];
   onSelectFiles: (files: File[]) => void;
+  onRemoveFile?: (index: number) => void;
   onBeginSession: (prompt: string) => void;
   onOpenInvestigation: (id: string) => void;
   disabled?: boolean;

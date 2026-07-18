@@ -12,6 +12,7 @@ export function VaneUploadStage({
   disabled,
   busy,
   onSelectFiles,
+  onRemoveFile,
   onBeginSession,
   onOpenInvestigation,
 }: {
@@ -19,6 +20,7 @@ export function VaneUploadStage({
   disabled?: boolean;
   busy?: boolean;
   onSelectFiles: (files: File[]) => void;
+  onRemoveFile?: (index: number) => void;
   onBeginSession: (prompt: string) => void;
   onOpenInvestigation: (id: string) => void;
 }) {
@@ -67,8 +69,9 @@ export function VaneUploadStage({
       <InvestigationWorkspaceHome
         disabled={disabled}
         busy={busy || disabled}
-        stagedFileCount={files.length}
+        stagedFiles={files}
         onSelectFiles={onSelectFiles}
+        onRemoveFile={onRemoveFile}
         onBeginSession={onBeginSession}
         onUpload={() => openFilePicker(true)}
         onOpenInvestigation={onOpenInvestigation}

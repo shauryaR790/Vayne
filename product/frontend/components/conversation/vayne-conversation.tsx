@@ -984,6 +984,7 @@ export function VaneWorkspace({
               });
               setError("");
             }}
+            onRemoveFile={removeFile}
             onBeginSession={handleHomeBegin}
             onOpenInvestigation={handleOpenInvestigation}
             onFocusAnalyst={focusAnalyst}

@@ -1,7 +1,6 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
-
+import { VaneMark } from "@/components/brand/vane-logo";
 import type { AgentActivityFeed } from "@/lib/analyst-activity";
 import { ShimmerText } from "@/components/shared/cursor-loading-status";
 import { cn } from "@/lib/utils";
@@ -22,7 +21,7 @@ export function CursorAgentActivity({
     <div className={cn("space-y-1.5", className)} role="status" aria-live="polite">
       {showHeader && (title || subtitle) ? (
         <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <Sparkles className="size-3.5 shrink-0 text-white/40" aria-hidden />
+          <VaneMark size={14} className="text-white/50" aria-hidden />
           {title ? (
             <span className="text-[13px] font-medium text-white/88">{title}</span>
           ) : null}

@@ -1,7 +1,40 @@
-import Image from "next/image";
-
 import { PRODUCT_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
+
+/** Minimal geometric mark — two strokes forming a V. */
+export function VaneMark({
+  size = 24,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className={cn("shrink-0", className)}
+    >
+      <path
+        d="M5.5 5.5L12 18.5L18.5 5.5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.5 5.5H15.5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        opacity="0.35"
+      />
+    </svg>
+  );
+}
 
 export function VaneLogo({
   size = "md",
@@ -13,23 +46,16 @@ export function VaneLogo({
   className?: string;
 }) {
   const sizes = {
-    sm: { icon: 24, text: "text-[13px]", gap: "gap-3", tracking: "tracking-[0.2em]" },
-    sidebar: { icon: 36, text: "text-[19px]", gap: "gap-2", tracking: "tracking-[0.16em]" },
-    md: { icon: 32, text: "text-[15px]", gap: "gap-3", tracking: "tracking-[0.2em]" },
-    lg: { icon: 48, text: "text-[22px]", gap: "gap-3", tracking: "tracking-[0.18em]" },
-    hero: { icon: 72, text: "text-[28px]", gap: "gap-3", tracking: "tracking-[0.16em]" },
+    sm: { mark: 20, text: "text-[13px]", gap: "gap-2.5", tracking: "tracking-[0.16em]" },
+    sidebar: { mark: 28, text: "text-[17px]", gap: "gap-2.5", tracking: "tracking-[0.14em]" },
+    md: { mark: 26, text: "text-[15px]", gap: "gap-2.5", tracking: "tracking-[0.16em]" },
+    lg: { mark: 36, text: "text-[22px]", gap: "gap-3", tracking: "tracking-[0.14em]" },
+    hero: { mark: 44, text: "text-[28px]", gap: "gap-3", tracking: "tracking-[0.12em]" },
   }[size];
 
   return (
     <div className={cn("flex items-center", sizes.gap, className)}>
-      <Image
-        src="/vane-logo.png"
-        alt={PRODUCT_NAME}
-        width={sizes.icon}
-        height={sizes.icon}
-        className="shrink-0 object-contain"
-        priority
-      />
+      <VaneMark size={sizes.mark} className="text-white" />
       {showWordmark ? (
         <span
           className={cn(
@@ -46,18 +72,10 @@ export function VaneLogo({
 }
 
 export function VaneSidebarBrand({ className }: { className?: string }) {
-  return (
-    <Image
-      src="/vane-logo.png"
-      alt={PRODUCT_NAME}
-      width={248}
-      height={80}
-      className={cn("h-[80px] w-full max-w-full object-contain object-left", className)}
-      priority
-    />
-  );
+  return <VaneLogo size="sidebar" className={cn("px-1", className)} />;
 }
 
+/** @deprecated Use VaneMark */
 export function VaneLogoMark({
   size = 72,
   className,
@@ -65,14 +83,5 @@ export function VaneLogoMark({
   size?: number;
   className?: string;
 }) {
-  return (
-    <Image
-      src="/vane-logo.png"
-      alt={PRODUCT_NAME}
-      width={size}
-      height={size}
-      className={cn("object-contain", className)}
-      priority
-    />
-  );
+  return <VaneMark size={size} className={cn("text-white", className)} />;
 }

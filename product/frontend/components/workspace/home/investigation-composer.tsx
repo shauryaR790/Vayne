@@ -1,23 +1,61 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, ChevronDown, Infinity, Loader2, Paperclip } from "lucide-react";
+import { ArrowUp, ChevronDown, FileText, Infinity, Loader2, Paperclip, X } from "lucide-react";
 
+import { shortFilename } from "@/lib/evidence-presentation";
 import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { cn } from "@/lib/utils";
+
+function ComposerFileChip({
+  name,
+  onRemove,
+  disabled,
+}: {
+  name: string;
+  onRemove?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "inline-flex max-w-[220px] items-center gap-2 rounded-lg border border-white/20",
+        "bg-white/[0.04] px-2.5 py-1.5 text-white",
+      )}
+    >
+      <FileText className="size-3.5 shrink-0 text-white/70" strokeWidth={1.75} aria-hidden />
+      <span className="min-w-0 truncate text-[12px] text-white" title={name}>
+        {shortFilename(name)}
+      </span>
+      {onRemove ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onRemove}
+          className="flex size-4 shrink-0 items-center justify-center rounded text-white/45 transition-colors hover:text-white disabled:opacity-30"
+          aria-label={`Remove ${name}`}
+        >
+          <X className="size-3" strokeWidth={2} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 export function InvestigationComposer({
   disabled,
   busy,
-  stagedFileCount = 0,
+  stagedFiles = [],
   onSelectFiles,
+  onRemoveFile,
   onBeginSession,
   onUpload,
 }: {
   disabled?: boolean;
   busy?: boolean;
-  stagedFileCount?: number;
+  stagedFiles?: File[];
   onSelectFiles: (files: File[]) => void;
+  onRemoveFile?: (index: number) => void;
   onBeginSession: (prompt: string) => void;
   onUpload: () => void;
 }) {
@@ -27,6 +65,7 @@ export function InvestigationComposer({
   const [dragOver, setDragOver] = useState(false);
   const [focused, setFocused] = useState(false);
 
+  const stagedFileCount = stagedFiles.length;
   const canSubmit = Boolean(value.trim()) || stagedFileCount > 0;
   const isLoading = Boolean(busy || disabled);
 
@@ -86,9 +125,22 @@ export function InvestigationComposer({
       >
         {dragOver ? (
           <div className="border-b border-white/[0.06] px-4 py-2">
-            <p className="py-1.5 text-center text-[12px] text-vx-accent">
+            <p className="py-1.5 text-center text-[12px] text-white/55">
               Drop Nmap, Nessus, Burp, OpenVAS…
             </p>
+          </div>
+        ) : null}
+
+        {stagedFileCount > 0 ? (
+          <div className="flex flex-wrap gap-2 border-b border-white/[0.06] px-3 pb-2 pt-3">
+            {stagedFiles.map((file, index) => (
+              <ComposerFileChip
+                key={`${file.name}:${file.size}:${file.lastModified}`}
+                name={file.name}
+                disabled={disabled}
+                onRemove={onRemoveFile ? () => onRemoveFile(index) : undefined}
+              />
+            ))}
           </div>
         ) : null}
 
@@ -129,24 +181,17 @@ export function InvestigationComposer({
               <ChevronDown className="size-3 opacity-60" strokeWidth={2} aria-hidden />
             </button>
 
-            {stagedFileCount > 0 ? (
-              <span className="inline-flex items-center gap-1.5 truncate rounded-md px-1.5 py-1 text-[12px] text-vx-accent">
-                <span className="size-1.5 shrink-0 rounded-full bg-vx-accent" aria-hidden />
-                {stagedFileCount} file{stagedFileCount === 1 ? "" : "s"}
-              </span>
-            ) : (
-              <button
-                type="button"
-                className={cn(
-                  "inline-flex min-w-0 items-center gap-0.5 truncate rounded-md px-1.5 py-1",
-                  "text-[12px] text-white/40 transition-colors hover:text-white/65",
-                )}
-                aria-label="Model"
-              >
-                <span className="truncate">VANE Analyst</span>
-                <ChevronDown className="size-3 shrink-0 opacity-50" strokeWidth={2} aria-hidden />
-              </button>
-            )}
+            <button
+              type="button"
+              className={cn(
+                "inline-flex min-w-0 items-center gap-0.5 truncate rounded-md px-1.5 py-1",
+                "text-[12px] text-white/40 transition-colors hover:text-white/65",
+              )}
+              aria-label="Model"
+            >
+              <span className="truncate">VANE Analyst</span>
+              <ChevronDown className="size-3 shrink-0 opacity-50" strokeWidth={2} aria-hidden />
+            </button>
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
