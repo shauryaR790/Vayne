@@ -454,7 +454,53 @@ class InvestigationService:
         return json.loads(path.read_text(encoding="utf-8"))
 
     def get_report_view(self, inv_id: str) -> dict | None:
-        return self.load_artifact(inv_id, "investigation.json")
+        disk = self.load_artifact(inv_id, "investigation.json")
+        if disk:
+            return disk
+        return self.build_fallback_report_view(inv_id)
+
+    def build_fallback_report_view(self, inv_id: str) -> dict | None:
+        """Rebuild a report payload from DB when export artifacts are missing."""
+        inv = self.get_investigation(inv_id)
+        if not inv:
+            return None
+
+        findings = self.get_findings_export(inv_id)
+        validated = findings.get("validated") or []
+        rejected = findings.get("rejected") or []
+
+        def _count_class(values: list[dict], needle: str) -> int:
+            return sum(
+                1
+                for item in values
+                if str(item.get("classification") or "").lower() == needle
+            )
+
+        stats = {
+            "findings_loaded": len(validated) + len(rejected),
+            "findings_correlated": len(validated),
+            "findings_retained": len(validated),
+            "attack_paths": inv.path_count,
+            "false_positives_removed": len(rejected),
+            "confirmed": _count_class(validated, "confirmed"),
+            "likely_exploitable": _count_class(validated, "likely_exploitable"),
+            "observed": _count_class(validated, "observed"),
+            "critical_count": inv.critical_count,
+            "confidence_distribution": {},
+        }
+
+        return {
+            "name": inv.name,
+            "target": inv.source_filename or inv.name,
+            "duration_seconds": 0,
+            "stats": stats,
+            "attack_surface_score": inv.attack_surface_score,
+            "attack_surface_classification": inv.attack_surface_classification,
+            "attack_surface_proof": {},
+            "graph_proof": {},
+            "assets": [],
+            "discovered_assets": [],
+        }
 
     def get_workbench(self, inv_id: str) -> dict | None:
         """Rich analyst-workstation payload derived from engine exports."""
@@ -463,7 +509,7 @@ class InvestigationService:
         inv = self.get_investigation(inv_id)
         if not inv:
             return None
-        report = self.load_artifact(inv_id, "investigation.json") or {}
+        report = self.get_report_view(inv_id) or {}
         graph = self.get_full_graph(inv_id)
         findings = self.get_findings_export(inv_id)
         remediation = self.get_remediation_export(inv_id)
@@ -477,10 +523,23 @@ class InvestigationService:
         )
 
     def get_findings_export(self, inv_id: str) -> dict:
-        return self.load_artifact(inv_id, "findings.json") or {
-            "validated": [],
-            "rejected": [],
-        }
+        disk = self.load_artifact(inv_id, "findings.json")
+        if disk:
+            return disk
+
+        inv = self.get_investigation(inv_id)
+        if not inv or not inv.findings:
+            return {"validated": [], "rejected": []}
+
+        validated: list[dict] = []
+        rejected: list[dict] = []
+        for row in inv.findings:
+            data = json.loads(row.data) if row.data else {}
+            if row.severity == "rejected" or row.classification == "rejected":
+                rejected.append(data)
+            else:
+                validated.append(data)
+        return {"validated": validated, "rejected": rejected}
 
     def get_remediation_export(self, inv_id: str) -> dict:
         return self.load_artifact(inv_id, "remediation_plan.json") or {

@@ -58,15 +58,52 @@ function apiUrl(path: string): string {
   return `${getApiBase()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/** Turn FastAPI / fetch error bodies into short user-facing text. */
+export function parseApiError(status: number, body: string): string {
+  const trimmed = body.trim();
+  if (!trimmed) return `Request failed (${status})`;
+
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      detail?: string | Array<{ msg?: string }>;
+      error?: string;
+      message?: string;
+    };
+
+    const detail = parsed.detail;
+    if (typeof detail === "string") {
+      if (detail === "Investigation not found") {
+        return "This investigation no longer exists on the server.";
+      }
+      if (detail === "Report not found") {
+        return "This investigation's report is unavailable. Re-run the analysis to regenerate it.";
+      }
+      return detail;
+    }
+
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail.find((item) => item?.msg)?.msg;
+      if (first) return first;
+    }
+
+    if (parsed.error?.trim()) return parsed.error.trim();
+    if (parsed.message?.trim()) return parsed.message.trim();
+  } catch {
+    // fall through
+  }
+
+  return trimmed.length > 240 ? `${trimmed.slice(0, 237)}…` : trimmed;
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(apiUrl(path), { cache: "no-store" });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error(parseApiError(res.status, await res.text()));
   return res.json() as Promise<T>;
 }
 
 async function fetchText(path: string): Promise<string> {
   const res = await fetch(apiUrl(path), { cache: "no-store" });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error(parseApiError(res.status, await res.text()));
   return res.text();
 }
 

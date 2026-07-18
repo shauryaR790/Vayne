@@ -92,7 +92,7 @@ def get_report(inv_id: str, db: Session = Depends(get_db)) -> InvestigationRepor
         raise HTTPException(status_code=404, detail="Investigation not found")
     raw = svc.get_report_view(inv_id)
     if not raw:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail="Investigation not found")
     stats_raw = raw.get("stats") or {}
     return InvestigationReportView(
         name=raw.get("name", ""),

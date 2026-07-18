@@ -376,8 +376,8 @@ export function VaneWorkspace({
               );
             }
           })
-          .catch((e) => {
-            setError(e instanceof Error ? e.message : String(e));
+          .catch(() => {
+            // Inline report components surface load failures in the workspace.
           });
       } catch (e) {
         setMessages([]);

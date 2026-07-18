@@ -72,11 +72,8 @@ function partialBundle(
 }
 
 async function fetchInvestigationBundle(id: string, entry: BundleEntry): Promise<InvestigationBundle> {
-  const [detail, report, findings] = await Promise.all([
-    getInvestigation(id),
-    getReport(id),
-    getFindings(id),
-  ]);
+  const detail = await getInvestigation(id);
+  const [report, findings] = await Promise.all([getReport(id), getFindings(id)]);
 
   let current = partialBundle(detail, report, findings);
   emit(entry, current);

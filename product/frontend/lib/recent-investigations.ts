@@ -460,6 +460,14 @@ export async function syncRecentInvestigationsFromApi(
   return prepared.slice(0, limit);
 }
 
+export function removeRecentInvestigation(id: string) {
+  if (typeof window === "undefined") return;
+
+  const list = loadRawRecentInvestigations().filter((item) => item.id !== id);
+  persistInvestigationList(prepareInvestigationHistory(list));
+  notifyRecentUpdated();
+}
+
 export function saveRecentInvestigation(
   entry: RecentInvestigation,
   options?: { preserveTimestamp?: boolean },

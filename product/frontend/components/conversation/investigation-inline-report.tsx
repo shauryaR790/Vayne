@@ -9,6 +9,7 @@ import {
 } from "@/components/shared/cursor-loading-status";
 import { loadInvestigationBundle, subscribeInvestigationBundle } from "@/lib/investigation-bundle";
 import type { InvestigationBundle } from "@/lib/investigation-bundle";
+import { removeRecentInvestigation } from "@/lib/recent-investigations";
 import { cn } from "@/lib/utils";
 
 function workspaceLoadingLines(
@@ -75,7 +76,12 @@ export function InvestigationInlineReport({
     const unsubscribe = subscribeInvestigationBundle(investigationId, onUpdate);
     void loadInvestigationBundle(investigationId)
       .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (cancelled) return;
+        const message = e instanceof Error ? e.message : String(e);
+        setError(message);
+        if (message.includes("no longer exists")) {
+          removeRecentInvestigation(investigationId);
+        }
       })
       .finally(() => {
         if (!cancelled) setFetchDone(true);
@@ -87,7 +93,14 @@ export function InvestigationInlineReport({
     };
   }, [investigationId, sourceLabel, sequenceIndex]);
 
-  if (error) return <p className="px-6 py-4 text-[13px] text-vx-muted">{error}</p>;
+  if (error) {
+    return (
+      <div className="border-b border-vx-border px-6 py-5">
+        <p className="text-[13px] font-medium text-vx-secondary">Could not load investigation</p>
+        <p className="mt-1 text-[13px] text-vx-muted">{error}</p>
+      </div>
+    );
+  }
 
   if (!fetchDone || !bundle) {
     return (
