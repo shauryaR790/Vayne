@@ -2,6 +2,9 @@
   "name": "vayne-product-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "scripts": {
     "clean": "node scripts/clean-cache.js",
     "dev": "node scripts/ensure-dev.js && node -r ./scripts/patch-fs-ebusy.js ./node_modules/next/dist/bin/next dev -p 3000",

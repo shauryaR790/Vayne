@@ -32,9 +32,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "C:\\Users\\shaur\\AppData\\Local\\vayne-next-cache\\.next/types/**/*.ts",
-    "../../../../../AppData/Local/vayne-next-cache/.next/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
