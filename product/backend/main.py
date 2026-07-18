@@ -43,10 +43,15 @@ origins = os.getenv(
     "CORS_ORIGINS",
     "http://localhost:3000,http://127.0.0.1:3000",
 ).split(",")
+# Local dev + all Vercel production/preview URLs (*.vercel.app).
+_cors_origin_regex = (
+    r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$"
+    r"|https://([a-z0-9-]+\.)*vercel\.app$"
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in origins if o.strip()],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$",
+    allow_origins=[o.strip().rstrip("/") for o in origins if o.strip()],
+    allow_origin_regex=_cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
