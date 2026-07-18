@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
   type Edge,
   type Node,
   type ReactFlowInstance,
@@ -14,33 +15,24 @@ import type { GraphData, GraphNode as GraphNodeType, WorkbenchData } from "@/lib
 import { computeElkLayout } from "./elkLayout";
 import { GraphCanvasBackground } from "./GraphCanvasBackground";
 import { GraphEmptyState, type ReasoningCheck } from "./GraphEmptyState";
-import { GraphExplorerChrome, type GraphFilterId } from "./GraphExplorerChrome";
 import { GraphGroupNode } from "./GraphGroupNode";
-import { GraphMinimapRail } from "./GraphMinimapRail";
 import { GraphNode } from "./GraphNode";
 import { GraphNodeInspector } from "./GraphNodeInspector";
+import { GraphSearchModal } from "./GraphSearchModal";
 import { VayneEdge } from "./VayneEdge";
-import { applyGraphFit, FIT_MAX_ZOOM, FIT_MIN_ZOOM, FIT_PADDING } from "./graphFit";
+import { applyGraphFit, centerOnNode } from "./graphFit";
 import { computeHighlightState, edgeKey } from "./graphHighlight";
 import {
   applyServiceGrouping,
   detectServiceGroups,
   type ServiceGroup,
 } from "./graphServiceGroups";
-import {
-  formatEdgeLabel,
-  isCriticalNode,
-  isExploitableNode,
-  isInternetFacingNode,
-  isLateralMovementNode,
-  nodeMatchesSearch,
-  normalizeGraphType,
-} from "./graphUtils";
+import { formatEdgeLabel, normalizeGraphType } from "./graphUtils";
+import { useGraphKeyboard } from "./useGraphKeyboard";
 
 const nodeTypes = { vayne: GraphNode, group: GraphGroupNode };
 const edgeTypes = { vayne: VayneEdge };
 
-const GRAPH_HEIGHT = "h-[680px]";
 const TRANSLATE_EXTENT: [[number, number], [number, number]] = [
   [-100000, -100000],
   [100000, 100000],
@@ -55,58 +47,35 @@ export interface GraphExplorerContext {
   emptyChecks: ReasoningCheck[];
 }
 
-function filterGraphNodes(
-  nodes: GraphNodeType[],
-  edges: GraphData["edges"],
-  filters: Set<GraphFilterId>,
-): GraphNodeType[] {
-  if (!filters.size) return nodes;
-  return nodes.filter((node) => {
-    if (filters.has("critical") && !isCriticalNode(node)) return false;
-    if (filters.has("exploitable") && !isExploitableNode(node, edges)) return false;
-    if (filters.has("internet") && !isInternetFacingNode(node, edges)) return false;
-    if (filters.has("lateral") && !isLateralMovementNode(node, edges)) return false;
-    return true;
-  });
-}
-
-function GraphExplorerInner({
+function GraphCanvas({
   graph,
   context,
-  embedded = false,
-  layout = "default",
+  layout,
+  embedded,
 }: {
   graph: GraphData;
   context?: GraphExplorerContext;
+  layout: "default" | "inline" | "hero" | "workstation";
   embedded?: boolean;
-  layout?: "default" | "inline" | "hero" | "workstation";
-  workbench?: WorkbenchData;
 }) {
+  const isWorkstation = layout === "workstation";
   const isInline = layout === "inline";
   const isHero = layout === "hero";
-  const isWorkstation = layout === "workstation";
-  const isWide = isHero || isWorkstation;
-  const graphHeight = isWorkstation
-    ? "h-[520px]"
+  const heightClass = isWorkstation
+    ? "h-[560px] min-h-[520px]"
     : isHero
-      ? "h-[620px]"
+      ? "h-[680px] min-h-[620px]"
       : isInline
-        ? "h-[460px]"
-        : GRAPH_HEIGHT;
-  const minHeight = isWorkstation
-    ? "min-h-[480px]"
-    : isHero
-      ? "min-h-[560px]"
-      : isInline
-        ? "min-h-[380px]"
-        : "min-h-[600px]";
+        ? "h-[520px] min-h-[460px]"
+        : "h-[720px] min-h-[640px]";
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const flowRef = useRef<ReactFlowInstance | null>(null);
+  const { zoomIn, zoomOut } = useReactFlow();
   const [flowReady, setFlowReady] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<Set<GraphFilterId>>(() => new Set());
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchHighlightId, setSearchHighlightId] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const [layoutPositions, setLayoutPositions] = useState<
     Map<string, { x: number; y: number; width: number; height: number }>
@@ -114,46 +83,17 @@ function GraphExplorerInner({
   const [layoutLoading, setLayoutLoading] = useState(true);
 
   const serviceGroups = useMemo(() => detectServiceGroups(graph.nodes), [graph.nodes]);
-
   const grouped = useMemo(
     () => applyServiceGrouping(graph.nodes, graph.edges, serviceGroups, expandedGroups),
     [graph.nodes, graph.edges, serviceGroups, expandedGroups],
   );
-
-  const filteredByChip = useMemo(
-    () => filterGraphNodes(grouped.nodes, grouped.edges, activeFilters),
-    [grouped.nodes, grouped.edges, activeFilters],
-  );
-
-  const visibleNodeIds = useMemo(() => new Set(filteredByChip.map((n) => n.id)), [filteredByChip]);
-
-  const filteredEdges = useMemo(
-    () =>
-      grouped.edges.filter((e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target)),
-    [grouped.edges, visibleNodeIds],
-  );
-
-  const searchMatchIds = useMemo(() => {
-    if (!searchQuery.trim()) return null;
-    const matches = new Set<string>();
-    for (const node of filteredByChip) {
-      if (nodeMatchesSearch(node, searchQuery)) matches.add(node.id);
-    }
-    if (!matches.size) return matches;
-    const expanded = new Set(matches);
-    for (const edge of filteredEdges) {
-      if (matches.has(edge.source) || matches.has(edge.target)) {
-        expanded.add(edge.source);
-        expanded.add(edge.target);
-      }
-    }
-    return expanded;
-  }, [filteredByChip, filteredEdges, searchQuery]);
+  const nodes = grouped.nodes;
+  const edges = grouped.edges;
 
   useEffect(() => {
     let cancelled = false;
     setLayoutLoading(true);
-    computeElkLayout(filteredByChip, filteredEdges).then((positions) => {
+    computeElkLayout(nodes, edges).then((positions) => {
       if (!cancelled) {
         setLayoutPositions(positions);
         setLayoutLoading(false);
@@ -162,19 +102,17 @@ function GraphExplorerInner({
     return () => {
       cancelled = true;
     };
-  }, [filteredByChip, filteredEdges]);
+  }, [nodes, edges]);
 
   const edgeIdByKey = useMemo(() => {
     const map = new Map<string, string>();
-    filteredEdges.forEach((e, i) => {
-      map.set(edgeKey(e.source, e.target), `e-${e.source}-${e.target}-${i}`);
-    });
+    edges.forEach((e, i) => map.set(edgeKey(e.source, e.target), `e-${e.source}-${e.target}-${i}`));
     return map;
-  }, [filteredEdges]);
+  }, [edges]);
 
   const highlight = useMemo(
-    () => computeHighlightState(selectedId, filteredEdges, edgeIdByKey),
-    [selectedId, filteredEdges, edgeIdByKey],
+    () => computeHighlightState(selectedId ?? searchHighlightId, edges, edgeIdByKey),
+    [selectedId, searchHighlightId, edges, edgeIdByKey],
   );
 
   const toggleGroup = useCallback((groupId: string) => {
@@ -193,19 +131,18 @@ function GraphExplorerInner({
   }, [serviceGroups]);
 
   const { flowNodes, flowEdges } = useMemo(() => {
-    const hasSelection = Boolean(selectedId);
-    const hasSearch = Boolean(searchMatchIds?.size);
+    const focusId = selectedId ?? searchHighlightId;
+    const hasFocus = Boolean(focusId);
 
-    const flowNodes: Node[] = filteredByChip
+    const flowNodes: Node[] = nodes
       .filter((n) => layoutPositions.has(n.id))
       .map((n) => {
         const pos = layoutPositions.get(n.id)!;
         const nodeType = normalizeGraphType(n);
         const isGroup = nodeType === "group";
         const group = isGroup ? groupById.get(n.id) : undefined;
-        const inHighlight = hasSelection ? highlight.chainIds.has(n.id) : true;
-        const inSearch = hasSearch ? searchMatchIds!.has(n.id) : true;
-        const dimmed = (hasSelection && !inHighlight) || (hasSearch && !inSearch);
+        const onPath = hasFocus ? highlight.chainIds.has(n.id) : true;
+        const dimmed = hasFocus && !onPath;
 
         return {
           id: n.id,
@@ -215,18 +152,18 @@ function GraphExplorerInner({
             ...n,
             type: nodeType,
             dimmed,
-            highlighted: selectedId === n.id,
-            onChain: highlight.chainIds.has(n.id),
+            highlighted: focusId === n.id,
+            onChain: onPath,
             expanded: expandedGroups.has(n.id),
             memberCount: group?.memberIds.length ?? 0,
             onToggle: isGroup ? () => toggleGroup(n.id) : undefined,
           },
-          selected: selectedId === n.id,
+          selected: focusId === n.id,
         };
       });
 
     const edgeGroups = new Map<string, GraphData["edges"][number][]>();
-    for (const e of filteredEdges) {
+    for (const e of edges) {
       const key = `${e.source}::${e.target}`;
       if (!edgeGroups.has(key)) edgeGroups.set(key, []);
       edgeGroups.get(key)!.push(e);
@@ -241,10 +178,8 @@ function GraphExplorerInner({
       const allSameRel = group.every((g) => g.relationship === e.relationship);
       const displayLabel = count > 1 && allSameRel ? `${rel} ×${count}` : rel;
       const id = edgeIdByKey.get(edgeKey(e.source, e.target)) ?? `e-${i++}`;
-      const onChain = highlight.chainEdgeIds.has(id);
-      const incoming = highlight.incomingEdgeIds.has(id);
-      const outgoing = highlight.outgoingEdgeIds.has(id);
-      const dimmed = hasSelection && !onChain && !incoming && !outgoing;
+      const onPath = highlight.chainEdgeIds.has(id);
+      const dimmed = hasFocus && !onPath;
 
       flowEdges.push({
         id,
@@ -255,22 +190,21 @@ function GraphExplorerInner({
           ...e,
           relationship: rel,
           displayLabel,
-          edgeCount: count,
           dimmed,
-          highlighted: onChain || incoming || outgoing,
-          highlightRole: incoming ? "incoming" : outgoing ? "outgoing" : onChain ? "chain" : undefined,
+          highlighted: onPath,
+          highlightRole: onPath ? "chain" : undefined,
         },
       });
     }
 
     return { flowNodes, flowEdges };
   }, [
-    filteredByChip,
-    filteredEdges,
+    nodes,
+    edges,
     layoutPositions,
     selectedId,
+    searchHighlightId,
     highlight,
-    searchMatchIds,
     expandedGroups,
     groupById,
     toggleGroup,
@@ -282,6 +216,12 @@ function GraphExplorerInner({
     [graph.nodes, selectedId],
   );
 
+  const fitGraph = useCallback(() => {
+    if (!flowRef.current || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    applyGraphFit(flowRef.current, flowNodes, { width: rect.width, height: rect.height });
+  }, [flowNodes]);
+
   const onInit = useCallback((instance: ReactFlowInstance) => {
     flowRef.current = instance;
     setFlowReady(true);
@@ -289,178 +229,162 @@ function GraphExplorerInner({
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedId(node.id);
+    setSearchHighlightId(null);
   }, []);
 
   const onPaneClick = useCallback(() => {
     setSelectedId(null);
+    setSearchHighlightId(null);
   }, []);
 
   const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
-    const instance = flowRef.current;
-    if (!instance) return;
-    const width = Number(node.width ?? 170);
-    const height = Number(node.height ?? 80);
-    instance.setCenter(node.position.x + width / 2, node.position.y + height / 2, {
-      zoom: 1,
-      duration: 450,
-    });
+    if (!flowRef.current) return;
+    centerOnNode(flowRef.current, node, 1.08);
   }, []);
 
-  const toggleFilter = useCallback((id: GraphFilterId) => {
-    setActiveFilters((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  const jumpToNode = useCallback(
+    (nodeId: string) => {
+      setSelectedId(nodeId);
+      setSearchHighlightId(nodeId);
+      const node = flowNodes.find((n) => n.id === nodeId);
+      if (node && flowRef.current) centerOnNode(flowRef.current, node, 1.05);
+    },
+    [flowNodes],
+  );
+
+  useGraphKeyboard({
+    enabled: flowReady && !layoutLoading,
+    onClearSelection: onPaneClick,
+    onOpenSearch: () => setSearchOpen(true),
+    onFit: fitGraph,
+    onZoomIn: () => zoomIn({ duration: 180 }),
+    onZoomOut: () => zoomOut({ duration: 180 }),
+  });
 
   useEffect(() => {
     if (!flowRef.current || !flowNodes.length || !canvasRef.current || layoutLoading || !flowReady) return;
-    const { width, height } = canvasRef.current.getBoundingClientRect();
-    if (width < 32 || height < 32) return;
-    const t = window.setTimeout(() => {
-      applyGraphFit(flowRef.current!, flowNodes);
-    }, 60);
+    const t = window.setTimeout(fitGraph, 80);
     return () => window.clearTimeout(t);
-  }, [flowNodes, flowReady, layoutLoading]);
+  }, [flowNodes, flowReady, layoutLoading, fitGraph]);
 
-  const hasGraphData = filteredByChip.length > 0;
+  useEffect(() => {
+    if (!canvasRef.current || !flowReady || layoutLoading) return;
+    const ro = new ResizeObserver(() => {
+      window.requestAnimationFrame(() => fitGraph());
+    });
+    ro.observe(canvasRef.current);
+    return () => ro.disconnect();
+  }, [flowReady, layoutLoading, fitGraph]);
+
+  const hasGraphData = nodes.length > 0;
   const showEmptyState = Boolean(
     isWorkstation
       ? !hasGraphData
       : context && !context.hasPaths && context.emptyChecks?.length && !hasGraphData,
   );
 
-  const searchMatchCount = searchMatchIds?.size ?? filteredByChip.length;
-
-  return (
-    <div
-      className={`grid min-w-0 grid-cols-1 items-stretch gap-px ${
-        isWorkstation ? "" : isInline ? "" : isHero ? "xl:grid-cols-[minmax(0,1fr)_220px]" : "xl:grid-cols-[minmax(0,1fr)_240px]"
-      }`}
-    >
+  if (showEmptyState) {
+    return (
       <div
-        className={`vx-graph-explorer flex min-w-0 flex-col ${graphHeight} ${minHeight} ${
-          isWorkstation ? "border border-vx-border bg-vx-app" : "bg-[#050505]"
-        } ${
-          isWorkstation
-            ? ""
-            : embedded || isWide
-              ? "border border-white/[0.12]"
-              : "border border-white/20"
+        className={`vx-graph-explorer ${heightClass} border ${
+          isWorkstation ? "border-vx-border bg-vx-app" : "border-white/10 bg-[#050505]"
         }`}
       >
-        {showEmptyState ? (
-          <GraphEmptyState
-            checks={
-              context?.emptyChecks?.length
-                ? context.emptyChecks
-                : [{ label: "Graph nodes not available yet", ok: false }]
-            }
-          />
-        ) : (
-          <>
-            <GraphExplorerChrome
-              query={searchQuery}
-              onQueryChange={setSearchQuery}
-              activeFilters={activeFilters}
-              onToggleFilter={toggleFilter}
-              matchCount={searchMatchCount}
-              totalCount={filteredByChip.length}
-              nodeCount={filteredByChip.length}
-              edgeCount={filteredEdges.length}
-              loading={layoutLoading}
-            />
-
-            <div className="relative min-h-0 flex-1 overflow-hidden">
-              <div ref={canvasRef} className="absolute inset-0 right-[148px]">
-                <GraphCanvasBackground />
-                <ReactFlow
-                  nodes={flowNodes}
-                  edges={flowEdges}
-                  nodeTypes={nodeTypes}
-                  edgeTypes={edgeTypes}
-                  onInit={onInit}
-                  onNodeClick={onNodeClick}
-                  onNodeDoubleClick={onNodeDoubleClick}
-                  onPaneClick={onPaneClick}
-                  defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-                  minZoom={0.08}
-                  maxZoom={2.5}
-                  translateExtent={TRANSLATE_EXTENT}
-                  panOnDrag
-                  panOnScroll={false}
-                  zoomOnScroll
-                  zoomOnPinch
-                  zoomOnDoubleClick={false}
-                  nodesDraggable={false}
-                  nodesConnectable={false}
-                  elementsSelectable
-                  proOptions={{ hideAttribution: true }}
-                  className="!bg-transparent"
-                  style={{ width: "100%", height: "100%" }}
-                >
-                  <GraphMinimapRail />
-                  <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden>
-                    <defs>
-                      <marker
-                        id="vayne-arrow-default"
-                        markerWidth="10"
-                        markerHeight="10"
-                        refX="8"
-                        refY="5"
-                        orient="auto"
-                      >
-                        <path d="M1,1 L9,5 L1,9 Z" fill="#71717a" />
-                      </marker>
-                      <marker
-                        id="vayne-arrow-valid"
-                        markerWidth="10"
-                        markerHeight="10"
-                        refX="8"
-                        refY="5"
-                        orient="auto"
-                      >
-                        <path d="M1,1 L9,5 L1,9 Z" fill="#e4e4e7" />
-                      </marker>
-                      <marker
-                        id="vayne-arrow-reject"
-                        markerWidth="10"
-                        markerHeight="10"
-                        refX="8"
-                        refY="5"
-                        orient="auto"
-                      >
-                        <path d="M1,1 L9,5 L1,9 Z" fill="#f97316" />
-                      </marker>
-                    </defs>
-                  </svg>
-                </ReactFlow>
-              </div>
-            </div>
-          </>
-        )}
+        <GraphEmptyState
+          checks={
+            context?.emptyChecks?.length
+              ? context.emptyChecks
+              : [{ label: "Graph nodes not available yet", ok: false }]
+          }
+        />
       </div>
+    );
+  }
 
-      {!isWorkstation ? (
+  return (
+    <>
+      <GraphSearchModal
+        open={searchOpen}
+        nodes={nodes}
+        onClose={() => setSearchOpen(false)}
+        onSelect={jumpToNode}
+      />
+
+      <div
+        className={`vx-graph-explorer grid overflow-hidden border transition-[grid-template-columns] duration-300 ease-out ${heightClass} ${
+          isWorkstation ? "border-vx-border bg-vx-app" : embedded ? "border-white/10 bg-[#050505]" : "border-white/10 bg-[#050505]"
+        }`}
+        style={{
+          gridTemplateColumns: selectedNode ? "minmax(0,1fr) minmax(280px,33%)" : "minmax(0,1fr) 0fr",
+        }}
+      >
+        <div ref={canvasRef} className="vx-graph-canvas relative min-w-0 overflow-hidden">
+          <GraphCanvasBackground />
+          <ReactFlow
+            nodes={flowNodes}
+            edges={flowEdges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onInit={onInit}
+            onNodeClick={onNodeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onPaneClick={onPaneClick}
+            minZoom={0.12}
+            maxZoom={2.5}
+            translateExtent={TRANSLATE_EXTENT}
+            panOnDrag
+            panOnScroll={false}
+            zoomOnScroll
+            zoomOnPinch
+            zoomOnDoubleClick={false}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable
+            proOptions={{ hideAttribution: true }}
+            className="!bg-transparent"
+            style={{ width: "100%", height: "100%" }}
+          >
+            <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden>
+              <defs>
+                <marker id="vayne-arrow-default" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                  <path d="M1,1 L9,5 L1,9 Z" fill="#52525b" />
+                </marker>
+                <marker id="vayne-arrow-valid" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                  <path d="M1,1 L9,5 L1,9 Z" fill="#f4f4f5" />
+                </marker>
+              </defs>
+            </svg>
+          </ReactFlow>
+        </div>
+
         <aside
-          className={`flex ${
-            isInline ? "h-auto max-h-[200px]" : graphHeight
-          } ${isInline ? "min-h-0" : minHeight} min-w-0 flex-col bg-[#050505] ${
-            embedded || isWide ? "border border-white/30" : "border border-white/20"
+          className={`min-w-0 overflow-hidden border-l border-white/10 bg-[#050505] transition-opacity duration-300 ${
+            selectedNode ? "opacity-100" : "pointer-events-none opacity-0"
           }`}
+          aria-hidden={!selectedNode}
         >
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-vx-muted">
-              Inspector
-            </p>
-            <GraphNodeInspector node={selectedNode} />
-          </div>
+          {selectedNode ? (
+            <GraphNodeInspector
+              node={selectedNode}
+              graphNodes={graph.nodes}
+              graphEdges={graph.edges}
+              onClose={() => setSelectedId(null)}
+            />
+          ) : null}
         </aside>
-      ) : null}
-    </div>
+      </div>
+    </>
   );
+}
+
+function GraphExplorerInner(props: {
+  graph: GraphData;
+  context?: GraphExplorerContext;
+  embedded?: boolean;
+  layout?: "default" | "inline" | "hero" | "workstation";
+  workbench?: WorkbenchData;
+}) {
+  return <GraphCanvas {...props} layout={props.layout ?? "default"} />;
 }
 
 export function GraphExplorer({

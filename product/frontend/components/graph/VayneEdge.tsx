@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import {
   BaseEdge,
   EdgeLabelRenderer,
-  getSmoothStepPath,
+  getBezierPath,
   type EdgeProps,
 } from "@xyflow/react";
 
@@ -21,36 +21,22 @@ function VayneEdgeComponent({
 }: EdgeProps) {
   const [hovered, setHovered] = useState(false);
   const active = hovered || selected || data?.highlighted;
-  const label = String(data?.displayLabel || data?.relationship || "").replace(/_/g, " ");
-  const rejected =
-    String(data?.category ?? "").toLowerCase().includes("reject") ||
-    String(data?.relationship ?? "").toLowerCase().includes("reject");
+  const label = String(data?.displayLabel || data?.relationship || "").toUpperCase();
   const dimmed = Boolean(data?.dimmed);
-  const highlightRole = data?.highlightRole as "incoming" | "outgoing" | "chain" | undefined;
+  const onPath = Boolean(data?.highlightRole);
 
-  const [path, labelX, labelY] = getSmoothStepPath({
+  const [path, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     targetX,
     targetY,
     sourcePosition,
     targetPosition,
-    borderRadius: 12,
   });
 
-  const stroke = rejected
-    ? "#f97316"
-    : highlightRole === "incoming"
-      ? "#38bdf8"
-      : highlightRole === "outgoing"
-        ? "#a78bfa"
-        : highlightRole === "chain"
-          ? "#fafafa"
-          : active
-            ? "#e4e4e7"
-            : "#71717a";
-  const strokeWidth = active || highlightRole ? 2.5 : 1.5;
-  const opacity = dimmed ? 0.12 : active || highlightRole ? 1 : rejected ? 0.45 : 0.65;
+  const stroke = onPath || active ? "#f4f4f5" : "#52525b";
+  const strokeWidth = onPath || active ? 2.5 : 1.75;
+  const opacity = dimmed ? 0.16 : onPath || active ? 0.95 : 0.42;
 
   return (
     <>
@@ -58,7 +44,7 @@ function VayneEdgeComponent({
         d={path}
         fill="none"
         stroke="transparent"
-        strokeWidth={20}
+        strokeWidth={18}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       />
@@ -69,11 +55,9 @@ function VayneEdgeComponent({
           stroke,
           strokeWidth,
           opacity,
-          strokeDasharray: rejected ? "6 5" : undefined,
-          transition: "opacity 180ms, stroke-width 180ms, stroke 180ms",
+          transition: "opacity 200ms, stroke 200ms, stroke-width 200ms",
         }}
-        className={active ? "vx-edge-flow" : undefined}
-        markerEnd={`url(#vayne-arrow-${rejected ? "reject" : active || highlightRole ? "valid" : "default"})`}
+        markerEnd={`url(#vayne-arrow-${onPath || active ? "valid" : "default"})`}
       />
       {label ? (
         <EdgeLabelRenderer>
@@ -82,9 +66,9 @@ function VayneEdgeComponent({
               position: "absolute",
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: "none",
-              opacity: dimmed ? 0.15 : active ? 1 : 0.75,
+              opacity: dimmed ? 0.14 : onPath || active ? 1 : 0.72,
             }}
-            className="rounded border border-white/10 bg-[#09090b]/95 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-white/70"
+            className="rounded-full border border-white/12 bg-[#09090b]/95 px-2 py-0.5 text-[9px] font-semibold tracking-[0.08em] text-white/75"
           >
             {label}
           </div>

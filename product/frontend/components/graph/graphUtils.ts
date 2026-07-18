@@ -21,26 +21,27 @@ export function isValidatedEdge(e: GraphEdge): boolean {
 }
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
-  exposed_to: "Exposed",
-  runs: "Runs",
-  version_may_affect: "Affects",
-  confirms_applicability: "Trust",
-  enables: "Exploits",
-  yields_access: "Auth",
-  lateral_movement: "Lateral Movement",
-  lateral: "Lateral Movement",
-  trusts: "Trust",
-  authenticates: "Auth",
-  exploits: "Exploits",
-  connects_to: "Connects",
-  hosts: "Hosts",
-  depends_on: "Depends",
+  exposed_to: "EXPOSED",
+  runs: "RUNS",
+  version_may_affect: "AFFECTS",
+  confirms_applicability: "TRUST",
+  enables: "EXPLOITS",
+  yields_access: "AUTH",
+  lateral_movement: "LATERAL",
+  lateral: "LATERAL",
+  trusts: "TRUST",
+  authenticates: "AUTH",
+  exploits: "EXPLOITS",
+  connects_to: "CONNECTS",
+  hosts: "HOSTS",
+  depends_on: "DEPENDS",
 };
 
 export function formatEdgeLabel(edge: GraphEdge): string {
-  const raw = String(edge.relationship ?? "linked").replace(/_/g, " ");
   const key = String(edge.relationship ?? "").toLowerCase();
-  return RELATIONSHIP_LABELS[key] ?? raw.replace(/\b\w/g, (c) => c.toUpperCase());
+  if (RELATIONSHIP_LABELS[key]) return RELATIONSHIP_LABELS[key];
+  const raw = String(edge.relationship ?? "linked").replace(/_/g, " ");
+  return raw.toUpperCase();
 }
 
 export function severityBorderColor(node: GraphNode): string {

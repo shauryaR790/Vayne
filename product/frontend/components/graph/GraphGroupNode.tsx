@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ChevronDown, ChevronRight, Layers } from "lucide-react";
 
+import { GRAPH_NODE_WIDTH } from "@/lib/graph-node-styles";
 import { severityBorderColor } from "@/components/graph/graphUtils";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +27,8 @@ function GraphGroupNodeComponent({ data, selected }: NodeProps) {
         selected && "z-10",
       )}
       style={{
-        width: 190,
-        opacity: dimmed ? 0.2 : 1,
+        width: GRAPH_NODE_WIDTH,
+        opacity: dimmed ? 0.18 : 1,
       }}
     >
       <Handle
