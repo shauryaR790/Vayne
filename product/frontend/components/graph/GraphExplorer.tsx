@@ -276,6 +276,12 @@ function GraphCanvas({
     return () => ro.disconnect();
   }, [flowReady, layoutLoading, fitGraph]);
 
+  useEffect(() => {
+    if (!flowReady || layoutLoading) return;
+    const t = window.setTimeout(fitGraph, 320);
+    return () => window.clearTimeout(t);
+  }, [selectedId, flowReady, layoutLoading, fitGraph]);
+
   const hasGraphData = nodes.length > 0;
   const showEmptyState = Boolean(
     isWorkstation
@@ -311,14 +317,11 @@ function GraphCanvas({
       />
 
       <div
-        className={`vx-graph-explorer grid overflow-hidden border transition-[grid-template-columns] duration-300 ease-out ${heightClass} ${
+        className={`vx-graph-explorer flex flex-col overflow-hidden border ${heightClass} ${
           isWorkstation ? "border-vx-border bg-vx-app" : embedded ? "border-white/10 bg-[#050505]" : "border-white/10 bg-[#050505]"
         }`}
-        style={{
-          gridTemplateColumns: selectedNode ? "minmax(0,1fr) minmax(280px,33%)" : "minmax(0,1fr) 0fr",
-        }}
       >
-        <div ref={canvasRef} className="vx-graph-canvas relative min-w-0 overflow-hidden">
+        <div ref={canvasRef} className="vx-graph-canvas relative min-h-0 flex-1 overflow-hidden transition-[flex-grow] duration-300 ease-out">
           <GraphCanvasBackground />
           <ReactFlow
             nodes={flowNodes}
@@ -329,7 +332,7 @@ function GraphCanvas({
             onNodeClick={onNodeClick}
             onNodeDoubleClick={onNodeDoubleClick}
             onPaneClick={onPaneClick}
-            minZoom={0.12}
+            minZoom={0.04}
             maxZoom={2.5}
             translateExtent={TRANSLATE_EXTENT}
             panOnDrag
@@ -357,9 +360,9 @@ function GraphCanvas({
           </ReactFlow>
         </div>
 
-        <aside
-          className={`min-w-0 overflow-hidden border-l border-white/10 bg-[#050505] transition-opacity duration-300 ${
-            selectedNode ? "opacity-100" : "pointer-events-none opacity-0"
+        <div
+          className={`shrink-0 overflow-hidden border-white/10 bg-[#050505] transition-all duration-300 ease-out ${
+            selectedNode ? "max-h-[280px] border-t opacity-100" : "max-h-0 border-t-0 opacity-0"
           }`}
           aria-hidden={!selectedNode}
         >
@@ -371,7 +374,7 @@ function GraphCanvas({
               onClose={() => setSelectedId(null)}
             />
           ) : null}
-        </aside>
+        </div>
       </div>
     </>
   );
