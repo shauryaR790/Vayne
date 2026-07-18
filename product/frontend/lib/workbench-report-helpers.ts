@@ -950,12 +950,13 @@ export interface BusinessImpactRow {
   title: string;
   host: string;
   summary: string;
-  attacker_gains?: string;
-  systems_exposed?: string;
-  process_affected?: string;
+  whatCouldHappen?: string;
+  whoIsAtRisk?: string;
+  businessAreas?: string;
+  score?: number;
 }
 
-/** Business impact of the retained findings — summarizes, never introduces (P8). */
+/** Business impact of the retained findings — plain language for executives. */
 export function businessImpactRows(workbench: WorkbenchData): BusinessImpactRow[] {
   const out: BusinessImpactRow[] = [];
   const seen = new Set<string>();
@@ -971,9 +972,10 @@ export function businessImpactRows(workbench: WorkbenchData): BusinessImpactRow[
       title: f.title,
       host: f.host || "—",
       summary,
-      attacker_gains: detail?.attacker_gains,
-      systems_exposed: detail?.systems_exposed,
-      process_affected: detail?.process_affected,
+      whatCouldHappen: detail?.importance || detail?.attacker_gains,
+      whoIsAtRisk: detail?.systems_exposed,
+      businessAreas: detail?.process_affected,
+      score: (detail as { score?: number } | undefined)?.score,
     });
     if (out.length >= 4) break;
   }

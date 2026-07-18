@@ -61,23 +61,32 @@ export function connectedAssetLabels(node: GraphNode, edges: GraphEdge[], nodes:
 }
 
 export function whyItMatters(node: GraphNode): string {
-  if (node.evidence?.[0]) return node.evidence[0];
+  if (node.evidence?.[0] && !node.evidence[0].toLowerCase().includes("not observed")) {
+    return node.evidence[0];
+  }
   const t = normalizeGraphType(node);
-  if (t === "vulnerability") return "Links scanner evidence to a reachable exploit path.";
-  if (t === "service") return "Exposed service that can bridge external access to internal assets.";
-  if (t === "asset") return "Host in the blast radius of validated attack movement.";
-  return "Evidence-linked entity in the validated attack graph.";
+  if (t === "vulnerability")
+    return "If exploited, this weakness could let an attacker steal data or take control of connected systems.";
+  if (t === "service")
+    return "This exposed service could be the door an attacker uses to reach internal business systems.";
+  if (t === "asset")
+    return "Compromise of this host could disrupt operations and expose data stored or processed here.";
+  return "Part of a validated path that could lead to unauthorized access or service disruption.";
 }
 
 export function businessImpact(node: GraphNode): string {
   const radius = node.blast_radius;
-  if (radius != null && radius > 0) {
-    return `Blast radius spans ${radius} related entities if this step succeeds.`;
-  }
   const risk = node.risk ?? 0;
-  if (risk >= 7) return "High-risk pivot — compromise here accelerates lateral movement.";
-  if (risk >= 4) return "Moderate exposure — contributes to path confidence but not sole impact.";
-  return "Supporting node — contextual evidence for the broader attack chain.";
+  if (radius != null && radius >= 3) {
+    return `Could affect ${radius} connected systems — spreading outage, data loss, or ransomware beyond this single host.`;
+  }
+  if (risk >= 7) {
+    return "High risk of data theft, service outage, or attackers moving deeper into your network.";
+  }
+  if (risk >= 4) {
+    return "Could disrupt day-to-day operations or expose internal data if exploited.";
+  }
+  return "Adds to overall exposure — fixing it reduces the chance of a broader incident.";
 }
 
 export function recommendedRemediation(node: GraphNode): string[] {

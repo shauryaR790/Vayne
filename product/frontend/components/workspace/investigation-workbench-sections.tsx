@@ -861,13 +861,12 @@ function AnalystFindingCard({
 
             {impact && showBusinessImpact ? (
               <div>
-                <SectionLabel>Potential attacker outcome</SectionLabel>
+                <SectionLabel>Business impact</SectionLabel>
                 <dl className="mt-3 space-y-3">
                   {[
-                    { label: "Attacker gains", value: impact.attacker_gains },
-                    { label: "Attacker could access", value: impact.systems_exposed },
-                    { label: "If exploited", value: impact.process_affected },
-                    { label: "Why it matters", value: impact.importance },
+                    { label: "What could go wrong", value: impact.importance || impact.attacker_gains },
+                    { label: "Who's at risk", value: impact.systems_exposed },
+                    { label: "Business areas affected", value: impact.process_affected },
                   ]
                     .filter((row) => row.value)
                     .map((row) => (
@@ -1335,7 +1334,7 @@ export function BusinessImpactSection({
   return (
     <WorkstationSection title="Business Impact" reveal={reveal} large>
       <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white/55">
-        What the technical findings above mean for the business if an attacker acts on them.
+        What could actually happen to your organization if these issues are exploited — not the technical steps, but the real-world damage.
       </p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {rows.map((row) => (
@@ -1344,13 +1343,13 @@ export function BusinessImpactSection({
               {row.title}
             </h4>
             <p className="mt-1 font-mono text-[11px] text-white/50">{row.host}</p>
-            <p className="mt-3 text-[13px] leading-relaxed text-white/80">{row.summary}</p>
-            {row.attacker_gains || row.systems_exposed || row.process_affected ? (
+            <p className="mt-3 text-[14px] font-medium leading-relaxed text-white/90">{row.summary}</p>
+            {row.whatCouldHappen || row.whoIsAtRisk || row.businessAreas ? (
               <dl className="mt-4 space-y-3 border-t border-vx-border pt-4">
                 {[
-                  { label: "Attacker gains", value: row.attacker_gains },
-                  { label: "Systems exposed", value: row.systems_exposed },
-                  { label: "Process affected", value: row.process_affected },
+                  { label: "What could go wrong", value: row.whatCouldHappen },
+                  { label: "Who's at risk", value: row.whoIsAtRisk },
+                  { label: "Business areas affected", value: row.businessAreas },
                 ]
                   .filter((r) => r.value)
                   .map((r) => (
@@ -1358,7 +1357,7 @@ export function BusinessImpactSection({
                       <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">
                         {r.label}
                       </dt>
-                      <dd className="mt-1 text-[12px] leading-relaxed text-white/65">{r.value}</dd>
+                      <dd className="mt-1 text-[13px] leading-relaxed text-white/75">{r.value}</dd>
                     </div>
                   ))}
               </dl>

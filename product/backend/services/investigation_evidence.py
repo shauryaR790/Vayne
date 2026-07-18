@@ -964,32 +964,48 @@ def _build_business_impact(analyst: dict, *, title: str, host: str, cve: str) ->
 
     attacker_gains = actions[0] if actions else (
         scenario.split(".")[0].strip() if scenario else
-        (f"Remote code execution via {cve}" if cve else f"Abuse of exposed {title}")
+        (
+            f"An attacker could remotely control systems on {host or 'this host'} and access business data."
+            if cve
+            else f"An attacker could abuse {title} to disrupt operations or steal data on {host or 'the target'}."
+        )
     )
-    systems_exposed = host or "Affected host"
-    if prereqs:
-        systems_exposed = f"{host or 'Target'} (requires: {', '.join(prereqs[:2])})"
+    systems_exposed = (
+        f"{host or 'This host'} is exposed on the internet — anyone worldwide can attempt to reach it."
+        if "internet" in (impact + why + scenario).lower() or "remote" in (impact + why).lower()
+        else f"Internal systems on {host or 'the affected host'}."
+    )
 
     process_affected = (
-        "Internet-facing service availability and integrity"
+        "Customer-facing websites, portals, and services your users rely on every day"
         if "internet" in (impact + why).lower() or "remote" in (impact + why).lower()
-        else "Service confidentiality and integrity on the affected host"
+        else "Internal apps, employee data, and operations on the affected server"
     )
     importance = why or impact or (
-        f"{title} is retained because scanner evidence confirms the exposure on {host or 'target'}."
+        f"If exploited, this could lead to data theft, service outage, or further access inside your network."
     )
     # Avoid dumping the generic engine boilerplate as "importance"
     if "Exploitability not assessed" in importance and scenario:
-        importance = scenario
+        importance = (
+            f"If exploited: {scenario.split('.')[0].strip()}."
+            if scenario
+            else "Could disrupt business operations or expose sensitive data if an attacker acts on this finding."
+        )
     elif "Exploitability not assessed" in importance and actions:
         importance = f"If exploited, an attacker could: {actions[0]}"
+
+    summary = (
+        importance
+        if importance and "Exploitability not assessed" not in importance
+        else f"{title} on {host or 'target'} could disrupt operations or expose business data if left unaddressed."
+    )
 
     return {
         "attacker_gains": attacker_gains[:220],
         "systems_exposed": systems_exposed[:180],
         "process_affected": process_affected[:180],
         "importance": importance[:280],
-        "summary": (impact or why or attacker_gains)[:280],
+        "summary": summary[:280],
     }
 
 

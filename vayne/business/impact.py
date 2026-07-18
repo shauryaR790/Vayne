@@ -133,48 +133,86 @@ def _narrative(
         finding.canonical_entity.label if finding.canonical_entity else finding.title
     ) or finding.title
     host = finding.host or "the affected host"
-
-    paths = profile.common_exploit_paths or []
-    if validation.cve_applicable and finding.cve:
-        gains = f"Exploit {finding.cve} on {label} to gain {paths[0] if paths else 'unauthorized access'}"
-    elif paths:
-        gains = f"Follow the {profile.display} exploit path: {paths[0]}"
-    else:
-        gains = f"Abuse the exposed {label} to gain a foothold on {host}"
-
-    exposed = host
-    if blast >= 2:
-        exposed = f"{host} plus {blast - 1} reachable downstream asset(s)"
-    elif internet:
-        exposed = f"{host} (internet-facing)"
-
+    service_name = profile.display or label
     sensitivity = str(model.get("data_sensitivity") or "unknown")
+
+    # Plain-language outcome — what actually happens to the business.
+    if validation.privilege_escalation_possible:
+        attacker_gains = (
+            "An attacker could gain administrative control — install ransomware, "
+            "create backdoors, or access any data on connected systems."
+        )
+    elif validation.reproducible or str(validation.exploitability_status) == "confirmed":
+        attacker_gains = (
+            f"An attacker could take over {service_name} on {host} and run their own code — "
+            "stealing files, encrypting systems, or using it as a launch point inside your network."
+        )
+    elif validation.lateral_movement_possible or model.get("lateral"):
+        attacker_gains = (
+            f"An attacker who gets in via {service_name} could spread to other internal systems — "
+            "finance, HR, customer databases, or production servers."
+        )
+    elif validation.auth_required:
+        attacker_gains = (
+            f"An attacker with stolen or guessed credentials could access {service_name} and "
+            "the business data it handles."
+        )
+    elif internet:
+        attacker_gains = (
+            f"Anyone on the internet could reach {service_name} on {host} and attempt to "
+            "break in — no VPN or office access required."
+        )
+    else:
+        attacker_gains = (
+            f"An attacker inside your network could abuse {service_name} to disrupt operations "
+            "or access sensitive information."
+        )
+
+    if internet:
+        systems_exposed = (
+            f"{host} is reachable from the public internet — customers, partners, and attackers "
+            "worldwide can attempt access."
+        )
+    elif blast >= 2:
+        systems_exposed = (
+            f"{host} plus up to {blast} connected internal systems that depend on it or trust it."
+        )
+    else:
+        systems_exposed = f"Internal systems on or around {host}."
+
     process = {
-        "critical": "systems handling business-critical or regulated data",
-        "high": "sensitive internal services and data stores",
-        "medium": "internet-facing service availability and integrity",
-        "low": "peripheral service functionality",
-    }.get(sensitivity, "service confidentiality and integrity on the affected host")
+        "critical": "Regulated or business-critical data (customer records, financials, health data, IP)",
+        "high": "Internal applications, employee data, and customer-facing backends",
+        "medium": "Public websites, customer portals, and online services your users rely on",
+        "low": "Supporting IT services that keep day-to-day operations running",
+    }.get(sensitivity, "Operations and data handled by the affected server")
 
     consequences: list[str] = []
+    if internet and score >= 40:
+        consequences.append("Public security incident — reputational damage and customer churn")
+    if sensitivity in ("critical", "high") or model.get("data"):
+        consequences.append("Theft or leak of confidential business and customer data")
     if validation.lateral_movement_possible or model.get("lateral"):
-        consequences.append("lateral movement into the internal network")
+        consequences.append("Outage or compromise spreading to other departments' systems")
     if validation.privilege_escalation_possible:
-        consequences.append("privilege escalation toward administrative control")
-    if model.get("data"):
-        consequences.append("bulk data disclosure or tampering")
+        consequences.append("Full server takeover — ransomware, data destruction, or persistent access")
+    if score >= 66:
+        consequences.append("Extended downtime, missed SLAs, and lost revenue while recovering")
+    elif score >= 40:
+        consequences.append("Disruption to staff and customers who depend on this service")
     if not consequences:
-        consequences.append("service compromise and potential data exposure")
+        consequences.append("Unauthorized access to business data or interruption of service")
 
+    severity_word = "critical" if score >= 66 else "moderate" if score >= 40 else "limited"
     summary = (
-        f"{profile.display} on {host} carries {'high' if score >= 66 else 'moderate' if score >= 40 else 'limited'} "
-        f"business impact ({score}/100): {gains.lower()}."
+        f"{service_name} on {host} poses {severity_word} business risk ({score}/100). "
+        f"{consequences[0].rstrip('.')}."
     )
 
     return {
-        "attacker_gains": gains,
-        "systems_exposed": exposed,
+        "attacker_gains": attacker_gains,
+        "systems_exposed": systems_exposed,
         "business_process_affected": process,
-        "potential_consequences": "; ".join(consequences),
+        "potential_consequences": "; ".join(consequences[:4]),
         "summary": summary,
     }
