@@ -2,47 +2,47 @@
 
 import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+
 import { formatGraphNodeLabel } from "@/lib/format";
-import { glowForType, nodeSizeForType } from "@/lib/graph-node-styles";
+import { nodeSizeForType } from "@/lib/graph-node-styles";
+import { normalizeGraphType, severityBorderColor } from "@/components/graph/graphUtils";
 import { cn } from "@/lib/utils";
 
 function GraphNodeComponent({ data, selected }: NodeProps) {
-  const type = String(data.type || "unknown");
+  const type = normalizeGraphType({
+    id: String(data.id ?? ""),
+    label: String(data.label ?? ""),
+    type: String(data.type ?? "unknown"),
+  });
   const label = String(data.label || data.id || "");
   const secondary = Boolean(data.secondary);
-  const rejected = type.toLowerCase().includes("reject");
   const dimmed = Boolean(data.dimmed);
+  const highlighted = Boolean(data.highlighted);
+  const onChain = Boolean(data.onChain);
   const { primary, secondary: sublabel } = formatGraphNodeLabel(label);
-  const glow = glowForType(type, secondary);
   const size = nodeSizeForType(type, secondary);
   const isPill = type === "endpoint" && !secondary;
   const [hovered, setHovered] = useState(false);
-  const active = selected || hovered;
-  const playbackHidden = Boolean(data.playbackHidden);
-  const playbackActive = Boolean(data.playbackActive);
-  const scale = playbackActive ? 1.04 : active ? 1.03 : 1;
+  const active = selected || hovered || highlighted;
 
-  const boxShadow = playbackActive
-    ? `0 0 28px ${glow.color}88, inset 0 0 12px ${glow.color}22`
-    : active
-      ? `0 0 16px ${glow.color}55, inset 0 0 8px ${glow.color}15`
-      : `0 0 8px ${glow.color}22`;
+  const borderColor = severityBorderColor({
+    id: String(data.id ?? ""),
+    label,
+    type,
+    risk: Number(data.risk ?? 0),
+    criticality: data.criticality as string | undefined,
+  });
 
   return (
     <div
       className={cn(
-        "graph-node-inner font-mono relative transition-transform duration-200",
-        playbackActive && "graph-node-playback-active",
+        "graph-node-inner relative font-mono transition-opacity duration-200",
+        active && "z-10",
       )}
-      data-wave={data.animationWave ?? 0}
-      data-index={data.animationIndex ?? 0}
       data-node-id={String(data.id ?? "")}
       style={{
         width: size.width,
-        opacity: playbackHidden ? 0 : dimmed ? 0.18 : secondary ? 0.55 : 1,
-        transform: `scale(${scale})`,
-        transformOrigin: "center center",
-        pointerEvents: playbackHidden ? "none" : undefined,
+        opacity: dimmed ? 0.2 : 1,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -50,73 +50,41 @@ function GraphNodeComponent({ data, selected }: NodeProps) {
       <Handle
         type="target"
         position={Position.Left}
-        style={{
-          width: 6,
-          height: 6,
-          background: glow.color,
-          border: "none",
-          boxShadow: `0 0 6px ${glow.color}`,
-        }}
+        className="!h-1.5 !w-1.5 !border-none"
+        style={{ background: borderColor }}
       />
       <div
         style={{
           width: size.width,
           minHeight: size.height,
-          background: "#050505",
-          border: `1px solid ${glow.color}${secondary ? "66" : active ? "cc" : "99"}`,
-          borderRadius: isPill || secondary ? 999 : 4,
+          background: "#09090b",
+          border: `${active || onChain ? 2 : 1}px solid ${borderColor}`,
+          borderRadius: isPill || secondary ? 999 : 8,
           padding: secondary ? "8px 12px" : "10px 14px",
-          boxShadow,
+          boxShadow: active ? `0 0 0 1px ${borderColor}33` : undefined,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
         }}
       >
-        <div
-          className="uppercase tracking-wider text-center"
-          style={{
-            fontSize: secondary ? 9 : 10,
-            color: glow.color,
-            fontWeight: 700,
-            letterSpacing: "0.14em",
-            marginBottom: 4,
-          }}
-        >
-          {secondary ? "evidence" : rejected ? "rejected" : type}
+        <div className="text-center text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
+          {secondary ? "evidence" : type}
         </div>
-        <div
-          className="text-white font-bold text-center leading-tight"
-          style={{ fontSize: secondary ? 11 : 13 }}
-        >
-          {primary}
-        </div>
+        <div className="text-center text-[12px] font-semibold leading-tight text-white/90">{primary}</div>
         {sublabel && !isPill && !secondary ? (
-          <div
-            className="mt-1 truncate text-center text-white/45"
-            style={{ fontSize: 10 }}
-          >
-            {sublabel}
-          </div>
+          <div className="mt-1 truncate text-center text-[10px] text-white/35">{sublabel}</div>
         ) : null}
         {data.confidence != null && !secondary ? (
-          <div
-            className="mt-1.5 text-center font-bold tabular-nums"
-            style={{ fontSize: 9, color: `${glow.color}cc` }}
-          >
-            {Math.round(Number(data.confidence))}% CONF
+          <div className="mt-1 text-center text-[9px] tabular-nums text-white/35">
+            {Math.round(Number(data.confidence))}%
           </div>
         ) : null}
       </div>
       <Handle
         type="source"
         position={Position.Right}
-        style={{
-          width: 6,
-          height: 6,
-          background: glow.color,
-          border: "none",
-          boxShadow: `0 0 6px ${glow.color}`,
-        }}
+        className="!h-1.5 !w-1.5 !border-none"
+        style={{ background: borderColor }}
       />
     </div>
   );

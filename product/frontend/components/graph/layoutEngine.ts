@@ -752,9 +752,7 @@ export function computeGraphLayout(
   };
 }
 
-export function normalizeGraphType(node: GraphNode): string {
-  return normalizeType(node);
-}
+export { normalizeGraphType } from "./graphUtils";
 
 export function isSecondaryGraphNode(node: GraphNode): boolean {
   return isSecondaryEvidence(node);

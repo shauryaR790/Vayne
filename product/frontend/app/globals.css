@@ -287,9 +287,12 @@ select option {
 }
 
 .react-flow__controls,
-.react-flow__minimap,
 .react-flow__panel.react-flow__attribution {
   display: none !important;
+}
+
+.vx-graph-explorer .react-flow__minimap {
+  display: block !important;
 }
 
 .react-flow__edge-path {
