@@ -67,15 +67,15 @@ function GraphNodeComponent({ data, selected }: NodeProps) {
           justifyContent: "center",
         }}
       >
-        <div className="text-center text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
+        <div className="text-center text-[9px] font-semibold uppercase tracking-[0.12em] text-white/40">
           {secondary ? "evidence" : type}
         </div>
-        <div className="text-center text-[12px] font-semibold leading-tight text-white/90">{primary}</div>
+        <div className="text-center text-[11px] font-semibold leading-snug text-white/90">{primary}</div>
         {sublabel && !isPill && !secondary ? (
-          <div className="mt-1 truncate text-center text-[10px] text-white/35">{sublabel}</div>
+          <div className="mt-0.5 truncate text-center text-[9px] text-white/35">{sublabel}</div>
         ) : null}
         {data.confidence != null && !secondary ? (
-          <div className="mt-1 text-center text-[9px] tabular-nums text-white/35">
+          <div className="mt-0.5 text-center text-[8px] tabular-nums text-white/30">
             {Math.round(Number(data.confidence))}%
           </div>
         ) : null}

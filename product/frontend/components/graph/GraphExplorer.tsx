@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   type Edge,
@@ -14,12 +13,12 @@ import "@xyflow/react/dist/style.css";
 import type { GraphData, GraphNode as GraphNodeType, WorkbenchData } from "@/lib/types";
 import { computeElkLayout } from "./elkLayout";
 import { GraphCanvasBackground } from "./GraphCanvasBackground";
-import { GraphControls } from "./GraphControls";
 import { GraphEmptyState, type ReasoningCheck } from "./GraphEmptyState";
+import { GraphExplorerChrome, type GraphFilterId } from "./GraphExplorerChrome";
 import { GraphGroupNode } from "./GraphGroupNode";
+import { GraphMinimapRail } from "./GraphMinimapRail";
 import { GraphNode } from "./GraphNode";
 import { GraphNodeInspector } from "./GraphNodeInspector";
-import { GraphSearchFilter, type GraphFilterId } from "./GraphSearchFilter";
 import { VayneEdge } from "./VayneEdge";
 import { applyGraphFit, FIT_MAX_ZOOM, FIT_MIN_ZOOM, FIT_PADDING } from "./graphFit";
 import { computeHighlightState, edgeKey } from "./graphHighlight";
@@ -34,7 +33,6 @@ import {
   isExploitableNode,
   isInternetFacingNode,
   isLateralMovementNode,
-  isValidatedEdge,
   nodeMatchesSearch,
   normalizeGraphType,
 } from "./graphUtils";
@@ -42,7 +40,7 @@ import {
 const nodeTypes = { vayne: GraphNode, group: GraphGroupNode };
 const edgeTypes = { vayne: VayneEdge };
 
-const GRAPH_HEIGHT = "h-[640px]";
+const GRAPH_HEIGHT = "h-[680px]";
 const TRANSLATE_EXTENT: [[number, number], [number, number]] = [
   [-100000, -100000],
   [100000, 100000],
@@ -89,21 +87,21 @@ function GraphExplorerInner({
   const isWorkstation = layout === "workstation";
   const isWide = isHero || isWorkstation;
   const graphHeight = isWorkstation
-    ? "h-[460px]"
+    ? "h-[520px]"
     : isHero
-      ? "h-[580px]"
+      ? "h-[620px]"
       : isInline
-        ? "h-[420px]"
+        ? "h-[460px]"
         : GRAPH_HEIGHT;
   const minHeight = isWorkstation
-    ? "min-h-[400px]"
+    ? "min-h-[480px]"
     : isHero
-      ? "min-h-[520px]"
+      ? "min-h-[560px]"
       : isInline
-        ? "min-h-[340px]"
-        : "min-h-[560px]";
+        ? "min-h-[380px]"
+        : "min-h-[600px]";
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const flowRef = useRef<ReactFlowInstance | null>(null);
   const [flowReady, setFlowReady] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -300,10 +298,10 @@ function GraphExplorerInner({
   const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
     const instance = flowRef.current;
     if (!instance) return;
-    const width = Number(node.width ?? node.data?.width ?? 170);
-    const height = Number(node.height ?? node.data?.height ?? 80);
+    const width = Number(node.width ?? 170);
+    const height = Number(node.height ?? 80);
     instance.setCenter(node.position.x + width / 2, node.position.y + height / 2, {
-      zoom: 1.15,
+      zoom: 1,
       duration: 450,
     });
   }, []);
@@ -318,32 +316,13 @@ function GraphExplorerInner({
   }, []);
 
   useEffect(() => {
-    if (!flowRef.current || !flowNodes.length || !containerRef.current || layoutLoading) return;
-    const { width, height } = containerRef.current.getBoundingClientRect();
+    if (!flowRef.current || !flowNodes.length || !canvasRef.current || layoutLoading || !flowReady) return;
+    const { width, height } = canvasRef.current.getBoundingClientRect();
     if (width < 32 || height < 32) return;
     const t = window.setTimeout(() => {
       applyGraphFit(flowRef.current!, flowNodes);
-    }, 80);
+    }, 60);
     return () => window.clearTimeout(t);
-  }, [flowNodes, flowReady, layoutLoading, graph.nodes.length, graph.edges.length]);
-
-  useEffect(() => {
-    if (!flowReady || !containerRef.current || !flowRef.current) return;
-    const el = containerRef.current;
-    const ro = new ResizeObserver(() => {
-      if (!flowNodes.length || layoutLoading) return;
-      window.requestAnimationFrame(() => {
-        flowRef.current?.fitView({
-          nodes: flowNodes.filter((n) => !n.hidden),
-          padding: FIT_PADDING,
-          duration: 0,
-          maxZoom: FIT_MAX_ZOOM,
-          minZoom: FIT_MIN_ZOOM,
-        });
-      });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
   }, [flowNodes, flowReady, layoutLoading]);
 
   const hasGraphData = filteredByChip.length > 0;
@@ -362,9 +341,8 @@ function GraphExplorerInner({
       }`}
     >
       <div
-        ref={containerRef}
-        className={`vx-graph-explorer relative ${graphHeight} ${minHeight} isolate min-w-0 ${
-          isWorkstation ? "overflow-hidden border border-vx-border bg-vx-app" : "overflow-hidden bg-[#050505]"
+        className={`vx-graph-explorer flex min-w-0 flex-col ${graphHeight} ${minHeight} ${
+          isWorkstation ? "border border-vx-border bg-vx-app" : "bg-[#050505]"
         } ${
           isWorkstation
             ? ""
@@ -383,100 +361,84 @@ function GraphExplorerInner({
           />
         ) : (
           <>
-            <GraphCanvasBackground />
-
-            <GraphSearchFilter
+            <GraphExplorerChrome
               query={searchQuery}
               onQueryChange={setSearchQuery}
               activeFilters={activeFilters}
               onToggleFilter={toggleFilter}
               matchCount={searchMatchCount}
               totalCount={filteredByChip.length}
+              nodeCount={filteredByChip.length}
+              edgeCount={filteredEdges.length}
+              loading={layoutLoading}
             />
 
-            <div className="absolute inset-0 z-[2]">
-              <ReactFlow
-                nodes={flowNodes}
-                edges={flowEdges}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                onInit={onInit}
-                onNodeClick={onNodeClick}
-                onNodeDoubleClick={onNodeDoubleClick}
-                onPaneClick={onPaneClick}
-                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-                minZoom={0.08}
-                maxZoom={2.5}
-                translateExtent={TRANSLATE_EXTENT}
-                panOnDrag
-                panOnScroll={false}
-                zoomOnScroll
-                zoomOnPinch
-                zoomOnDoubleClick={false}
-                nodesDraggable={false}
-                nodesConnectable={false}
-                elementsSelectable
-                proOptions={{ hideAttribution: true }}
-                className="!bg-transparent"
-                style={{ width: "100%", height: "100%" }}
-              >
-                <GraphControls />
-                <MiniMap
-                  position="bottom-right"
-                  className="!bottom-3 !right-3 !m-0 !h-[96px] !w-[140px] !rounded-lg !border !border-white/10 !bg-black/75"
-                  nodeColor={(node) => {
-                    const risk = Number(node.data?.risk ?? 0);
-                    if (risk >= 8) return "#ef4444";
-                    if (risk >= 6) return "#f97316";
-                    if (risk >= 4) return "#eab308";
-                    return "#52525b";
-                  }}
-                  maskColor="rgba(5,5,5,0.65)"
-                  pannable
-                  zoomable
-                />
-                <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden>
-                  <defs>
-                    <marker
-                      id="vayne-arrow-default"
-                      markerWidth="10"
-                      markerHeight="10"
-                      refX="8"
-                      refY="5"
-                      orient="auto"
-                    >
-                      <path d="M1,1 L9,5 L1,9 Z" fill="#71717a" />
-                    </marker>
-                    <marker
-                      id="vayne-arrow-valid"
-                      markerWidth="10"
-                      markerHeight="10"
-                      refX="8"
-                      refY="5"
-                      orient="auto"
-                    >
-                      <path d="M1,1 L9,5 L1,9 Z" fill="#e4e4e7" />
-                    </marker>
-                    <marker
-                      id="vayne-arrow-reject"
-                      markerWidth="10"
-                      markerHeight="10"
-                      refX="8"
-                      refY="5"
-                      orient="auto"
-                    >
-                      <path d="M1,1 L9,5 L1,9 Z" fill="#f97316" />
-                    </marker>
-                  </defs>
-                </svg>
-              </ReactFlow>
-            </div>
-
-            {layoutLoading ? (
-              <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 text-center text-[10px] uppercase tracking-wide text-white/30">
-                Laying out graph…
+            <div className="relative min-h-0 flex-1 overflow-hidden">
+              <div ref={canvasRef} className="absolute inset-0 right-[148px]">
+                <GraphCanvasBackground />
+                <ReactFlow
+                  nodes={flowNodes}
+                  edges={flowEdges}
+                  nodeTypes={nodeTypes}
+                  edgeTypes={edgeTypes}
+                  onInit={onInit}
+                  onNodeClick={onNodeClick}
+                  onNodeDoubleClick={onNodeDoubleClick}
+                  onPaneClick={onPaneClick}
+                  defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+                  minZoom={0.08}
+                  maxZoom={2.5}
+                  translateExtent={TRANSLATE_EXTENT}
+                  panOnDrag
+                  panOnScroll={false}
+                  zoomOnScroll
+                  zoomOnPinch
+                  zoomOnDoubleClick={false}
+                  nodesDraggable={false}
+                  nodesConnectable={false}
+                  elementsSelectable
+                  proOptions={{ hideAttribution: true }}
+                  className="!bg-transparent"
+                  style={{ width: "100%", height: "100%" }}
+                >
+                  <GraphMinimapRail />
+                  <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden>
+                    <defs>
+                      <marker
+                        id="vayne-arrow-default"
+                        markerWidth="10"
+                        markerHeight="10"
+                        refX="8"
+                        refY="5"
+                        orient="auto"
+                      >
+                        <path d="M1,1 L9,5 L1,9 Z" fill="#71717a" />
+                      </marker>
+                      <marker
+                        id="vayne-arrow-valid"
+                        markerWidth="10"
+                        markerHeight="10"
+                        refX="8"
+                        refY="5"
+                        orient="auto"
+                      >
+                        <path d="M1,1 L9,5 L1,9 Z" fill="#e4e4e7" />
+                      </marker>
+                      <marker
+                        id="vayne-arrow-reject"
+                        markerWidth="10"
+                        markerHeight="10"
+                        refX="8"
+                        refY="5"
+                        orient="auto"
+                      >
+                        <path d="M1,1 L9,5 L1,9 Z" fill="#f97316" />
+                      </marker>
+                    </defs>
+                  </svg>
+                </ReactFlow>
               </div>
-            ) : null}
+            </div>
           </>
         )}
       </div>

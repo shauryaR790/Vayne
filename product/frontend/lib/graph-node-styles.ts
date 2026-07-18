@@ -1,16 +1,16 @@
 /** Node dimensions and glow palette for the attack graph. */
 
 export const NODE_SIZE: Record<string, { width: number; height: number }> = {
-  endpoint: { width: 140, height: 70 },
-  asset: { width: 170, height: 80 },
-  service: { width: 160, height: 80 },
-  software: { width: 170, height: 80 },
-  vulnerability: { width: 200, height: 90 },
-  attack: { width: 220, height: 90 },
-  verified: { width: 220, height: 90 },
-  rejected: { width: 220, height: 90 },
-  secondary: { width: 150, height: 56 },
-  unknown: { width: 170, height: 80 },
+  endpoint: { width: 120, height: 56 },
+  asset: { width: 140, height: 60 },
+  service: { width: 132, height: 58 },
+  software: { width: 140, height: 60 },
+  vulnerability: { width: 156, height: 64 },
+  attack: { width: 160, height: 64 },
+  verified: { width: 160, height: 64 },
+  rejected: { width: 150, height: 60 },
+  secondary: { width: 120, height: 48 },
+  unknown: { width: 132, height: 58 },
 };
 
 export const NODE_GLOW: Record<string, { color: string; label: string }> = {

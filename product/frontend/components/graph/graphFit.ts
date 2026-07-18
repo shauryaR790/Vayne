@@ -1,10 +1,10 @@
 import { getNodesBounds, type ReactFlowInstance, type Node } from "@xyflow/react";
 import type { GraphEdge, GraphNode } from "@/lib/types";
 
-export const FIT_PADDING = 0.2;
-export const FIT_DURATION = 800;
-export const FIT_MAX_ZOOM = 1.4;
-export const FIT_MIN_ZOOM = 0.7;
+export const FIT_PADDING = 0.12;
+export const FIT_DURATION = 600;
+export const FIT_MAX_ZOOM = 1;
+export const FIT_MIN_ZOOM = 0.12;
 
 export const WORKSTATION_FIT_PADDING = 0.08;
 export const WORKSTATION_FIT_MAX_ZOOM = 0.5;
