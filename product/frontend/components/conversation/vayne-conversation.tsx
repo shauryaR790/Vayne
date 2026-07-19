@@ -120,6 +120,7 @@ export function VaneWorkspace({
   const [analystInput, setAnalystInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [bundle, setBundle] = useState<InvestigationBundle | null>(null);
+  const [investigationBundles, setInvestigationBundles] = useState<InvestigationBundle[]>([]);
   const [busy, setBusy] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [activityFeed, setActivityFeed] = useState<AgentActivityFeed | null>(null);
@@ -150,6 +151,11 @@ export function VaneWorkspace({
       setInvestigationMode(defaultInvestigationMode(files.length, ""));
     }
   }, [files.length, modeExplicit]);
+
+  const handleInvestigationModeChange = useCallback((mode: InvestigationMode) => {
+    setInvestigationMode(mode);
+    setModeExplicit(true);
+  }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const engineStickRef = useRef(false);
@@ -360,17 +366,21 @@ export function VaneWorkspace({
         });
 
         const primaryBundleId = bundleIds[0];
-        void loadInvestigationBundle(primaryBundleId, setBundle)
-          .then((data) => {
-            saveRecentInvestigation(
-              recentEntryFromBundle(
-                data,
-                session.files[0]?.name || data.report.target?.split(/[/\\]/).pop(),
-              ),
-            );
+        void Promise.all(bundleIds.map((id) => loadInvestigationBundle(id)))
+          .then((loadedBundles) => {
+            setInvestigationBundles(loadedBundles);
+            setBundle(loadedBundles[0] ?? null);
+            for (const row of loadedBundles) {
+              saveRecentInvestigation(
+                recentEntryFromBundle(
+                  row,
+                  session.files[0]?.name || row.report.target?.split(/[/\\]/).pop(),
+                ),
+              );
+            }
             if (!restoredAnalyst.length) {
               void playAnalystBriefing(
-                buildAnalystBriefingMessages([data], {
+                buildAnalystBriefingMessages(loadedBundles, {
                   sourceLabels: session.files.map((f) => f.name),
                 }),
               );
@@ -719,6 +729,7 @@ export function VaneWorkspace({
         const bundles = await Promise.all(
           result.investigations.map((item) => loadInvestigationBundle(item.investigation_id)),
         );
+        setInvestigationBundles(bundles);
         setBundle(bundles[0] ?? null);
         for (const row of bundles) {
           saveRecentInvestigation(
@@ -754,7 +765,7 @@ export function VaneWorkspace({
         void finishEngineAnimation();
 
         const data = await loadInvestigationBundle(result.investigation_id, setBundle);
-        setBundle(data);
+        setInvestigationBundles([data]);
         saveRecentInvestigation(recentEntryFromBundle(data, label));
 
         const intro = combinedAnalystIntro(fileNames.length);
@@ -796,6 +807,7 @@ export function VaneWorkspace({
       setAnalystInput("");
       setFiles([]);
       setBundle(null);
+      setInvestigationBundles([]);
       setInvestigationGroupId(null);
       setInvestigationIds([]);
       setInvestigationMode("combined");
@@ -901,6 +913,22 @@ export function VaneWorkspace({
       : [];
   }, [investigationIds, bundle]);
 
+  const analystBundles = investigationBundles.length
+    ? investigationBundles
+    : bundle
+      ? [bundle]
+      : [];
+
+  const analystContextLabel = useMemo(() => {
+    if (investigationMode === "separate" && analystBundles.length > 1) {
+      return `${analystBundles.length} separate analyses`;
+    }
+    if (engineSourceLabels.length > 1) {
+      return `${engineSourceLabels.length} merged scans`;
+    }
+    return analystBundles[0]?.report.name?.trim() || analystBundles[0]?.detail.summary.id || ANALYST_NAME;
+  }, [analystBundles, engineSourceLabels.length, investigationMode]);
+
   const commandPaletteItems = useCommandPaletteItems({
     onNewInvestigation: () => window.dispatchEvent(new Event("vayne:new-chat")),
     onOpenInvestigation: handleOpenInvestigation,
@@ -968,6 +996,7 @@ export function VaneWorkspace({
                   : []
             }
             investigationGroupId={investigationGroupId}
+            investigationMode={investigationMode}
             sourceLabels={engineSourceLabels}
             onSelectFiles={(picked) => {
               setFiles((prev) => {
@@ -985,6 +1014,7 @@ export function VaneWorkspace({
               setError("");
             }}
             onRemoveFile={removeFile}
+            onInvestigationModeChange={handleInvestigationModeChange}
             onBeginSession={handleHomeBegin}
             onOpenInvestigation={handleOpenInvestigation}
             onFocusAnalyst={focusAnalyst}
@@ -1005,6 +1035,8 @@ export function VaneWorkspace({
           >
             <VaneAnalystPanel
               bundle={bundle}
+              bundles={analystBundles}
+              contextLabel={analystContextLabel}
               messages={analystMessages}
               input={analystInput}
               busy={busy}

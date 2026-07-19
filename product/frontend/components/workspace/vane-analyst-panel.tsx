@@ -24,6 +24,8 @@ interface AnalystMessageRow extends StoredChatMessage {
 
 export function VaneAnalystPanel({
   bundle,
+  bundles,
+  contextLabel,
   messages,
   input,
   busy,
@@ -42,6 +44,8 @@ export function VaneAnalystPanel({
   sourceLabels,
 }: {
   bundle: InvestigationBundle | null;
+  bundles?: InvestigationBundle[];
+  contextLabel?: string;
   messages: AnalystMessageRow[];
   input: string;
   busy: boolean;
@@ -82,14 +86,19 @@ export function VaneAnalystPanel({
 
   const disabled = busy;
   const empty = !messages.length && !thinking && !activityFeed?.lines.length && !briefingPrompt;
-  const contextLabel = bundle
-    ? bundle.report.name?.trim() || bundle.detail.summary.id || ANALYST_NAME
-    : ANALYST_NAME;
+  const activeBundles = bundles?.length ? bundles : bundle ? [bundle] : [];
+  const panelContextLabel =
+    contextLabel ||
+    (activeBundles.length > 1
+      ? `${activeBundles.length} analyses`
+      : activeBundles[0]?.report.name?.trim() ||
+        activeBundles[0]?.detail.summary.id ||
+        ANALYST_NAME);
 
   return (
     <aside className="flex h-full w-full min-w-[300px] flex-col border-l border-vx-border bg-vx-analyst">
       <AnalystPanelHeader
-        contextLabel={contextLabel}
+        contextLabel={panelContextLabel}
         onDismiss={messages.length && onClearChat ? onClearChat : undefined}
       />
       <div
@@ -106,9 +115,11 @@ export function VaneAnalystPanel({
         {empty ? (
           <div className="flex h-full min-h-[200px] items-center justify-center px-2 text-center">
             <p className="max-w-[240px] text-[14px] leading-relaxed text-vx-muted">
-              {!bundle
+              {!bundle && !activeBundles.length
                 ? "Ask VAYNE anything about cybersecurity — or upload evidence to start an investigation."
-                : "Ask why a finding was retained, how a path was validated, or what to fix first."}
+                : activeBundles.length > 1
+                  ? "Ask across all uploaded analyses — compare findings, paths, and evidence from every scan."
+                  : "Ask why a finding was retained, how a path was validated, or what to fix first."}
             </p>
           </div>
         ) : null}

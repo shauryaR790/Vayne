@@ -10,6 +10,8 @@ import {
 import { LayoutGroup, motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 
+import { SourceFileBadge } from "@/components/shared/source-file-badge";
+
 import type {
   WorkbenchCandidatePath,
   WorkbenchConfirmedFinding,
@@ -62,6 +64,7 @@ import { Badge } from "@/components/ui/badge";
 import { MetricTile, SectionLabel, WorkspaceCard } from "@/components/shared/workspace-card";
 import { AnalystEngineFileBoxes } from "@/components/workspace/analyst/analyst-engine-file-boxes";
 import type { InvestigationBundle } from "@/lib/investigation-bundle";
+import { findingSourceFile } from "@/lib/source-attribution";
 import { buildEngineFileInsights } from "@/lib/engine-file-insights";
 import {
   CollapsibleSection,
@@ -575,11 +578,15 @@ export function InvestigationMetadataSection({
 function AnalystFindingCard({
   finding,
   allScanners,
+  sourceFilenames,
+  contributions,
   open,
   onToggle,
 }: {
   finding: WorkbenchConfirmedFinding;
   allScanners: string[];
+  sourceFilenames?: string[];
+  contributions?: WorkbenchFileContribution[];
   open: boolean;
   onToggle: () => void;
 }) {
@@ -627,6 +634,10 @@ function AnalystFindingCard({
     exploit?.probes[0]?.name ||
     finding.not_validated_checks[0] ||
     "Validate exploitability through controlled reproduction.";
+  const sourceFile =
+    sourceFilenames?.length
+      ? findingSourceFile(finding, sourceFilenames, contributions)
+      : undefined;
 
   return (
     <WorkspaceCard
@@ -651,6 +662,11 @@ function AnalystFindingCard({
               <p className="mt-1 truncate font-mono text-[11px] text-white">
                 {finding.host || "—"}
               </p>
+              {sourceFile ? (
+                <div className="mt-2">
+                  <SourceFileBadge file={sourceFile} title={`Finding from ${sourceFile}`} />
+                </div>
+              ) : null}
               {expert ? (
                 <p
                   className="mt-0.5 truncate font-mono text-[10px] text-white/35"
@@ -942,9 +958,11 @@ function AnalystFindingCard({
 
 export function ConfirmedFindingsSection({
   workbench,
+  sourceFilenames,
   reveal,
 }: {
   workbench: WorkbenchData;
+  sourceFilenames?: string[];
   reveal: number;
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -1000,6 +1018,8 @@ export function ConfirmedFindingsSection({
           <AnalystFindingCard
             finding={finding}
             allScanners={allScanners}
+            sourceFilenames={sourceFilenames}
+            contributions={workbench.file_contributions}
             open={isOpen}
             onToggle={() => setOpenId((cur) => (cur === finding.id ? null : finding.id))}
           />

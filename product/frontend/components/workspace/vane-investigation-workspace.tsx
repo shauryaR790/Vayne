@@ -9,6 +9,7 @@ import {
   MultiInvestigationInlineReport,
 } from "@/components/conversation/investigation-inline-report";
 import type { StoredChatMessage } from "@/lib/conversation-session";
+import type { InvestigationMode } from "@/lib/investigation-mode";
 import { ensureEngineMessages } from "@/lib/engine-messages";
 
 export function VaneInvestigationWorkspace({
@@ -17,6 +18,7 @@ export function VaneInvestigationWorkspace({
   messages,
   investigationIds,
   investigationGroupId,
+  investigationMode,
   sourceLabels,
   evidenceFileCount,
   error,
@@ -26,6 +28,7 @@ export function VaneInvestigationWorkspace({
   messages: StoredChatMessage[];
   investigationIds: string[];
   investigationGroupId?: string | null;
+  investigationMode?: InvestigationMode;
   sourceLabels?: string[];
   evidenceFileCount?: number;
   error?: string;
@@ -42,6 +45,8 @@ export function VaneInvestigationWorkspace({
           key={msg.id}
           investigationId={msg.investigationId}
           sourceLabel={msg.sourceLabel}
+          sourceLabels={sourceLabels}
+          investigationMode={investigationMode}
         />,
       ];
     }
@@ -95,6 +100,8 @@ export function VaneInvestigationWorkspace({
               key={id}
               investigationId={id}
               sourceLabel={sourceLabels?.[index]}
+              sourceLabels={sourceLabels}
+              investigationMode={investigationMode}
               sequenceIndex={index + 1}
             />
           ))

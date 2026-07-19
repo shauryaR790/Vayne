@@ -231,6 +231,7 @@ export interface WorkbenchConfirmedFinding {
   machine_confidence: number;
   analyst_confidence: string;
   sources: string[];
+  source_file?: string;
   reasoning: string[];
   evidence: string[];
   proof?: WorkbenchProofItem[];

@@ -1,6 +1,7 @@
 import type { InvestigationBundle } from "./investigation-bundle";
 import type { AttackPathSummary, Finding, GraphData } from "./types";
 import { buildInvestigationCardMetaFromBundle } from "./investigation-metadata";
+import { matchSourceFile, parseUploadedFilenames } from "./source-attribution";
 import {
   avgConfidence,
   parseRejectedChains,
@@ -38,6 +39,7 @@ export interface FindingCardData {
   id: string;
   asset: string;
   finding: string;
+  sourceFile?: string;
   confidence: number;
   exploitability: string;
   businessImpact: string;
@@ -51,6 +53,7 @@ export interface FindingCardData {
 export interface ValidatedChainPresentation {
   id: string;
   steps: string[];
+  sourceFile?: string;
   confidence: number;
   riskScore: number;
   blastRadius: number;
@@ -127,16 +130,24 @@ function findingAnalystNote(f: Finding, beliefReasons: string[]): string {
   ].filter(Boolean);
   return parts.slice(0, 4).join(" ");
 }
-function findingCard(f: Finding, index: number): FindingCardData {
+function findingCard(
+  f: Finding,
+  index: number,
+  sourceFilenames: string[],
+): FindingCardData {
   const confidence = Math.round(f.confidence ?? 0);
   const classification = (f.classification || "observed").toUpperCase();
   const evidenceCount = f.evidence?.length ?? 0;
   const beliefReasons = buildBeliefReasons(f);
+  const sourceFile = matchSourceFile(sourceFilenames, {
+    sources: f.evidence,
+  });
 
   return {
     id: f.id || `finding-${index}`,
     asset: f.host || "Unknown asset",
     finding: f.title || f.cve || "Validated exposure",
+    sourceFile,
     confidence,
     exploitability: classification.includes("CONFIRMED")
       ? "Confirmed"
@@ -330,9 +341,16 @@ function graphAnalystNote(hasPaths: boolean, nodeCount: number, topPath?: Attack
 export function buildInvestigationPresentation(
   bundle: InvestigationBundle,
   sourceLabel?: string,
+  sourceLabels?: string[],
 ): InvestigationPresentation {
   const { detail, report, findings, graph } = bundle;
   const meta = buildInvestigationCardMetaFromBundle(bundle, sourceLabel);
+  const uploadedFilenames = parseUploadedFilenames(
+    ...(sourceLabels ?? []),
+    sourceLabel,
+    report.target,
+    report.name,
+  );
   const topPath = detail.attack_paths[0];
   const assets = report.assets?.length || report.discovered_assets?.length || 1;
   const validated = findings.validated;
@@ -388,7 +406,7 @@ export function buildInvestigationPresentation(
         }
       : null,
     breakdown,
-    findings: validated.slice(0, 6).map(findingCard),
+    findings: validated.slice(0, 6).map((f, i) => findingCard(f, i, uploadedFilenames)),
     validatedChains,
     rejectedChains,
     graphAnalystNote: graphAnalystNote(hasPaths, graph.nodes.length, topPath),

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 import { InvestigationWorkspaceHome } from "@/components/workspace/home/investigation-workspace-home";
 import { SessionAnalyzingBar } from "@/components/workspace/home/session-analyzing-bar";
+import type { InvestigationMode } from "@/lib/investigation-mode";
 import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { OPEN_EVIDENCE_EVENT } from "@/lib/workspace-shortcuts";
 
@@ -11,6 +12,8 @@ export function VaneUploadStage({
   files,
   disabled,
   busy,
+  investigationMode,
+  onInvestigationModeChange,
   onSelectFiles,
   onRemoveFile,
   onBeginSession,
@@ -19,6 +22,8 @@ export function VaneUploadStage({
   files: File[];
   disabled?: boolean;
   busy?: boolean;
+  investigationMode?: InvestigationMode;
+  onInvestigationModeChange?: (mode: InvestigationMode) => void;
   onSelectFiles: (files: File[]) => void;
   onRemoveFile?: (index: number) => void;
   onBeginSession: (prompt: string) => void;
@@ -70,6 +75,8 @@ export function VaneUploadStage({
         disabled={disabled}
         busy={busy || disabled}
         stagedFiles={files}
+        investigationMode={investigationMode}
+        onInvestigationModeChange={onInvestigationModeChange}
         onSelectFiles={onSelectFiles}
         onRemoveFile={onRemoveFile}
         onBeginSession={onBeginSession}

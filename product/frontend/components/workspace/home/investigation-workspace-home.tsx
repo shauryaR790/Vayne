@@ -2,11 +2,14 @@
 
 import { InvestigationComposer } from "@/components/workspace/home/investigation-composer";
 import { RecentInvestigationList } from "@/components/workspace/home/recent-investigation-list";
+import type { InvestigationMode } from "@/lib/investigation-mode";
 
 export function InvestigationWorkspaceHome({
   disabled,
   busy,
   stagedFiles,
+  investigationMode,
+  onInvestigationModeChange,
   onSelectFiles,
   onRemoveFile,
   onBeginSession,
@@ -16,6 +19,8 @@ export function InvestigationWorkspaceHome({
   disabled?: boolean;
   busy?: boolean;
   stagedFiles?: File[];
+  investigationMode?: InvestigationMode;
+  onInvestigationModeChange?: (mode: InvestigationMode) => void;
   onSelectFiles: (files: File[]) => void;
   onRemoveFile?: (index: number) => void;
   onBeginSession: (prompt: string) => void;
@@ -35,6 +40,8 @@ export function InvestigationWorkspaceHome({
           disabled={disabled}
           busy={busy}
           stagedFiles={stagedFiles}
+          investigationMode={investigationMode}
+          onInvestigationModeChange={onInvestigationModeChange}
           onSelectFiles={onSelectFiles}
           onRemoveFile={onRemoveFile}
           onBeginSession={onBeginSession}

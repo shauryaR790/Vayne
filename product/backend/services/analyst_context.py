@@ -290,7 +290,7 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
     except Exception:
         workbench_slice = {}
 
-    return {
+    context: dict[str, Any] = {
         "investigation_summary": {
             "id": inv_id,
             "name": report.get("name") or "",
@@ -398,6 +398,43 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
         "workbench": workbench_slice,
     }
 
+    inv = svc.get_investigation(inv_id)
+    if inv and inv.investigation_group_id:
+        siblings = svc.list_investigations_in_group(inv.investigation_group_id)
+        if len(siblings) > 1:
+            related: list[dict[str, Any]] = []
+            for sib in siblings:
+                if sib.id == inv_id:
+                    continue
+                sib_findings = svc.get_findings_export(sib.id)
+                sib_paths = svc.get_attack_paths_export(sib.id)
+                related.append(
+                    {
+                        "id": sib.id,
+                        "name": sib.name,
+                        "source_filename": sib.source_filename or "",
+                        "risk_score": sib.attack_surface_score,
+                        "risk_classification": sib.attack_surface_classification,
+                        "validated_findings": [
+                            _finding_row(f)
+                            for f in (sib_findings.get("validated") or [])[:8]
+                        ],
+                        "attack_paths": [_path_row(p) for p in sib_paths[:4]],
+                    }
+                )
+            context["investigation_group"] = {
+                "id": inv.investigation_group_id,
+                "mode": inv.mode or "separate",
+                "analysis_count": len(siblings),
+                "related_analyses": related,
+                "instruction": (
+                    "The user may ask about any analysis in this group. "
+                    "Answer using the primary investigation plus related_analyses."
+                ),
+            }
+
+    return context
+
 
 def pack_prompt_context(context: dict[str, Any]) -> dict[str, Any]:
     """Structured context object injected before every LLM response."""
@@ -417,6 +454,7 @@ def pack_prompt_context(context: dict[str, Any]) -> dict[str, Any]:
         "proof_timeline": context.get("proof_timeline") or [],
         "graph_summary": context.get("graph_summary") or context.get("graph_statistics") or {},
         "workbench": context.get("workbench") or {},
+        "investigation_group": context.get("investigation_group") or {},
     }
 
 

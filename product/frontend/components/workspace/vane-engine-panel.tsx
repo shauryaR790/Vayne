@@ -6,6 +6,7 @@ import { InvestigationNoEvidence } from "@/components/workspace/home/investigati
 import { VaneEngineEmpty } from "@/components/workspace/vane-engine-empty";
 import { VaneInvestigationWorkspace } from "@/components/workspace/vane-investigation-workspace";
 import type { StoredChatMessage } from "@/lib/conversation-session";
+import type { InvestigationMode } from "@/lib/investigation-mode";
 import { OPEN_EVIDENCE_EVENT, dispatchWorkspaceEvent } from "@/lib/workspace-shortcuts";
 
 export function VaneEnginePanel({
@@ -17,6 +18,8 @@ export function VaneEnginePanel({
   analystOnline,
   error,
   files,
+  investigationMode,
+  onInvestigationModeChange,
   enginePhase,
   messages,
   investigationIds,
@@ -37,6 +40,8 @@ export function VaneEnginePanel({
   analystOnline: boolean;
   error: string;
   files: File[];
+  investigationMode?: InvestigationMode;
+  onInvestigationModeChange?: (mode: InvestigationMode) => void;
   enginePhase: "idle" | "running" | "complete";
   messages: StoredChatMessage[];
   investigationIds: string[];
@@ -55,6 +60,8 @@ export function VaneEnginePanel({
     return (
       <VaneEngineEmpty
         files={files}
+        investigationMode={investigationMode}
+        onInvestigationModeChange={onInvestigationModeChange}
         disabled={busy}
         busy={busy}
         onSelectFiles={onSelectFiles}
@@ -100,6 +107,7 @@ export function VaneEnginePanel({
       messages={messages}
       investigationIds={investigationIds}
       investigationGroupId={investigationGroupId}
+      investigationMode={investigationMode}
       sourceLabels={sourceLabels}
       evidenceFileCount={files.length || undefined}
       error={error || offlineError}

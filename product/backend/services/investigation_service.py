@@ -433,6 +433,16 @@ class InvestigationService:
             key=lambda p: (-p.risk, -p.confidence, p.stable_id),
         )
 
+    def list_investigations_in_group(self, group_id: str) -> list[InvestigationORM]:
+        if not group_id:
+            return []
+        return (
+            self.db.query(InvestigationORM)
+            .filter(InvestigationORM.investigation_group_id == group_id)
+            .order_by(InvestigationORM.group_index.asc(), InvestigationORM.created_at.asc())
+            .all()
+        )
+
     def get_graph(self, inv_id: str) -> dict:
         inv = self.get_investigation(inv_id)
         if not inv:

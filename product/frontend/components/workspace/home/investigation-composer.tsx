@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, ChevronDown, FileText, Infinity, Loader2, Paperclip, X } from "lucide-react";
 
 import { shortFilename } from "@/lib/evidence-presentation";
+import type { InvestigationMode } from "@/lib/investigation-mode";
 import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 
@@ -42,10 +43,56 @@ function ComposerFileChip({
   );
 }
 
+function InvestigationModePicker({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: InvestigationMode;
+  disabled?: boolean;
+  onChange: (mode: InvestigationMode) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-2 border-t border-white/[0.06] px-3 py-2.5">
+      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-vx-muted">
+        Multi-file mode
+      </span>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange("combined")}
+        className={cn(
+          "rounded-full border px-3 py-1 text-[12px] transition-colors",
+          value === "combined"
+            ? "border-white/30 bg-white text-black"
+            : "border-white/10 text-vx-muted hover:border-white/20 hover:text-white",
+        )}
+      >
+        Merge scans
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange("separate")}
+        className={cn(
+          "rounded-full border px-3 py-1 text-[12px] transition-colors",
+          value === "separate"
+            ? "border-white/30 bg-white text-black"
+            : "border-white/10 text-vx-muted hover:border-white/20 hover:text-white",
+        )}
+      >
+        Analyze separately
+      </button>
+    </div>
+  );
+}
+
 export function InvestigationComposer({
   disabled,
   busy,
   stagedFiles = [],
+  investigationMode = "combined",
+  onInvestigationModeChange,
   onSelectFiles,
   onRemoveFile,
   onBeginSession,
@@ -54,6 +101,8 @@ export function InvestigationComposer({
   disabled?: boolean;
   busy?: boolean;
   stagedFiles?: File[];
+  investigationMode?: InvestigationMode;
+  onInvestigationModeChange?: (mode: InvestigationMode) => void;
   onSelectFiles: (files: File[]) => void;
   onRemoveFile?: (index: number) => void;
   onBeginSession: (prompt: string) => void;
@@ -132,16 +181,25 @@ export function InvestigationComposer({
         ) : null}
 
         {stagedFileCount > 0 ? (
-          <div className="flex flex-wrap gap-2 border-b border-white/[0.06] px-3 pb-2 pt-3">
-            {stagedFiles.map((file, index) => (
-              <ComposerFileChip
-                key={`${file.name}:${file.size}:${file.lastModified}`}
-                name={file.name}
+          <>
+            <div className="flex flex-wrap gap-2 border-b border-white/[0.06] px-3 pb-2 pt-3">
+              {stagedFiles.map((file, index) => (
+                <ComposerFileChip
+                  key={`${file.name}:${file.size}:${file.lastModified}`}
+                  name={file.name}
+                  disabled={disabled}
+                  onRemove={onRemoveFile ? () => onRemoveFile(index) : undefined}
+                />
+              ))}
+            </div>
+            {stagedFileCount > 1 && onInvestigationModeChange ? (
+              <InvestigationModePicker
+                value={investigationMode}
                 disabled={disabled}
-                onRemove={onRemoveFile ? () => onRemoveFile(index) : undefined}
+                onChange={onInvestigationModeChange}
               />
-            ))}
-          </div>
+            ) : null}
+          </>
         ) : null}
 
         <textarea

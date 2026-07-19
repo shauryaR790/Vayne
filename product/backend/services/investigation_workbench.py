@@ -275,9 +275,16 @@ def build_workbench(
     file_contributions: list[dict[str, Any]] = []
     for st in tool_stats.values():
         matched_file = next(
-            (f for f in files if st["tool"].lower() in f.lower()),
+            (
+                f
+                for f in files
+                if st["tool"].lower() in f.lower()
+                or st["label"].lower().replace(" ", "") in f.lower().replace(" ", "")
+            ),
             "",
         )
+        if not matched_file and len(files) == 1:
+            matched_file = files[0]
         file_contributions.append(
             {
                 "file": matched_file or f"{st['label']} evidence",
@@ -412,6 +419,40 @@ def build_workbench(
         validated_count=validated_count,
         rejected_count=rejected_count,
     )
+
+    if len(files) > 1:
+        for finding in confirmed_findings:
+            sources = finding.get("sources") or []
+            matched = next(
+                (
+                    row["file"]
+                    for row in file_contributions
+                    if row.get("file")
+                    and not str(row["file"]).lower().endswith(" evidence")
+                    and any(
+                        str(src).lower() in str(row["tool"]).lower()
+                        or str(row["tool"]).lower() in str(src).lower()
+                        for src in sources
+                    )
+                ),
+                "",
+            )
+            if not matched:
+                matched = next(
+                    (
+                        f
+                        for f in files
+                        for src in sources
+                        if str(src).lower() in f.lower() or f.lower().startswith(str(src).lower())
+                    ),
+                    "",
+                )
+            if matched:
+                finding["source_file"] = matched
+    elif files:
+        for finding in confirmed_findings:
+            finding["source_file"] = files[0]
+
     # Keep evidence_trail as the same progression for UI consumers that still
     # read that key; parser-stage detail stays in pipeline / developer details.
     evidence_trail = [

@@ -1,5 +1,6 @@
 "use client";
 
+import { CombinedEvidenceBanner } from "@/components/workspace/combined-evidence-banner";
 import { GraphExplorer } from "@/components/graph/GraphExplorer";
 import type { ReasoningCheck } from "@/components/graph/GraphEmptyState";
 import {
@@ -15,6 +16,8 @@ import {
   formatInvestigationRecordTimestamp,
 } from "@/lib/investigation-record";
 import { cn } from "@/lib/utils";
+import { parseUploadedFilenames } from "@/lib/source-attribution";
+import type { InvestigationMode } from "@/lib/investigation-mode";
 import {
   createReveal,
   HeaderMetric,
@@ -271,15 +274,19 @@ const EMPTY_GRAPH_CHECKS: ReasoningCheck[] = [
 export function InvestigationWorkstationReport({
   bundle,
   sourceLabel,
+  sourceLabels,
+  investigationMode,
   sequenceIndex = 1,
   className,
 }: {
   bundle: InvestigationBundle;
   sourceLabel?: string;
+  sourceLabels?: string[];
+  investigationMode?: InvestigationMode;
   sequenceIndex?: number;
   className?: string;
 }) {
-  const presentation = buildInvestigationPresentation(bundle, sourceLabel);
+  const presentation = buildInvestigationPresentation(bundle, sourceLabel, sourceLabels);
   const record = buildInvestigationRecordMeta(bundle, { sourceLabel, sequenceIndex });
   const {
     executive,
@@ -296,11 +303,23 @@ export function InvestigationWorkstationReport({
   ];
   const assetRows = [...new Set(findings.map((f) => f.asset))];
   const workbench = bundle.workbench;
+  const uploadedFilenames = parseUploadedFilenames(
+    ...(sourceLabels ?? []),
+    sourceLabel,
+    bundle.report.target,
+    bundle.report.name,
+  );
+  const showCombinedAttribution =
+    (investigationMode === "combined" || uploadedFilenames.length > 1) &&
+    uploadedFilenames.length > 1;
 
   const nextDelay = createReveal();
 
   return (
     <article className={cn("flex w-full min-w-0 flex-col gap-1", className)}>
+      {showCombinedAttribution ? (
+        <CombinedEvidenceBanner filenames={uploadedFilenames} />
+      ) : null}
       {workbench ? (
         <ExpertModeProvider expert={false}>
           <RiskOverviewSection
@@ -319,7 +338,11 @@ export function InvestigationWorkstationReport({
 
           <InvestigationFlowSection workbench={workbench} reveal={nextDelay()} />
 
-          <ConfirmedFindingsSection workbench={workbench} reveal={nextDelay()} />
+          <ConfirmedFindingsSection
+            workbench={workbench}
+            sourceFilenames={uploadedFilenames}
+            reveal={nextDelay()}
+          />
 
           <EvidenceTimelineSection workbench={workbench} reveal={nextDelay()} />
 

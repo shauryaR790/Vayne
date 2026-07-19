@@ -10,7 +10,8 @@ import {
 import { loadInvestigationBundle, subscribeInvestigationBundle } from "@/lib/investigation-bundle";
 import type { InvestigationBundle } from "@/lib/investigation-bundle";
 import { removeRecentInvestigation } from "@/lib/recent-investigations";
-import { cn } from "@/lib/utils";
+import type { InvestigationMode } from "@/lib/investigation-mode";
+import { InvestigationSourceTabs } from "@/components/workspace/investigation-source-tabs";
 
 function workspaceLoadingLines(
   bundle: InvestigationBundle | null,
@@ -51,11 +52,15 @@ function workspaceLoadingLines(
 export function InvestigationInlineReport({
   investigationId,
   sourceLabel,
+  sourceLabels,
+  investigationMode,
   sequenceIndex = 1,
   className,
 }: {
   investigationId: string;
   sourceLabel?: string;
+  sourceLabels?: string[];
+  investigationMode?: InvestigationMode;
   sequenceIndex?: number;
   className?: string;
 }) {
@@ -114,6 +119,8 @@ export function InvestigationInlineReport({
     <InvestigationWorkstationReport
       bundle={bundle}
       sourceLabel={sourceLabel}
+      sourceLabels={sourceLabels}
+      investigationMode={investigationMode}
       sequenceIndex={sequenceIndex}
       className={className}
     />
@@ -125,17 +132,5 @@ export function MultiInvestigationInlineReport({
 }: {
   investigations: Array<{ id: string; sourceLabel?: string }>;
 }) {
-  return (
-    <div className="flex w-full min-w-0 flex-col">
-      {investigations.map((inv, index) => (
-        <div key={inv.id} className={cn(index > 0 && "border-t border-vx-border")}>
-          <InvestigationInlineReport
-            investigationId={inv.id}
-            sourceLabel={inv.sourceLabel}
-            sequenceIndex={index + 1}
-          />
-        </div>
-      ))}
-    </div>
-  );
+  return <InvestigationSourceTabs investigations={investigations} />;
 }
