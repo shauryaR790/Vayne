@@ -1,5 +1,7 @@
 /** Parse Cursor-style markdown for analyst chat messages. */
 
+import { stripLeadingEnumeration } from "@/lib/workbench-report-helpers";
+
 export type InlineNode =
   | { type: "text"; value: string }
   | { type: "bold"; value: string }
@@ -193,7 +195,7 @@ function parseBlocks(lines: string[]): BlockNode[] {
       flushBullets();
       flushNumbered();
       flushParagraph();
-      const title = boldSection[1].trim();
+      const title = stripLeadingEnumeration(boldSection[1].trim());
       if (title.toLowerCase() !== lastSectionTitle.toLowerCase()) {
         blocks.push({ type: "section", title });
         lastSectionTitle = title;
@@ -206,7 +208,7 @@ function parseBlocks(lines: string[]): BlockNode[] {
       flushBullets();
       flushNumbered();
       flushParagraph();
-      const title = boldSectionInline[1].slice(2, -2).trim();
+      const title = stripLeadingEnumeration(boldSectionInline[1].slice(2, -2).trim());
       if (title.toLowerCase() !== lastSectionTitle.toLowerCase()) {
         blocks.push({ type: "section", title });
         lastSectionTitle = title;
@@ -220,7 +222,7 @@ function parseBlocks(lines: string[]): BlockNode[] {
       flushBullets();
       flushNumbered();
       flushParagraph();
-      const title = hashSection[1].trim();
+      const title = stripLeadingEnumeration(hashSection[1].trim());
       if (title.toLowerCase() !== lastSectionTitle.toLowerCase()) {
         blocks.push({ type: "section", title });
         lastSectionTitle = title;
@@ -240,7 +242,7 @@ function parseBlocks(lines: string[]): BlockNode[] {
     if (num) {
       flushParagraph();
       flushBullets();
-      numbered.push(num[1]);
+      numbered.push(stripLeadingEnumeration(num[1]));
       continue;
     }
 

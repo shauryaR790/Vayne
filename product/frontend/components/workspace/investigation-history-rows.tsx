@@ -1,21 +1,27 @@
 "use client";
 
-import { formatInvestigationTimestamp, type RecentInvestigation } from "@/lib/recent-investigations";
+import {
+  formatHistoryLabel,
+  formatInvestigationTimestamp,
+  type RecentInvestigation,
+} from "@/lib/recent-investigations";
 import { cn } from "@/lib/utils";
 
 export function InvestigationHistoryRow({
   item,
+  allItems,
   active,
   onSelect,
   showTime = "always",
 }: {
   item: RecentInvestigation;
+  allItems: RecentInvestigation[];
   active?: boolean;
   onSelect: (id: string) => void;
   showTime?: "always" | "hover";
 }) {
   const when = formatInvestigationTimestamp(item.updatedAt || item.createdAt);
-  const title = item.title || "Security Investigation";
+  const title = formatHistoryLabel(item, allItems);
 
   return (
     <button
@@ -65,6 +71,7 @@ export function InvestigationHistoryList({
         <InvestigationHistoryRow
           key={item.id}
           item={item}
+          allItems={items}
           active={activeId === item.id}
           onSelect={onSelect}
           showTime={showTime}

@@ -46,6 +46,7 @@ import {
   riskOverviewMetrics,
   semanticConfidence,
   statusMeaning,
+  stripLeadingEnumeration,
   summarizePathFailures,
 } from "@/lib/workbench-report-helpers";
 import {
@@ -319,7 +320,9 @@ export function ExecutiveSummarySection({
 
         <div className="border-t border-vx-border pt-5">
           <SectionLabel>Recommended next step</SectionLabel>
-          <p className="mt-2 text-[15px] font-medium leading-relaxed text-white">{verdict.nextAction}</p>
+          <p className="mt-2 text-[15px] font-medium leading-relaxed text-white">
+            See prioritized actions in Recommendations below.
+          </p>
         </div>
 
         {panel.overallConfidence != null ? (
@@ -427,7 +430,7 @@ export function InvestigationFlowSection({
         How VANE reached its conclusions — from raw scanner output through correlation, validation,
         and final retention.
       </p>
-      <ol className="divide-y divide-vx-border border-y border-vx-border">
+      <ol className="list-none divide-y divide-vx-border border-y border-vx-border pl-0">
           {steps.map((step, i) => (
             <li key={`${step.label}-${i}`} className="flex gap-4 px-5 py-4">
               <div className="flex w-6 shrink-0 flex-col items-center pt-1">
@@ -488,16 +491,13 @@ export function EngineFileDetailsSection({
 }
 
 const RISK_TILE_MEANING: Record<string, string> = {
-  Risk: "Overall severity, weighted by exposure",
-  Observation: "How sure the top finding exists",
-  Correlation: "How much scanners agree",
-  Exploit: "How likely it can be exploited",
-  Confidence: "Engine certainty in the top finding",
-  Findings: "Retained after evidence review",
-  Assets: "Distinct hosts investigated",
+  "Attack surface": "How exposed the environment is if attack paths hold",
+  "Evidence strength": "How strongly evidence supports the top finding — not severity",
+  "Retained findings": "Findings that passed evidence review",
+  Assets: "Distinct hosts in scope",
   Files: "Scan files parsed",
-  Paths: "Attack paths validated / rejected",
-  Correlations: "Cross-scanner evidence matches",
+  Paths: "Validated vs rejected attack paths",
+  Correlations: "Findings confirmed by multiple scanners",
 };
 
 export function RiskOverviewSection({
@@ -512,8 +512,7 @@ export function RiskOverviewSection({
   reveal: number;
 }) {
   const metrics = riskOverviewMetrics(workbench, risk, confidence);
-  // Decision-relevant only. Everything else lives in Investigation Metadata (P1).
-  const decision = metrics.filter((m) => m.highlight || m.label === "Paths");
+  const decision = metrics.filter((m) => m.highlight);
   return (
     <WorkstationSection
       title="At a Glance"
@@ -526,7 +525,11 @@ export function RiskOverviewSection({
         />
       }
     >
-      <div className="grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
+      <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white/70">
+        Attack surface is about potential impact. Evidence strength is about proof — they measure
+        different things.
+      </p>
+      <div className="grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-3">
         {decision.map((m) => (
           <MetricTile
             key={m.label}
@@ -534,7 +537,7 @@ export function RiskOverviewSection({
             value={m.value}
             large
             flat
-            sub={RISK_TILE_MEANING[m.label] ?? "Key metric"}
+            sub={m.sub ?? RISK_TILE_MEANING[m.label]}
           />
         ))}
       </div>
@@ -580,6 +583,8 @@ function AnalystFindingCard({
   allScanners,
   sourceFilenames,
   contributions,
+  priorityIndex,
+  priorityTotal,
   open,
   onToggle,
 }: {
@@ -587,6 +592,8 @@ function AnalystFindingCard({
   allScanners: string[];
   sourceFilenames?: string[];
   contributions?: WorkbenchFileContribution[];
+  priorityIndex?: number;
+  priorityTotal?: number;
   open: boolean;
   onToggle: () => void;
 }) {
@@ -656,8 +663,13 @@ function AnalystFindingCard({
         <div className="border-b border-vx-border p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
+              {priorityIndex && priorityTotal ? (
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
+                  Finding {priorityIndex} of {priorityTotal}
+                </p>
+              ) : null}
               <h4 className="text-[13px] font-black uppercase leading-snug tracking-wide text-white">
-                {finding.title}
+                {stripLeadingEnumeration(finding.title)}
               </h4>
               <p className="mt-1 truncate font-mono text-[11px] text-white">
                 {finding.host || "—"}
@@ -678,7 +690,9 @@ function AnalystFindingCard({
                 </p>
               ) : null}
             </div>
-            <Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge>
+            <Badge variant={severityVariant(finding.severity)} title="Scanner severity">
+              Sev · {finding.severity}
+            </Badge>
           </div>
 
           {/* State + meaning (P1, P6) */}
@@ -707,11 +721,11 @@ function AnalystFindingCard({
 
             {primary ? (
               <div>
-                <SectionLabel>{primary.label} confidence</SectionLabel>
+                <SectionLabel>Evidence strength</SectionLabel>
                 <div className="mt-2">
                   <ConfidenceBar score={score} contributors={contributors} compact />
                   <p className="mt-2 text-[12px] leading-snug text-white">
-                    {confidenceMeaning(primary.key, primary.metric.score)}
+                    {score}% — {confidenceMeaning(primary.key, primary.metric.score)}
                   </p>
                 </div>
               </div>
@@ -1020,6 +1034,8 @@ export function ConfirmedFindingsSection({
             allScanners={allScanners}
             sourceFilenames={sourceFilenames}
             contributions={workbench.file_contributions}
+            priorityIndex={findings.indexOf(finding) + 1}
+            priorityTotal={findings.length}
             open={isOpen}
             onToggle={() => setOpenId((cur) => (cur === finding.id ? null : finding.id))}
           />
@@ -1260,7 +1276,7 @@ export function EvidenceTimelineSection({
         through to retention.
         {top ? <span> ({top.title})</span> : null}
       </p>
-      <ol className="divide-y divide-vx-border border-y border-vx-border">
+      <ol className="list-none divide-y divide-vx-border border-y border-vx-border pl-0">
         {steps.map((step, i) => (
           <li key={`${step.label}-${i}`} className="flex gap-4 py-4">
               <div className="flex w-6 shrink-0 flex-col items-center pt-1">
@@ -1670,7 +1686,7 @@ export function DeveloperDetailsSection({
 
         {trail.length ? (
           <CollapsibleSection title="Parser Pipeline" defaultOpen={false}>
-            <ol className="divide-y divide-vx-border border-y border-vx-border">
+            <ol className="list-none divide-y divide-vx-border border-y border-vx-border pl-0">
               {trail.map((event, i) => (
                 <li key={`${event.event}-${i}`} className="flex gap-4 py-3">
                   <span className="w-16 shrink-0 font-mono text-[11px] font-bold text-white">

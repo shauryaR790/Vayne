@@ -199,7 +199,16 @@ export function generateInvestigationTitle(
     return truncate(engineName, 56);
   }
 
-  return activityTitle(tech, activity);
+  const title = activityTitle(tech, activity);
+  const primaryHost =
+    findings.validated[0]?.host ||
+    (report.assets?.[0] as { host?: string } | undefined)?.host ||
+    (report.discovered_assets?.[0] as { host?: string } | undefined)?.host;
+  if (primaryHost && /exposure analysis|attack path analysis|attack surface review/i.test(title)) {
+    const shortHost = primaryHost.split(".")[0] || primaryHost;
+    return `${title} · ${truncate(shortHost, 24)}`;
+  }
+  return title;
 }
 
 export function generateInvestigationSummary(

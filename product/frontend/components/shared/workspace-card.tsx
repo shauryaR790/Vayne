@@ -42,7 +42,7 @@ export function MetricTile({
       >
         {typeof value === "string" ? value.toUpperCase() : value}
       </p>
-      {sub ? <p className="mt-1.5 text-[12px] font-bold uppercase text-white">{sub}</p> : null}
+      {sub ? <p className="mt-1.5 text-[12px] normal-case leading-snug text-white/55">{sub}</p> : null}
     </div>
   );
 }

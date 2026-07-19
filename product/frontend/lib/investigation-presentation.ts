@@ -161,7 +161,10 @@ function findingCard(
           ? "Elevated — lateral risk"
           : "Moderate — contained exposure",
     evidenceCount,
-    riskScore: Math.min(10, Math.max(1, Math.round(confidence / 10))),
+    riskScore: Math.min(
+      10,
+      Math.max(1, Math.round((f.confidence ?? 0) / 10)),
+    ),
     remediationPriority:
       confidence >= 80 ? "P1 — Immediate" : confidence >= 60 ? "P2 — This sprint" : "P3 — Scheduled",
     beliefReasons,

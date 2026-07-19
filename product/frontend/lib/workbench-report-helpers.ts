@@ -117,15 +117,20 @@ export interface ConfidenceBand {
 /** A number is never shown alone — pair it with a band word + sentence (P4). */
 export function confidenceBand(score: number): ConfidenceBand {
   if (score >= 80) {
-    return { word: "High confidence", sentence: "Evidence strongly supports this." };
+    return { word: "Strong evidence", sentence: "Multiple signals support this finding." };
   }
   if (score >= 55) {
-    return { word: "Moderate confidence", sentence: "Evidence supports this, but gaps remain." };
+    return { word: "Partial evidence", sentence: "Supported, but validation gaps remain." };
   }
   if (score >= 30) {
-    return { word: "Low confidence", sentence: "Limited evidence — treat as unconfirmed." };
+    return { word: "Weak evidence", sentence: "Treat as unconfirmed until validated." };
   }
-  return { word: "Very low confidence", sentence: "Insufficient evidence." };
+  return { word: "Insufficient evidence", sentence: "Not enough proof to act on yet." };
+}
+
+/** Remove duplicate list numbering from engine or LLM text. */
+export function stripLeadingEnumeration(text: string): string {
+  return text.replace(/^\s*\d+[.)]\s+/, "").trim();
 }
 
 /** Evidence that argues against the finding — conflicts & disagreement (P3). */
@@ -216,8 +221,13 @@ export function recommendationTasks(workbench: WorkbenchData): RecommendationTas
     return topic ? `Resolve: ${topic.toLowerCase()}` : "Move the finding toward validated";
   };
   return (workbench.next_actions || []).slice(0, 8).map((action) => {
-    const { gain, topic } = matchGain(action);
-    return { action, expectedResult: expectedFor(action, topic), expectedGain: gain };
+    const cleaned = stripLeadingEnumeration(action);
+    const { gain, topic } = matchGain(cleaned);
+    return {
+      action: cleaned,
+      expectedResult: expectedFor(cleaned, topic),
+      expectedGain: gain,
+    };
   });
 }
 
@@ -512,23 +522,43 @@ export function riskOverviewMetrics(workbench: WorkbenchData, risk: string, conf
     workbench.statistics.find((s) => s.label === label)?.value ?? "—";
   const top = workbench.confirmed_findings[0];
   const sem = top ? semanticConfidence(top) : null;
-  const confLabel = sem
-    ? `${CONFIDENCE_METRIC_LABEL[sem.primary.metric]}`
-    : "Confidence";
-  const confValue =
-    sem?.primary.score != null
-      ? `${sem.primary.score}%`
-      : confidence != null
-        ? `${confidence}%`
-        : "—";
+  const score =
+    sem?.primary.score ?? (confidence != null ? confidence : top?.machine_confidence ?? null);
+  const band = score != null ? confidenceBand(score) : null;
   return [
-    { label: "Risk", value: risk, highlight: true },
-    { label: confLabel, value: confValue, highlight: true },
-    { label: "Findings", value: workbench.totals.confirmed_findings ?? stat("Validated Findings"), highlight: true },
-    { label: "Assets", value: stat("Assets") },
-    { label: "Files", value: workbench.totals.files },
-    { label: "Paths", value: `${workbench.totals.validated_paths} / ${workbench.totals.rejected_paths}` },
-    { label: "Correlations", value: workbench.totals.cross_source_matches },
+    {
+      label: "Attack surface",
+      value: risk,
+      highlight: true,
+      sub: "Exposure if paths hold",
+    },
+    {
+      label: "Evidence strength",
+      value: band?.word ?? (score != null ? `${score}%` : "—"),
+      highlight: true,
+      sub:
+        score != null && band
+          ? `${score}% — ${band.sentence}`
+          : "How strongly evidence supports the top finding",
+    },
+    {
+      label: "Retained findings",
+      value: workbench.totals.confirmed_findings ?? stat("Validated Findings"),
+      highlight: true,
+      sub: "Passed evidence review",
+    },
+    { label: "Assets", value: stat("Assets"), sub: "Hosts in scope" },
+    { label: "Files", value: workbench.totals.files, sub: "Evidence uploaded" },
+    {
+      label: "Paths",
+      value: `${workbench.totals.validated_paths} / ${workbench.totals.rejected_paths}`,
+      sub: "Validated / rejected",
+    },
+    {
+      label: "Correlations",
+      value: workbench.totals.cross_source_matches,
+      sub: "Cross-scanner matches",
+    },
   ];
 }
 

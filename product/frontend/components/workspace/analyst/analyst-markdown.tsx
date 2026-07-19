@@ -10,6 +10,7 @@ import {
   parseAnalystMarkdown,
   tokenizeShellLine,
 } from "@/lib/analyst-markdown";
+import { stripLeadingEnumeration } from "@/lib/workbench-report-helpers";
 import { cn } from "@/lib/utils";
 
 function InlineCode({ value }: { value: string }) {
@@ -151,15 +152,24 @@ function Block({ block, index }: { block: BlockNode; index: number }) {
 
     case "numbered":
       return (
-        <ol className="vx-md-list space-y-2.5">
-          {block.items.map((item, i) => (
-            <li key={i} className="flex gap-3 text-[14px] leading-[1.7] text-white/85">
-              <span className="vx-md-number mt-px shrink-0 tabular-nums">{i + 1}.</span>
-              <span className="min-w-0 flex-1">
-                <InlineContent nodes={item} />
-              </span>
-            </li>
-          ))}
+        <ol className="vx-md-list list-none space-y-2.5 pl-0">
+          {block.items.map((item, i) => {
+            const nodes = [...item];
+            if (nodes[0]?.type === "text") {
+              nodes[0] = {
+                ...nodes[0],
+                value: stripLeadingEnumeration(nodes[0].value),
+              };
+            }
+            return (
+              <li key={i} className="flex gap-3 text-[14px] leading-[1.7] text-white/85">
+                <span className="vx-md-number mt-px shrink-0 tabular-nums">{i + 1}.</span>
+                <span className="min-w-0 flex-1">
+                  <InlineContent nodes={nodes} />
+                </span>
+              </li>
+            );
+          })}
         </ol>
       );
 

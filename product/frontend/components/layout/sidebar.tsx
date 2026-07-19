@@ -20,6 +20,7 @@ import { resetConversationToHome } from "@/lib/conversation-session";
 import {
   RECENT_INVESTIGATIONS_UPDATED,
   SIDEBAR_RECENTS_MAX,
+  formatHistoryLabel,
   loadRecentInvestigations,
   syncRecentInvestigationsFromApi,
   type RecentInvestigation,
@@ -100,13 +101,16 @@ function NavSection({
 
 function RecentInvestigationRow({
   item,
+  allItems,
   active,
   onSelect,
 }: {
   item: RecentInvestigation;
+  allItems: RecentInvestigation[];
   active: boolean;
   onSelect: (id: string) => void;
 }) {
+  const label = formatHistoryLabel(item, allItems);
   return (
     <button
       type="button"
@@ -117,9 +121,9 @@ function RecentInvestigationRow({
           ? "bg-white/[0.08] text-white"
           : "text-white hover:bg-white/[0.04] hover:text-white",
       )}
-      title={item.title || "Security Investigation"}
+      title={label}
     >
-      {item.title || "Security Investigation"}
+      {label}
     </button>
   );
 }
@@ -176,6 +180,7 @@ function SidebarRecents({
         <RecentInvestigationRow
           key={item.id}
           item={item}
+          allItems={filtered}
           active={activeId === item.id}
           onSelect={onSelect}
         />

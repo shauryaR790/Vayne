@@ -20,6 +20,7 @@ import { parseUploadedFilenames } from "@/lib/source-attribution";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 import {
   createReveal,
+  CollapsibleSection,
   HeaderMetric,
   WorkstationSection,
 } from "@/components/workspace/workstation-primitives";
@@ -178,23 +179,19 @@ function FindingWorkstationCard({ finding }: { finding: FindingCardData }) {
           <p className="mt-1 text-[14px] font-medium text-white">{finding.finding}</p>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-px border-b border-vx-border bg-vx-border sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px border-b border-vx-border bg-vx-border sm:grid-cols-3">
         <div className="bg-vx-section-body px-4 py-3">
-          <p className="text-[10px] uppercase text-vx-muted">Risk</p>
-          <p className="mt-1 text-[14px] text-white">{finding.riskScore}/10</p>
-        </div>
-        <div className="bg-vx-section-body px-4 py-3">
-          <p className="text-[10px] uppercase text-vx-muted">Confidence</p>
+          <p className="text-[10px] uppercase text-vx-muted">Evidence</p>
           <p className="mt-1 text-[14px] text-white">{finding.confidence}%</p>
         </div>
         <div className="bg-vx-section-body px-4 py-3">
-          <p className="text-[10px] uppercase text-vx-muted">Exploitability</p>
+          <p className="text-[10px] uppercase text-vx-muted">Status</p>
           <p className="mt-1 text-[14px] text-white">{finding.exploitability}</p>
         </div>
         <div className="bg-vx-section-body px-4 py-3">
-          <p className="text-[10px] uppercase text-vx-muted">Business Impact</p>
+          <p className="text-[10px] uppercase text-vx-muted">Priority</p>
           <p className="mt-1 text-[13px] text-white">
-            {finding.businessImpact.split("—")[0]?.trim() || finding.businessImpact}
+            {finding.remediationPriority.split("—")[0]?.trim() || finding.remediationPriority}
           </p>
         </div>
       </div>
@@ -336,17 +333,11 @@ export function InvestigationWorkstationReport({
             reveal={nextDelay()}
           />
 
-          <InvestigationFlowSection workbench={workbench} reveal={nextDelay()} />
-
           <ConfirmedFindingsSection
             workbench={workbench}
             sourceFilenames={uploadedFilenames}
             reveal={nextDelay()}
           />
-
-          <EvidenceTimelineSection workbench={workbench} reveal={nextDelay()} />
-
-          <MissingEvidenceSection workbench={workbench} reveal={nextDelay()} />
 
           <RecommendationsSection workbench={workbench} reveal={nextDelay()} />
 
@@ -381,20 +372,29 @@ export function InvestigationWorkstationReport({
             <AttackPathsTimeline workbench={workbench} />
           </WorkstationSection>
 
-          <BusinessImpactSection workbench={workbench} reveal={nextDelay()} />
+          <CollapsibleSection title="Evidence & reasoning" reveal={nextDelay()} defaultOpen={false}>
+            <div className="space-y-1">
+              <InvestigationFlowSection workbench={workbench} reveal={0} />
+              <EvidenceTimelineSection workbench={workbench} reveal={0} />
+              <MissingEvidenceSection workbench={workbench} reveal={0} />
+            </div>
+          </CollapsibleSection>
 
-          <InvestigationTimelineSection workbench={workbench} reveal={nextDelay()} />
-
-          <EngineFileDetailsSection
-            workbench={workbench}
-            bundle={bundle}
-            sourceLabel={sourceLabel}
-            reveal={nextDelay()}
-          />
-
-          <EvidenceSection workbench={workbench} reveal={nextDelay()} />
-          <InvestigationMetadataSection workbench={workbench} reveal={nextDelay()} />
-          <DeveloperDetailsSection workbench={workbench} reveal={nextDelay()} />
+          <CollapsibleSection title="Business & audit context" reveal={nextDelay()} defaultOpen={false}>
+            <div className="space-y-1">
+              <BusinessImpactSection workbench={workbench} reveal={0} />
+              <InvestigationTimelineSection workbench={workbench} reveal={0} />
+              <EngineFileDetailsSection
+                workbench={workbench}
+                bundle={bundle}
+                sourceLabel={sourceLabel}
+                reveal={0}
+              />
+              <EvidenceSection workbench={workbench} reveal={0} />
+              <InvestigationMetadataSection workbench={workbench} reveal={0} />
+              <DeveloperDetailsSection workbench={workbench} reveal={0} />
+            </div>
+          </CollapsibleSection>
         </ExpertModeProvider>
       ) : (
         <>

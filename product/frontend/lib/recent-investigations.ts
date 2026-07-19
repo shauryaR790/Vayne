@@ -101,6 +101,53 @@ function historyTimestamp(item: RecentInvestigation): string {
   return item.updatedAt || item.createdAt;
 }
 
+function formatPreciseHistoryTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function historyLabelParts(item: RecentInvestigation): string[] {
+  const base = (item.title || item.name || "Security Investigation").trim();
+  const parts = [base];
+  if (item.sourceFile) {
+    parts.push(item.sourceFile.split(/[/\\]/).pop() || item.sourceFile);
+  }
+  const when = formatInvestigationTimestamp(item.updatedAt || item.createdAt);
+  if (when) parts.push(when);
+  if (item.pathCount != null && item.pathCount > 0) {
+    parts.push(`${item.pathCount} path${item.pathCount === 1 ? "" : "s"}`);
+  }
+  return parts;
+}
+
+/** Disambiguate sidebar rows that share the same generated title. */
+export function formatHistoryLabel(
+  item: RecentInvestigation,
+  allItems: RecentInvestigation[],
+): string {
+  const base = (item.title || item.name || "Security Investigation").trim();
+  const peers = allItems.filter(
+    (row) => (row.title || row.name || "Security Investigation").trim() === base,
+  );
+  if (peers.length <= 1) return base;
+
+  let label = historyLabelParts(item).join(" · ");
+  const duplicateLabels = peers.filter(
+    (row) => historyLabelParts(row).join(" · ") === label,
+  );
+  if (duplicateLabels.length > 1) {
+    const precise = formatPreciseHistoryTime(item.updatedAt || item.createdAt);
+    if (precise) label = `${label} · ${precise}`;
+  }
+  return label;
+}
+
 export function formatInvestigationTimestamp(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
