@@ -26,6 +26,7 @@ from dataclasses import dataclass
 
 from product.backend.services.investigation_key import (
     build_investigation_summary,
+    compact_investigation_name,
     compute_investigation_key,
     normalize_source_filename,
 )
@@ -78,6 +79,11 @@ class InvestigationService:
         group_index: int = 0,
     ) -> InvestigationORM:
         source = source_filename or _derive_source_filename(uploaded_paths, name)
+        display_name = compact_investigation_name(
+            name,
+            filenames=[p.name for p in uploaded_paths if p.name] or source.split(","),
+        )
+        stored_source = source
         work_dir = self.storage_root / f"_work_{uuid.uuid4().hex}"
         cleanup_dir: Path | None = work_dir
 
@@ -131,7 +137,8 @@ class InvestigationService:
                 inv = existing
                 inv.status = "running"
                 inv.summary = summary
-                inv.source_filename = normalize_source_filename(source) or source
+                inv.name = display_name
+                inv.source_filename = stored_source
                 inv.investigation_group_id = investigation_group_id or inv.investigation_group_id
                 inv.mode = mode or inv.mode
                 inv.group_index = group_index
@@ -159,10 +166,10 @@ class InvestigationService:
                 now = _utcnow()
                 inv = InvestigationORM(
                     id=inv_id,
-                    name=name,
+                    name=display_name,
                     status="running",
                     investigation_key=investigation_key,
-                    source_filename=normalize_source_filename(source) or source,
+                    source_filename=stored_source,
                     summary=summary,
                     investigation_group_id=investigation_group_id,
                     mode=mode,

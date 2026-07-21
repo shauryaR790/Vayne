@@ -672,8 +672,13 @@ export function VaneWorkspace({
     ]);
 
     try {
-      const label = validation.files.map((f) => f.name).join(", ");
       const fileNames = validation.files.map((f) => f.name);
+      const label =
+        fileNames.length === 1
+          ? fileNames[0]
+          : fileNames.length <= 3
+            ? fileNames.join(", ")
+            : `${fileNames[0]} + ${fileNames.length - 1} more files`;
       const result = await analyzeFiles(validation.files, label, {
         mode: resolvedMode,
         prompt,

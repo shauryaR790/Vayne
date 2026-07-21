@@ -19,6 +19,32 @@ def normalize_source_filename(name: str) -> str:
     return ",".join(sorted(parts))
 
 
+def compact_investigation_name(
+    name: str,
+    *,
+    filenames: list[str] | None = None,
+    max_len: int = 200,
+) -> str:
+    """Short display title for DB storage — never join hundreds of filenames."""
+    cleaned = [f.strip().split("/")[-1].split("\\")[-1] for f in (filenames or []) if f.strip()]
+    if not cleaned:
+        return (name or "web-investigation").strip()[:max_len]
+
+    if len(cleaned) == 1:
+        return cleaned[0][:max_len]
+
+    joined = ", ".join(cleaned)
+    if len(cleaned) <= 3 and len(joined) <= max_len:
+        return joined
+
+    first = cleaned[0]
+    suffix = f" + {len(cleaned) - 1} more files"
+    budget = max_len - len(suffix)
+    if budget < 8:
+        return f"{len(cleaned)} evidence files"[:max_len]
+    return f"{first[:budget]}{suffix}"
+
+
 def _normalize_validated_findings(findings: list[Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for finding in findings:

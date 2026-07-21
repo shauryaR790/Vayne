@@ -67,6 +67,40 @@ def _ensure_investigation_columns() -> None:
             "ALTER TABLE investigations ADD COLUMN group_index INTEGER DEFAULT 0"
         )
     if not statements:
+        pass
+    else:
+        with engine.begin() as conn:
+            for stmt in statements:
+                conn.execute(text(stmt))
+
+    _widen_investigation_text_columns()
+
+
+def _widen_investigation_text_columns() -> None:
+    """Postgres prod fix: multi-file uploads exceed VARCHAR(255) on investigations.name."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "investigations" not in inspector.get_table_names():
+        return
+
+    if DATABASE_URL.startswith("sqlite"):
+        return
+
+    if not DATABASE_URL.startswith("postgresql"):
+        return
+
+    cols = {c["name"]: c for c in inspector.get_columns("investigations")}
+    name_type = str(cols.get("name", {}).get("type", "")).upper()
+    source_type = str(cols.get("source_filename", {}).get("type", "")).upper()
+    statements: list[str] = []
+    if "VARCHAR" in name_type or "CHARACTER VARYING" in name_type:
+        statements.append("ALTER TABLE investigations ALTER COLUMN name TYPE TEXT")
+    if source_type and ("VARCHAR" in source_type or "CHARACTER VARYING" in source_type):
+        statements.append(
+            "ALTER TABLE investigations ALTER COLUMN source_filename TYPE TEXT"
+        )
+    if not statements:
         return
     with engine.begin() as conn:
         for stmt in statements:

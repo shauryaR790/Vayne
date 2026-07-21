@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from product.backend.services.investigation_key import (
     build_investigation_summary,
+    compact_investigation_name,
     compute_investigation_key,
     normalize_source_filename,
 )
@@ -50,3 +51,11 @@ def test_build_investigation_summary_prefers_attack_path():
         [{"attack_story": {"narrative": "Internet-facing Apache RCE identified"}}],
     )
     assert "Apache RCE" in summary
+
+
+def test_compact_investigation_name_for_many_files():
+    names = [f"scan_{i}.xml" for i in range(40)]
+    label = compact_investigation_name("web-investigation", filenames=names)
+    assert len(label) <= 200
+    assert "40" in label or "39 more" in label
+    assert "scan_0.xml" in label
