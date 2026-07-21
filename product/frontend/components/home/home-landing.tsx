@@ -8,7 +8,6 @@ import gsap from "gsap";
 
 import { Plus, Loader2 } from "lucide-react";
 
-import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { HoverCard } from "@/components/shared/hover-card";
 import { MarqueeStrip } from "@/components/shared/marquee-strip";
 
@@ -147,8 +146,6 @@ export function HomeLanding({
               type="file"
 
               multiple
-
-              accept={ACCEPTED_EXTENSIONS.join(",")}
 
               className="hidden"
 

@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { InvestigationWorkspaceHome } from "@/components/workspace/home/investigation-workspace-home";
 import { SessionAnalyzingBar } from "@/components/workspace/home/session-analyzing-bar";
 import type { InvestigationMode } from "@/lib/investigation-mode";
-import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { OPEN_EVIDENCE_EVENT } from "@/lib/workspace-shortcuts";
 
 export function VaneUploadStage({
@@ -32,6 +31,7 @@ export function VaneUploadStage({
   onOpenInvestigation: (id: string) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const openFilePicker = useCallback(
     (multiple = true) => {
@@ -42,6 +42,12 @@ export function VaneUploadStage({
     },
     [disabled],
   );
+
+  const openFolderPicker = useCallback(() => {
+    const input = folderInputRef.current;
+    if (!input || disabled) return;
+    input.click();
+  }, [disabled]);
 
   useEffect(() => {
     const onOpenEvidence = () => openFilePicker(true);
@@ -60,13 +66,28 @@ export function VaneUploadStage({
         if (picked.length) onSelectFiles(picked);
       }}
     >
+      {/* No accept= filter — Windows hides extensionless burp_042 / nuclei_195 exports otherwise. */}
       <input
         ref={fileInputRef}
         type="file"
-        accept={ACCEPTED_EXTENSIONS.join(",")}
         className="hidden"
         disabled={disabled}
         multiple
+        onChange={(e) => {
+          const picked = Array.from(e.target.files ?? []);
+          if (picked.length) onSelectFiles(picked);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        className="hidden"
+        disabled={disabled}
+        multiple
+        // @ts-expect-error — non-standard but supported in Chromium / Edge for folder pick
+        webkitdirectory=""
+        directory=""
         onChange={(e) => {
           const picked = Array.from(e.target.files ?? []);
           if (picked.length) onSelectFiles(picked);
@@ -84,6 +105,7 @@ export function VaneUploadStage({
         onClearFiles={onClearFiles}
         onBeginSession={onBeginSession}
         onUpload={() => openFilePicker(true)}
+        onUploadFolder={() => openFolderPicker()}
         onOpenInvestigation={onOpenInvestigation}
       />
       {busy || disabled ? <SessionAnalyzingBar label="Analyzing evidence…" /> : null}

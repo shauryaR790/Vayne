@@ -5,42 +5,18 @@ import { useCallback, useEffect, useState } from "react";
 import { PriorityInvestigationRow } from "@/components/workspace/executive-investigation-overview";
 import { getWorkbench } from "@/lib/api";
 import {
+  buildPrioritizedInvestigations,
   type PrioritizedInvestigation,
-  type PriorityTier,
 } from "@/lib/executive-investigation-overview";
 import {
   RECENT_INVESTIGATIONS_UPDATED,
   loadInvestigationHistory,
 } from "@/lib/recent-investigations";
-import type { WorkbenchData, WorkbenchPriorityItem } from "@/lib/types";
 
-function mapWorkbenchItem(item: WorkbenchPriorityItem): PrioritizedInvestigation {
-  const reasons = item.priority_reasons?.length ? item.priority_reasons : ["Retained for analyst review."];
-  return {
-    id: item.id,
-    tier: item.tier as PriorityTier,
-    title: item.title,
-    reason: item.reason || reasons[0],
-    riskScore: item.risk_score,
-    estimatedReviewMinutes: item.estimated_review_minutes,
-    priorityReasons: reasons,
-    evidenceCount: item.evidence_count,
-    confidence: item.confidence,
-    claimStatus: item.claim_status,
-    businessImpact: item.business_impact,
-    confidenceExplanation: item.confidence_explanation || `Composite confidence ${item.confidence}%.`,
-    immediateAction: item.immediate_action || reasons[0],
-    evidenceSources: item.evidence_sources ?? [],
-    affectedAssets: item.affected_assets ?? [],
-    evidenceItems: item.evidence_items ?? [],
-    missingEvidence: item.missing_evidence ?? [],
-    detailSectionId: item.detail_section_id,
-  };
-}
-
-function investigationsFromWorkbench(workbench: WorkbenchData): PrioritizedInvestigation[] {
-  const queue = workbench.investigations?.length ? workbench.investigations : workbench.priority_queue;
-  return (queue ?? []).map(mapWorkbenchItem);
+function homeInvestigations(workbench: Parameters<typeof buildPrioritizedInvestigations>[0]): PrioritizedInvestigation[] {
+  const all = buildPrioritizedInvestigations(workbench);
+  const urgent = all.filter((item) => item.tier === "Critical" || item.tier === "High");
+  return (urgent.length ? urgent : all).slice(0, 4);
 }
 
 export function PriorityInvestigationsPanel({
@@ -64,9 +40,8 @@ export function PriorityInvestigationsPanel({
     setLoading(true);
     try {
       const workbench = await getWorkbench(latest.id);
-      const investigations = investigationsFromWorkbench(workbench);
       setInvestigationId(latest.id);
-      setItems(investigations.slice(0, 6));
+      setItems(homeInvestigations(workbench));
     } catch {
       setItems([]);
       setInvestigationId(latest.id);
@@ -93,7 +68,7 @@ export function PriorityInvestigationsPanel({
             What Deserves Analyst Attention Right Now
           </h2>
           <p className="mt-1 text-[13px] text-white/55">
-            Ranked investigations from clustered evidence — not individual port observations.
+            Top Critical and High investigations from your latest run.
           </p>
         </div>
         {investigationId ? (

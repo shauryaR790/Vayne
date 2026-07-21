@@ -933,18 +933,33 @@ def _build_proof(raw: list[dict]) -> list[dict[str, str]]:
 
 def _business_from_engine(bi: dict) -> dict[str, Any]:
     """Map the engine's dynamic business-impact object to the product/UI shape."""
+    raw_summary = str(bi.get("summary") or "")
+    executive_summary = _executive_summary_from_engine(bi)
     return {
         "attacker_gains": str(bi.get("attacker_gains") or "")[:220],
         "systems_exposed": str(bi.get("systems_exposed") or "")[:180],
         "process_affected": str(bi.get("business_process_affected") or "")[:180],
         "importance": str(bi.get("potential_consequences") or bi.get("summary") or "")[:280],
-        "summary": str(bi.get("summary") or "")[:280],
+        "summary": executive_summary[:280],
         "score": int(bi.get("score") or 0),
         "factors": [
             {"label": str(f.get("label") or ""), "delta": int(f.get("delta") or 0)}
             for f in (bi.get("factors") or [])
         ][:12],
     }
+
+
+def _executive_summary_from_engine(bi: dict) -> str:
+    for key in ("potential_consequences", "importance", "attacker_gains"):
+        val = str(bi.get(key) or "").strip()
+        if val and "unknown" not in val.lower():
+            return val
+    raw = str(bi.get("summary") or "").strip()
+    if ". " in raw:
+        tail = raw.rsplit(". ", 1)[-1].strip().rstrip(".")
+        if tail and not tail.lower().startswith("poses "):
+            return tail
+    return raw
 
 
 def _claim_status_from_validation(validation: dict, *, exploit_confirmed: bool) -> str:
@@ -1134,11 +1149,11 @@ def analyze_findings(
         if engine_reasoning:
             reasoning = engine_reasoning
 
-        # Unique one-line reason derived from this finding's top positive/negative features.
         feat = semantic.get("features") or obs_factors
         top_pos = sorted(feat, key=lambda f: f["delta"], reverse=True)[:2]
         top_neg = sorted([f for f in feat if f["delta"] < 0], key=lambda f: f["delta"])[:1]
         reason_bits = [f"{f['label']} ({f['delta']:+d})" for f in top_pos + top_neg]
+        # Internal scoring breakdown — kept for engine audit, not analyst UI.
         unique_reason = "; ".join(reason_bits) if reason_bits else ""
 
         exploit_confirmed = str(validation.get("exploitability_status") or "") == "confirmed"
@@ -1192,7 +1207,7 @@ def analyze_findings(
                 "machine_confidence": primary_score,
                 "analyst_confidence": _analyst_confidence(classification, primary_score),
                 "sources": sources,
-                "reasoning": ([unique_reason] + reasoning)[:6] if unique_reason else reasoning[:6],
+                "reasoning": reasoning[:6],
                 "evidence": evidence[:4],
                 "proof": proof,
                 "confidence": semantic,

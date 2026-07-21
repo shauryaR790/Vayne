@@ -1,6 +1,38 @@
 /** Client-side upload validation for scan artifacts. */
 
-export const ACCEPTED_EXTENSIONS = [".xml", ".json", ".csv", ".nessus"] as const;
+export const ACCEPTED_EXTENSIONS = [
+  ".xml",
+  ".json",
+  ".csv",
+  ".nessus",
+  ".html",
+  ".htm",
+  ".txt",
+  ".sarif",
+] as const;
+
+/** Extensionless exports named burp_042, nuclei_195, cloud_197, etc. */
+export const PARSER_NAME_HINTS = [
+  "nmap",
+  "nessus",
+  "burp",
+  "openvas",
+  "nuclei",
+  "httpx",
+  "naabu",
+  "katana",
+  "qualys",
+  "rapid7",
+  "nexpose",
+  "insightvm",
+  "sarif",
+  "prowler",
+  "scoutsuite",
+  "cloud",
+  "ldap",
+  "metasploit",
+  "nessus",
+] as const;
 
 export const REJECTED_VM_EXTENSIONS = [
   ".vmdk",
@@ -12,9 +44,9 @@ export const REJECTED_VM_EXTENSIONS = [
 
 export const UNSUPPORTED_FILE_MESSAGE =
   "Unsupported file type.\n" +
-  "VAYNE currently accepts scan artifacts\n" +
-  "(.xml, .json, .csv, .nessus),\n" +
-  "not virtual machine images.";
+  "VAYNE accepts scanner exports (.xml, .json, .csv, .html, .nessus, .sarif)\n" +
+  "or extensionless files named with a tool hint (burp_, nuclei_, nmap_, etc.).\n" +
+  "Virtual machine images are not supported.";
 
 export type UploadValidationResult =
   | { ok: true; files: File[] }
@@ -25,19 +57,40 @@ function extension(name: string): string {
   return dot >= 0 ? name.slice(dot).toLowerCase() : "";
 }
 
+export function isAcceptedScanFilename(name: string): boolean {
+  const ext = extension(name);
+  if ((REJECTED_VM_EXTENSIONS as readonly string[]).includes(ext)) {
+    return false;
+  }
+  if (ext && (ACCEPTED_EXTENSIONS as readonly string[]).includes(ext)) {
+    return true;
+  }
+  if (!ext) {
+    const lower = name.toLowerCase();
+    return PARSER_NAME_HINTS.some((hint) => lower.includes(hint));
+  }
+  return false;
+}
+
 export function fileTypeLabel(filename: string): string {
   const ext = extension(filename);
   switch (ext) {
     case ".xml":
-      return "XML File";
+      return "XML Scan";
     case ".json":
-      return "JSON File";
+      return "JSON Scan";
     case ".csv":
-      return "CSV File";
+      return "CSV Export";
     case ".nessus":
       return "Nessus Scan";
+    case ".html":
+    case ".htm":
+      return "HTML Report";
+    case ".sarif":
+      return "SARIF";
     default:
-      return "File";
+      if (!ext && isAcceptedScanFilename(filename)) return "Scanner Export";
+      return "Evidence File";
   }
 }
 
@@ -47,15 +100,10 @@ export function validateUploadFiles(files: FileList | File[]): UploadValidationR
     return { ok: false, message: "Error: choose at least one file" };
   }
 
-  for (const file of list) {
-    const ext = extension(file.name);
-    if ((REJECTED_VM_EXTENSIONS as readonly string[]).includes(ext)) {
-      return { ok: false, message: UNSUPPORTED_FILE_MESSAGE };
-    }
-    if (!(ACCEPTED_EXTENSIONS as readonly string[]).includes(ext)) {
-      return { ok: false, message: UNSUPPORTED_FILE_MESSAGE };
-    }
+  const accepted = list.filter((file) => isAcceptedScanFilename(file.name));
+  if (!accepted.length) {
+    return { ok: false, message: UNSUPPORTED_FILE_MESSAGE };
   }
 
-  return { ok: true, files: list };
+  return { ok: true, files: accepted };
 }

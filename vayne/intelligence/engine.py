@@ -19,6 +19,8 @@ from vayne.contradiction import build_conflicts
 from vayne.evidence.evidence_graph import build_evidence_graph
 from vayne.evidence.quality import aggregate_quality
 from vayne.investigation import build_investigation, build_rejected_path_investigations
+from vayne.investigation.confidence_bridge import apply_confidence_bridge
+from vayne.investigation.generation import build_analyst_investigations
 from vayne.investigation.structured_notebook import build_structured_notebook
 from vayne.models import AttackPath, CorrelatedFinding, InvestigationReport, ValidationResult
 from vayne.reasoning import build_confidence_timeline, build_reasoning
@@ -94,6 +96,25 @@ def build_finding_intelligence(
     # Phase 3 — the full autonomous investigation for this finding.
     if full_investigation:
         inv = build_investigation(correlated, validation, attack_paths)
+        validation = apply_confidence_bridge(
+            validation,
+            inv.get("self_challenge"),
+            inv.get("validation_loop"),
+        )
+        confidence = {
+            "observation": validation.observation_confidence,
+            "reliability": validation.reliability_confidence,
+            "exploit": validation.exploit_confidence,
+            "impact": validation.impact_confidence,
+            "overall": validation.overall_confidence,
+            "dimensions": validation.confidence_dimensions,
+            "factors": validation.confidence_factors,
+            "supporting_evidence": validation.supporting_evidence,
+            "contradicting_evidence": validation.contradicting_evidence,
+            "missing_evidence": validation.missing_evidence,
+        }
+        bundle["confidence"] = confidence
+        bundle["_validation"] = validation
         # Enrich structured notebook with recommendations once the full bundle exists.
         inv["structured_notebook"] = build_structured_notebook(
             correlated,
@@ -149,6 +170,21 @@ def build_investigation_intelligence(
 
     graph = build_evidence_graph(graph_inputs).as_dict()
     rejected_paths = build_rejected_path_investigations(graph_proof)
+    from vayne.evidence.ledger import build_evidence_ledger
+
+    ledger = build_evidence_ledger(report.findings)
+    try:
+        analyst_investigations = build_analyst_investigations(
+            report, graph_proof, ledger=ledger
+        )
+    except Exception as exc:  # noqa: BLE001 — export must not fail the whole run
+        analyst_investigations = {
+            "investigations": [],
+            "count": 0,
+            "error": str(exc),
+            "generated_at": "",
+            "engine_version": "analyst_investigations_v1",
+        }
 
     artifacts = {
         "facts": {"findings": facts, "count": len(facts)},
@@ -159,6 +195,7 @@ def build_investigation_intelligence(
         "recommendations": {"findings": recommendations},
         "conflicts": {"conflicts": conflicts, "count": len(conflicts)},
         "investigations": {"findings": investigations, "count": len(investigations)},
+        "analyst_investigations": analyst_investigations,
         "rejected_paths": {"paths": rejected_paths, "count": len(rejected_paths)},
     }
     # Phase 4 — ground-truth validation summary and calibration status.

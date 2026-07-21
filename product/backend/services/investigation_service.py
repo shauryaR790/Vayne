@@ -544,6 +544,7 @@ class InvestigationService:
         remediation = self.get_remediation_export(inv_id)
         review = self.load_artifact(inv_id, "review.json")
         evidence_ledger = self.load_artifact(inv_id, "evidence_ledger.json")
+        analyst_investigations = self.load_artifact(inv_id, "analyst_investigations.json")
         return build_workbench(
             report,
             graph,
@@ -553,6 +554,7 @@ class InvestigationService:
             remediation=remediation,
             review=review,
             evidence_ledger=evidence_ledger,
+            analyst_investigations=analyst_investigations,
         )
 
     def get_findings_export(self, inv_id: str) -> dict:

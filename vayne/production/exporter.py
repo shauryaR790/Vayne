@@ -134,6 +134,7 @@ def export_production_artifacts(
         "recommendations.json": intelligence["recommendations"],
         "conflicts.json": intelligence["conflicts"],
         "investigations.json": intelligence["investigations"],
+        "analyst_investigations.json": intelligence["analyst_investigations"],
         "rejected_paths.json": intelligence["rejected_paths"],
         # Phase 4 — ground-truth validation loop + probability calibration status.
         "validation.json": intelligence["validation"],

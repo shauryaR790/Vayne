@@ -248,6 +248,10 @@ class Orchestrator:
                 item, validation, item_paths,
                 full_investigation=item.id in full_ids,
             )
+            bridged = intelligence.pop("_validation", None)
+            if bridged is not None:
+                validation = bridged
+                validation_map[item.id] = validation
 
             investigated.append(
                 InvestigatedFinding(

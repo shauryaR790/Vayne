@@ -88,6 +88,7 @@ def build_workbench(
     remediation: dict | None = None,
     review: dict | None = None,
     evidence_ledger: dict | None = None,
+    analyst_investigations: dict | None = None,
 ) -> dict:
     report = report or {}
     graph = graph or {}
@@ -397,11 +398,16 @@ def build_workbench(
             if finding.get("claim_status") == "confirmed":
                 finding["claim_status"] = "suspected"
 
-    investigations = build_investigation_clusters(
-        confirmed_findings=confirmed_findings,
-        candidate_paths=candidate_paths,
-        hypotheses=hypotheses,
-    )
+    engine_investigations = (analyst_investigations or {}).get("investigations") or []
+    engine_failed = bool((analyst_investigations or {}).get("error"))
+    if engine_investigations and not engine_failed:
+        investigations = engine_investigations
+    else:
+        investigations = build_investigation_clusters(
+            confirmed_findings=confirmed_findings,
+            candidate_paths=candidate_paths,
+            hypotheses=hypotheses,
+        )
     priority_queue = build_priority_queue(
         confirmed_findings=confirmed_findings,
         candidate_paths=candidate_paths,

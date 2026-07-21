@@ -1,7 +1,6 @@
 "use client";
 
 import { InvestigationComposer } from "@/components/workspace/home/investigation-composer";
-import { PriorityInvestigationsPanel } from "@/components/workspace/home/priority-investigations-panel";
 import { RecentInvestigationList } from "@/components/workspace/home/recent-investigation-list";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 
@@ -16,6 +15,7 @@ export function InvestigationWorkspaceHome({
   onClearFiles,
   onBeginSession,
   onUpload,
+  onUploadFolder,
   onOpenInvestigation,
 }: {
   disabled?: boolean;
@@ -28,6 +28,7 @@ export function InvestigationWorkspaceHome({
   onClearFiles?: () => void;
   onBeginSession: (prompt: string) => void;
   onUpload: () => void;
+  onUploadFolder?: () => void;
   onOpenInvestigation: (id: string) => void;
 }) {
   return (
@@ -50,9 +51,8 @@ export function InvestigationWorkspaceHome({
           onClearFiles={onClearFiles}
           onBeginSession={onBeginSession}
           onUpload={onUpload}
+          onUploadFolder={onUploadFolder}
         />
-
-        <PriorityInvestigationsPanel onOpenInvestigation={onOpenInvestigation} />
 
         <div className="mt-8">
           <RecentInvestigationList onOpen={onOpenInvestigation} />

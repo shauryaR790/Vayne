@@ -52,24 +52,27 @@ function PriorityInvestigationRow({
           <span>Evidence signals: {item.evidenceCount}</span>
         )}
         <span>Confidence: {item.confidence}%</span>
-        <span>Review: ~{item.estimatedReviewMinutes} min</span>
+        {!compact ? <span>Review: ~{item.estimatedReviewMinutes} min</span> : null}
       </div>
       {item.affectedAssets.length ? (
         <p className="mt-2 text-[12px] text-white/60">
           <span className="font-medium text-white/75">Affected assets: </span>
-          {item.affectedAssets.join(", ")}
+          {item.affectedAssets.slice(0, compact ? 2 : 8).join(", ")}
+          {compact && item.affectedAssets.length > 2 ? "…" : ""}
         </p>
       ) : null}
-      {item.businessImpact ? (
+      {!compact && item.businessImpact ? (
         <p className="mt-3 text-[12px] leading-relaxed text-white/65">
           <span className="font-medium text-white/80">Business impact: </span>
           {item.businessImpact}
         </p>
       ) : null}
-      <p className="mt-3 text-[12px] leading-relaxed text-white/60">
-        <span className="font-medium text-white/75">Confidence: </span>
-        {item.confidenceExplanation}
-      </p>
+      {!compact ? (
+        <p className="mt-3 text-[12px] leading-relaxed text-white/60">
+          <span className="font-medium text-white/75">Confidence: </span>
+          {item.confidenceExplanation}
+        </p>
+      ) : null}
       {!compact ? (
         <div className="mt-3">
           <p className="text-[12px] font-medium text-white">{item.tier} because:</p>
@@ -83,11 +86,13 @@ function PriorityInvestigationRow({
           </ul>
         </div>
       ) : null}
-      <p className="mt-3 text-[12px] leading-relaxed text-white/85">
-        <span className="font-medium text-white">Immediate action: </span>
-        {item.immediateAction}
-      </p>
-      {item.missingEvidence.length ? (
+      {!compact ? (
+        <p className="mt-3 text-[12px] leading-relaxed text-white/85">
+          <span className="font-medium text-white">Immediate action: </span>
+          {item.immediateAction}
+        </p>
+      ) : null}
+      {!compact && item.missingEvidence.length ? (
         <p className="mt-2 text-[11px] text-white/45">
           Missing evidence: {item.missingEvidence.join("; ")}
         </p>

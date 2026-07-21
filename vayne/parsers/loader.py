@@ -86,9 +86,22 @@ def _resolve_parser(path: Path, name: str):
             return fn
     if suffix == ".json":
         return lambda p: _auto_json(p)
-    if suffix == ".xml":
+    if suffix in (".xml", ".html", ".htm"):
         return lambda p: _auto_xml(p)
+    if suffix == ".txt":
+        return lambda p: _auto_text(p)
     raise ValueError(f"Cannot determine parser for: {path}")
+
+
+def _auto_text(path: Path) -> tuple[list[Finding], list[Asset]]:
+    head = path.read_text(encoding="utf-8", errors="replace")[:1200].lower()
+    if head.lstrip().startswith("{") or head.lstrip().startswith("["):
+        return _auto_json(path)
+    if "<" in head and ">" in head:
+        return _auto_xml(path)
+    if "," in head and "\n" in head:
+        return _auto_csv(path)
+    raise ValueError(f"Cannot determine parser for text file: {path.name}")
 
 
 def _auto_json(path: Path) -> tuple[list[Finding], list[Asset]]:
@@ -142,7 +155,7 @@ def _collect_files(paths: list[Path]) -> list[Path]:
     files: list[Path] = []
     for p in paths:
         if p.is_dir():
-            for ext in ("*.json", "*.xml", "*.csv", "*.sarif"):
+            for ext in ("*.json", "*.xml", "*.csv", "*.sarif", "*.html", "*.htm", "*.txt", "*.nessus"):
                 files.extend(sorted(p.rglob(ext)))
         elif p.is_file():
             files.append(p)

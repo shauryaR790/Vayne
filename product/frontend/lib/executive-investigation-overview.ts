@@ -1,5 +1,12 @@
 import type { InvestigationBundle } from "./investigation-bundle";
 import type { InvestigationPresentation } from "./investigation-presentation";
+import {
+  investigationBusinessImpact,
+  investigationConfidenceNote,
+  investigationReason,
+  isInternalScoringText,
+  sanitizeAnalystText,
+} from "./analyst-display";
 import type {
   WorkbenchData,
   WorkbenchPriorityItem,
@@ -45,21 +52,25 @@ function statValue(workbench: WorkbenchData, label: string): string | number {
 }
 
 function mapPriorityItem(item: WorkbenchPriorityItem): PrioritizedInvestigation {
-  const reasons = item.priority_reasons?.length ? item.priority_reasons : ["Retained for analyst review."];
+  const reasons = (item.priority_reasons || []).filter((r) => !isInternalScoringText(r));
+  const fallbackReasons = reasons.length ? reasons : ["Retained for analyst review."];
   return {
     id: item.id,
     tier: item.tier,
-    title: item.title,
-    reason: item.reason || reasons[0],
+    title: sanitizeAnalystText(item.title, item.title),
+    reason: investigationReason(item),
     riskScore: item.risk_score,
     estimatedReviewMinutes: item.estimated_review_minutes,
-    priorityReasons: reasons,
+    priorityReasons: fallbackReasons,
     evidenceCount: item.evidence_count,
     confidence: item.confidence,
     claimStatus: item.claim_status,
-    businessImpact: item.business_impact,
-    confidenceExplanation: item.confidence_explanation || `Composite confidence ${item.confidence}%.`,
-    immediateAction: item.immediate_action || reasons[0],
+    businessImpact: investigationBusinessImpact(item),
+    confidenceExplanation: investigationConfidenceNote(item),
+    immediateAction: sanitizeAnalystText(
+      item.immediate_action || item.next_best_actions?.[0] || "",
+      fallbackReasons[0],
+    ),
     evidenceSources: item.evidence_sources ?? [],
     affectedAssets: item.affected_assets ?? [],
     evidenceItems: item.evidence_items ?? [],
@@ -68,7 +79,7 @@ function mapPriorityItem(item: WorkbenchPriorityItem): PrioritizedInvestigation 
   };
 }
 
-function buildPrioritizedInvestigations(workbench: WorkbenchData): PrioritizedInvestigation[] {
+export function buildPrioritizedInvestigations(workbench: WorkbenchData): PrioritizedInvestigation[] {
   const queue = workbench.investigations?.length
     ? workbench.investigations
     : workbench.priority_queue;

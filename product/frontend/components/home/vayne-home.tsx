@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { Plus, Upload } from "lucide-react";
 
-import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { HoverCard } from "@/components/shared/hover-card";
 import { VayneThinking } from "@/components/shared/vayne-thinking";
 
@@ -73,7 +72,6 @@ export function VayneHome({
           ref={fileInputRef}
           type="file"
           multiple
-          accept={ACCEPTED_EXTENSIONS.join(",")}
           className="hidden"
           onChange={(e) => onFilesSelected(e.target.files)}
         />

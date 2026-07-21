@@ -514,6 +514,12 @@ export interface WorkbenchPriorityItem {
   evidence_items?: string[];
   missing_evidence?: string[];
   finding_ids?: string[];
+  purpose?: {
+    why_analyst_should_care?: string;
+    what_is_happening?: string;
+  };
+  business_impact_executive?: Record<string, string>;
+  next_best_actions?: string[];
 }
 
 export type WorkbenchInvestigation = WorkbenchPriorityItem;

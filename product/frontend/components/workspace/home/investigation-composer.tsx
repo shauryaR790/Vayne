@@ -5,7 +5,6 @@ import { ArrowUp, ChevronDown, Infinity, Loader2, Paperclip } from "lucide-react
 
 import { StagedEvidencePanel } from "@/components/workspace/home/staged-evidence-panel";
 import type { InvestigationMode } from "@/lib/investigation-mode";
-import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 
 function InvestigationModePicker({
@@ -63,6 +62,7 @@ export function InvestigationComposer({
   onClearFiles,
   onBeginSession,
   onUpload,
+  onUploadFolder,
 }: {
   disabled?: boolean;
   busy?: boolean;
@@ -74,8 +74,8 @@ export function InvestigationComposer({
   onClearFiles?: () => void;
   onBeginSession: (prompt: string) => void;
   onUpload: () => void;
+  onUploadFolder?: () => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -108,19 +108,6 @@ export function InvestigationComposer({
 
   return (
     <div className="w-full">
-      <input
-        ref={fileRef}
-        type="file"
-        accept={ACCEPTED_EXTENSIONS.join(",")}
-        multiple
-        className="hidden"
-        disabled={disabled}
-        onChange={(e) => {
-          handleFiles(Array.from(e.target.files ?? []));
-          e.target.value = "";
-        }}
-      />
-
       <div
         className={cn(
           "overflow-hidden rounded-xl border transition-colors duration-200",
@@ -232,10 +219,27 @@ export function InvestigationComposer({
                 "flex size-7 items-center justify-center rounded-md text-white/40 transition-colors",
                 "hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-30",
               )}
-              aria-label="Attach evidence"
+              aria-label="Attach evidence files"
+              title="Attach scan files"
             >
               <Paperclip className="size-4" strokeWidth={1.75} />
             </button>
+
+            {onUploadFolder ? (
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={onUploadFolder}
+                className={cn(
+                  "hidden rounded-md px-2 py-1 text-[11px] text-white/45 transition-colors sm:inline",
+                  "hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-30",
+                )}
+                aria-label="Upload evidence folder"
+                title="Upload entire folder (batch scans)"
+              >
+                Folder
+              </button>
+            ) : null}
 
             <button
               type="button"
