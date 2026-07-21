@@ -27,6 +27,7 @@ export function VaneEnginePanel({
   sourceLabels,
   onSelectFiles,
   onRemoveFile,
+  onClearFiles,
   onBeginSession,
   onOpenInvestigation,
   onFocusAnalyst,
@@ -49,6 +50,7 @@ export function VaneEnginePanel({
   sourceLabels?: string[];
   onSelectFiles: (files: File[]) => void;
   onRemoveFile?: (index: number) => void;
+  onClearFiles?: () => void;
   onBeginSession: (prompt: string) => void;
   onOpenInvestigation: (id: string) => void;
   onFocusAnalyst: () => void;
@@ -66,6 +68,7 @@ export function VaneEnginePanel({
         busy={busy}
         onSelectFiles={onSelectFiles}
         onRemoveFile={onRemoveFile}
+        onClearFiles={onClearFiles}
         onBeginSession={onBeginSession}
         onOpenInvestigation={onOpenInvestigation}
       />

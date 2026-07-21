@@ -143,6 +143,18 @@ def parse_single_file(path: Path, original_name: str) -> FileParseOutcome:
     """Parse one file with full instrumentation. Never raises."""
     parser = guess_parser_name(path)
     stage = parser
+    if path.stat().st_size == 0:
+        return FileParseOutcome(
+            filename=original_name,
+            parser=parser,
+            ok=False,
+            duration_ms=0.0,
+            stage=stage,
+            error_kind=KIND_INVALID_JSON,
+            error="Empty file",
+            details="The uploaded file contains no data.",
+            status_code=422,
+        )
     tracemalloc.start()
     started = time.perf_counter()
     try:

@@ -100,6 +100,8 @@ class Orchestrator:
         load_result = load_scan_files(self.paths, cache_dir=self.cache_dir)
         raw_findings, raw_assets = load_result
         self.parse_manifest = load_result.manifest
+        if not raw_findings and not raw_assets:
+            self._think("No parseable findings in uploaded files — check for empty or skipped files.")
         if self.parse_manifest.get("cache_hits"):
             self._think(
                 f"Incremental parse: {self.parse_manifest['cache_hits']} file(s) loaded from cache, "

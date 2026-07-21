@@ -1,47 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, ChevronDown, FileText, Infinity, Loader2, Paperclip, X } from "lucide-react";
+import { ArrowUp, ChevronDown, Infinity, Loader2, Paperclip } from "lucide-react";
 
-import { shortFilename } from "@/lib/evidence-presentation";
+import { StagedEvidencePanel } from "@/components/workspace/home/staged-evidence-panel";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 import { ACCEPTED_EXTENSIONS } from "@/lib/upload";
 import { cn } from "@/lib/utils";
-
-function ComposerFileChip({
-  name,
-  onRemove,
-  disabled,
-}: {
-  name: string;
-  onRemove?: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "inline-flex max-w-[220px] items-center gap-2 rounded-lg border border-white/20",
-        "bg-white/[0.04] px-2.5 py-1.5 text-white",
-      )}
-    >
-      <FileText className="size-3.5 shrink-0 text-white/70" strokeWidth={1.75} aria-hidden />
-      <span className="min-w-0 truncate text-[12px] text-white" title={name}>
-        {shortFilename(name)}
-      </span>
-      {onRemove ? (
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={onRemove}
-          className="flex size-4 shrink-0 items-center justify-center rounded text-white/45 transition-colors hover:text-white disabled:opacity-30"
-          aria-label={`Remove ${name}`}
-        >
-          <X className="size-3" strokeWidth={2} />
-        </button>
-      ) : null}
-    </div>
-  );
-}
 
 function InvestigationModePicker({
   value,
@@ -95,6 +60,7 @@ export function InvestigationComposer({
   onInvestigationModeChange,
   onSelectFiles,
   onRemoveFile,
+  onClearFiles,
   onBeginSession,
   onUpload,
 }: {
@@ -105,6 +71,7 @@ export function InvestigationComposer({
   onInvestigationModeChange?: (mode: InvestigationMode) => void;
   onSelectFiles: (files: File[]) => void;
   onRemoveFile?: (index: number) => void;
+  onClearFiles?: () => void;
   onBeginSession: (prompt: string) => void;
   onUpload: () => void;
 }) {
@@ -182,16 +149,12 @@ export function InvestigationComposer({
 
         {stagedFileCount > 0 ? (
           <>
-            <div className="flex flex-wrap gap-2 border-b border-white/[0.06] px-3 pb-2 pt-3">
-              {stagedFiles.map((file, index) => (
-                <ComposerFileChip
-                  key={`${file.name}:${file.size}:${file.lastModified}`}
-                  name={file.name}
-                  disabled={disabled}
-                  onRemove={onRemoveFile ? () => onRemoveFile(index) : undefined}
-                />
-              ))}
-            </div>
+            <StagedEvidencePanel
+              files={stagedFiles}
+              disabled={disabled}
+              onRemoveFile={onRemoveFile}
+              onClearAll={onClearFiles}
+            />
             {stagedFileCount > 1 && onInvestigationModeChange ? (
               <InvestigationModePicker
                 value={investigationMode}

@@ -92,7 +92,10 @@ def _resolve_parser(path: Path, name: str):
 
 
 def _auto_json(path: Path) -> tuple[list[Finding], list[Asset]]:
-    data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    text = path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text:
+        return [], []
+    data = json.loads(text)
     if isinstance(data, dict) and isinstance(data.get("runs"), list):
         return sarif.parse(path)
     if isinstance(data, list) and data:
@@ -149,15 +152,36 @@ def _collect_files(paths: list[Path]) -> list[Path]:
 
 
 def _parse_one(path: Path, cache_dir: Path | None) -> tuple[list[Finding], list[Asset], dict]:
-    digest = file_content_hash(path)
-    findings, assets, from_cache = load_cached_parse(path, cache_dir, parse_fn=parse_file)
-    return findings, assets, {
-        "file": path.name,
-        "content_hash": digest,
-        "from_cache": from_cache,
-        "findings": len(findings),
-        "assets": len(assets),
-    }
+    if path.stat().st_size == 0:
+        return [], [], {
+            "file": path.name,
+            "content_hash": "",
+            "from_cache": False,
+            "findings": 0,
+            "assets": 0,
+            "skipped": True,
+            "error": "Empty file",
+        }
+    try:
+        digest = file_content_hash(path)
+        findings, assets, from_cache = load_cached_parse(path, cache_dir, parse_fn=parse_file)
+        return findings, assets, {
+            "file": path.name,
+            "content_hash": digest,
+            "from_cache": from_cache,
+            "findings": len(findings),
+            "assets": len(assets),
+        }
+    except Exception as exc:
+        return [], [], {
+            "file": path.name,
+            "content_hash": "",
+            "from_cache": False,
+            "findings": 0,
+            "assets": 0,
+            "skipped": True,
+            "error": str(exc)[:240],
+        }
 
 
 def load_scan_files(

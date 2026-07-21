@@ -16,6 +16,7 @@ export function VaneUploadStage({
   onInvestigationModeChange,
   onSelectFiles,
   onRemoveFile,
+  onClearFiles,
   onBeginSession,
   onOpenInvestigation,
 }: {
@@ -26,6 +27,7 @@ export function VaneUploadStage({
   onInvestigationModeChange?: (mode: InvestigationMode) => void;
   onSelectFiles: (files: File[]) => void;
   onRemoveFile?: (index: number) => void;
+  onClearFiles?: () => void;
   onBeginSession: (prompt: string) => void;
   onOpenInvestigation: (id: string) => void;
 }) {
@@ -79,6 +81,7 @@ export function VaneUploadStage({
         onInvestigationModeChange={onInvestigationModeChange}
         onSelectFiles={onSelectFiles}
         onRemoveFile={onRemoveFile}
+        onClearFiles={onClearFiles}
         onBeginSession={onBeginSession}
         onUpload={() => openFilePicker(true)}
         onOpenInvestigation={onOpenInvestigation}

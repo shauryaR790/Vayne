@@ -58,6 +58,7 @@ import {
   separateAnalystIntro,
 } from "@/lib/investigation-presentation";
 import { validateUploadFiles } from "@/lib/upload";
+import { analysisPromptForFiles } from "@/lib/staged-files-summary";
 import { VaneSidebar } from "@/components/workspace/vane-sidebar";
 import { VaneEnginePanel } from "@/components/workspace/vane-engine-panel";
 import { VaneAnalystPanel } from "@/components/workspace/vane-analyst-panel";
@@ -655,7 +656,8 @@ export function VaneWorkspace({
     analyzingRef.current = true;
     setInvestigationSessionActive(true);
 
-    const prompt = `Analyze ${validation.files.map((f) => f.name).join(", ")}`;
+    const fileNames = validation.files.map((f) => f.name);
+    const prompt = analysisPromptForFiles(fileNames);
     const attachments = attachmentsFromFiles(validation.files);
     const resolvedMode = modeExplicit
       ? investigationMode
@@ -672,7 +674,6 @@ export function VaneWorkspace({
     ]);
 
     try {
-      const fileNames = validation.files.map((f) => f.name);
       const label =
         fileNames.length === 1
           ? fileNames[0]
@@ -841,6 +842,11 @@ export function VaneWorkspace({
 
   const removeFile = useCallback((index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+    setError("");
+  }, []);
+
+  const clearFiles = useCallback(() => {
+    setFiles([]);
     setError("");
   }, []);
 
@@ -1019,6 +1025,7 @@ export function VaneWorkspace({
               setError("");
             }}
             onRemoveFile={removeFile}
+            onClearFiles={clearFiles}
             onInvestigationModeChange={handleInvestigationModeChange}
             onBeginSession={handleHomeBegin}
             onOpenInvestigation={handleOpenInvestigation}

@@ -46,6 +46,9 @@ export function buildInvestigationRequestMeta(
   return {
     fileCount: count,
     headline: `Analyze ${count} uploaded evidence sets`,
-    scope: names.join(" + "),
+    scope:
+      count > 8
+        ? `${count} files (${names.slice(0, 3).join(", ")} + ${count - 3} more)`
+        : names.join(" + "),
   };
 }

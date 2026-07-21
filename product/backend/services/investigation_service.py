@@ -374,7 +374,13 @@ class InvestigationService:
     def _load_json(path: Path, default):
         if not path.exists():
             return default
-        return json.loads(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8").strip()
+        if not text:
+            return default
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return default
 
     def get_investigation(self, inv_id: str) -> InvestigationORM | None:
         return self.db.get(InvestigationORM, inv_id)

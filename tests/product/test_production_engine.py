@@ -18,7 +18,7 @@ from vayne.models import (
     ValidationResult,
     Classification,
 )
-from vayne.parsers.cache import ScanLoadResult, compute_input_fingerprint, file_content_hash
+from vayne.parsers.cache import ScanLoadResult, compute_input_fingerprint, file_content_hash, load_cached_parse
 from vayne.parsers.loader import load_scan_files, parse_file
 
 
@@ -153,7 +153,14 @@ def test_input_fingerprint_stable():
     assert a == b
 
 
-def test_file_content_hash_deterministic(tmp_path: Path):
-    f = tmp_path / "x.txt"
-    f.write_text("same content", encoding="utf-8")
-    assert file_content_hash(f) == file_content_hash(f)
+def test_corrupt_cache_reparses(tmp_path: Path):
+    sample = tmp_path / "test.csv"
+    sample.write_text("Plugin ID,Plugin Name,Severity,Host,Port\n19506,Nessus Scan Info,Info,10.0.0.1,0\n", encoding="utf-8")
+    cache_dir = tmp_path / "cache"
+    digest = file_content_hash(sample)
+    bad = cache_dir / "files" / f"{digest}.json"
+    bad.parent.mkdir(parents=True, exist_ok=True)
+    bad.write_text("", encoding="utf-8")
+    findings, assets, from_cache = load_cached_parse(sample, cache_dir, parse_fn=parse_file)
+    assert from_cache is False
+    assert isinstance(findings, list)

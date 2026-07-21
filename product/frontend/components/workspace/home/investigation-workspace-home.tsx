@@ -12,6 +12,7 @@ export function InvestigationWorkspaceHome({
   onInvestigationModeChange,
   onSelectFiles,
   onRemoveFile,
+  onClearFiles,
   onBeginSession,
   onUpload,
   onOpenInvestigation,
@@ -23,6 +24,7 @@ export function InvestigationWorkspaceHome({
   onInvestigationModeChange?: (mode: InvestigationMode) => void;
   onSelectFiles: (files: File[]) => void;
   onRemoveFile?: (index: number) => void;
+  onClearFiles?: () => void;
   onBeginSession: (prompt: string) => void;
   onUpload: () => void;
   onOpenInvestigation: (id: string) => void;
@@ -44,6 +46,7 @@ export function InvestigationWorkspaceHome({
           onInvestigationModeChange={onInvestigationModeChange}
           onSelectFiles={onSelectFiles}
           onRemoveFile={onRemoveFile}
+          onClearFiles={onClearFiles}
           onBeginSession={onBeginSession}
           onUpload={onUpload}
         />

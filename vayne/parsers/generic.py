@@ -53,7 +53,10 @@ def parse_csv(path: Path, tool: str = "generic") -> tuple[list[Finding], list[As
 
 
 def parse_json(path: Path, tool: str = "generic") -> tuple[list[Finding], list[Asset]]:
-    data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    text = path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text:
+        return [], []
+    data = json.loads(text)
     records = _extract_records(data)
     findings: list[Finding] = []
     assets: dict[str, Asset] = {}

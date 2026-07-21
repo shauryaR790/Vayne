@@ -9,6 +9,7 @@ export function VaneEngineEmpty(props: {
   onInvestigationModeChange?: (mode: InvestigationMode) => void;
   onSelectFiles: (files: File[]) => void;
   onRemoveFile?: (index: number) => void;
+  onClearFiles?: () => void;
   onBeginSession: (prompt: string) => void;
   onOpenInvestigation: (id: string) => void;
   disabled?: boolean;
