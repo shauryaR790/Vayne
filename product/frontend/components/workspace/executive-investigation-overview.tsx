@@ -24,9 +24,11 @@ function tierStyles(tier: PriorityTier): string {
 function PriorityInvestigationRow({
   item,
   onOpen,
+  compact,
 }: {
   item: PrioritizedInvestigation;
-  onOpen: (sectionId: string) => void;
+  onOpen?: (sectionId: string) => void;
+  compact?: boolean;
 }) {
   return (
     <article className="border-b border-vx-border py-5 last:border-b-0">
@@ -42,49 +44,68 @@ function PriorityInvestigationRow({
         <span className="font-mono text-[13px] font-bold text-white">Risk {item.riskScore}</span>
       </div>
       <h3 className="mt-3 text-[15px] font-semibold leading-snug text-white">{item.title}</h3>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/50">
-        <span>Evidence: {item.evidenceCount}</span>
+      <p className="mt-2 text-[13px] leading-relaxed text-white/75">{item.reason}</p>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/50">
+        {item.evidenceSources.length ? (
+          <span>Sources: {item.evidenceSources.join(", ")}</span>
+        ) : (
+          <span>Evidence signals: {item.evidenceCount}</span>
+        )}
         <span>Confidence: {item.confidence}%</span>
-        <span className="uppercase tracking-wide">{item.claimStatus.replace(/_/g, " ")}</span>
+        <span>Review: ~{item.estimatedReviewMinutes} min</span>
       </div>
-      <p className="mt-2 text-[12px] text-white/55">
-        Estimated review time: {item.estimatedReviewMinutes} minute
-        {item.estimatedReviewMinutes === 1 ? "" : "s"}
-      </p>
+      {item.affectedAssets.length ? (
+        <p className="mt-2 text-[12px] text-white/60">
+          <span className="font-medium text-white/75">Affected assets: </span>
+          {item.affectedAssets.join(", ")}
+        </p>
+      ) : null}
       {item.businessImpact ? (
         <p className="mt-3 text-[12px] leading-relaxed text-white/65">
           <span className="font-medium text-white/80">Business impact: </span>
           {item.businessImpact}
         </p>
       ) : null}
-      <div className="mt-3">
-        <p className="text-[12px] font-medium text-white">
-          {item.tier} because:
-        </p>
-        <ul className="mt-2 space-y-1.5">
-          {item.priorityReasons.map((reason) => (
-            <li key={reason} className="flex gap-2 text-[12px] leading-relaxed text-white/75">
-              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-white/45" aria-hidden />
-              <span>{reason}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <p className="mt-3 text-[12px] leading-relaxed text-white/60">
+        <span className="font-medium text-white/75">Confidence: </span>
+        {item.confidenceExplanation}
+      </p>
+      {!compact ? (
+        <div className="mt-3">
+          <p className="text-[12px] font-medium text-white">{item.tier} because:</p>
+          <ul className="mt-2 space-y-1.5">
+            {item.priorityReasons.map((reason) => (
+              <li key={reason} className="flex gap-2 text-[12px] leading-relaxed text-white/75">
+                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-white/45" aria-hidden />
+                <span>{reason}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <p className="mt-3 text-[12px] leading-relaxed text-white/85">
+        <span className="font-medium text-white">Immediate action: </span>
+        {item.immediateAction}
+      </p>
       {item.missingEvidence.length ? (
-        <p className="mt-3 text-[11px] text-white/45">
+        <p className="mt-2 text-[11px] text-white/45">
           Missing evidence: {item.missingEvidence.join("; ")}
         </p>
       ) : null}
-      <button
-        type="button"
-        onClick={() => onOpen(item.detailSectionId)}
-        className="mt-4 text-[12px] font-bold uppercase tracking-wider text-white transition-colors hover:text-white/80"
-      >
-        Open investigation →
-      </button>
+      {onOpen ? (
+        <button
+          type="button"
+          onClick={() => onOpen(item.detailSectionId)}
+          className="mt-4 text-[12px] font-bold uppercase tracking-wider text-white transition-colors hover:text-white/80"
+        >
+          Open investigation →
+        </button>
+      ) : null}
     </article>
   );
 }
+
+export { PriorityInvestigationRow };
 
 export function ExecutiveInvestigationOverview({
   overview,
@@ -120,7 +141,7 @@ export function ExecutiveInvestigationOverview({
 
         <div className="border-b border-vx-border py-8">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">
-            What Needs Attention
+            What Deserves Analyst Attention Right Now
           </h3>
           {overview.prioritizedInvestigations.length ? (
             <div className="mt-2 divide-y divide-vx-border">

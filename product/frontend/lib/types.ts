@@ -494,20 +494,29 @@ export interface WorkbenchNotes {
 
 export interface WorkbenchPriorityItem {
   id: string;
-  kind: "finding" | "attack_path" | "hypothesis";
+  kind: "investigation" | "finding" | "attack_path" | "hypothesis";
+  cluster_type?: string;
   tier: "Critical" | "High" | "Medium" | "Low";
   title: string;
+  reason?: string;
   risk_score: number;
   evidence_count: number;
   confidence: number;
   claim_status: string;
   priority_reasons: string[];
   business_impact: string;
+  confidence_explanation?: string;
+  immediate_action?: string;
+  evidence_sources?: string[];
+  affected_assets?: string[];
   estimated_review_minutes: number;
   detail_section_id: string;
   evidence_items?: string[];
   missing_evidence?: string[];
+  finding_ids?: string[];
 }
+
+export type WorkbenchInvestigation = WorkbenchPriorityItem;
 
 export interface WorkbenchExecutiveMetrics {
   files: number;
@@ -596,6 +605,7 @@ export interface WorkbenchData {
   investigation_timeline?: WorkbenchTimelineStep[];
   closing_line: string;
   priority_queue?: WorkbenchPriorityItem[];
+  investigations?: WorkbenchInvestigation[];
   investigation_audit?: WorkbenchInvestigationAudit;
   executive_metrics?: WorkbenchExecutiveMetrics;
   action_plan?: WorkbenchActionPlan;

@@ -23,6 +23,7 @@ from product.backend.services.investigation_evidence import (
     build_next_actions,
 )
 from product.backend.services.investigation_action_plan import build_action_plan
+from product.backend.services.investigation_clustering import build_investigation_clusters
 from product.backend.services.investigation_prioritization import (
     build_executive_metrics,
     build_investigation_audit,
@@ -396,11 +397,17 @@ def build_workbench(
             if finding.get("claim_status") == "confirmed":
                 finding["claim_status"] = "suspected"
 
+    investigations = build_investigation_clusters(
+        confirmed_findings=confirmed_findings,
+        candidate_paths=candidate_paths,
+        hypotheses=hypotheses,
+    )
     priority_queue = build_priority_queue(
         confirmed_findings=confirmed_findings,
         candidate_paths=candidate_paths,
         hypotheses=hypotheses,
         cross_source_matches=cross_source_matches,
+        investigations=investigations,
     )
     investigation_audit = build_investigation_audit(review, confirmed_findings)
     executive_metrics = build_executive_metrics(
@@ -537,6 +544,7 @@ def build_workbench(
         "investigation_timeline": investigation_timeline,
         "closing_line": "Everything above is traceable to raw scanner evidence.",
         "priority_queue": priority_queue,
+        "investigations": investigations[:12],
         "investigation_audit": investigation_audit,
         "executive_metrics": executive_metrics,
         "action_plan": action_plan,

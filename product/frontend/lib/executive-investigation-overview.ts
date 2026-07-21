@@ -12,18 +12,20 @@ export interface PrioritizedInvestigation {
   id: string;
   tier: PriorityTier;
   title: string;
+  reason: string;
   riskScore: number;
   estimatedReviewMinutes: number;
-  /** Primary reason — full list in priorityReasons. */
-  reason: string;
   priorityReasons: string[];
   evidenceCount: number;
   confidence: number;
   claimStatus: string;
   businessImpact: string;
+  confidenceExplanation: string;
+  immediateAction: string;
+  evidenceSources: string[];
+  affectedAssets: string[];
   evidenceItems: string[];
   missingEvidence: string[];
-  /** Collapsible detail section to expand when the analyst opens this item. */
   detailSectionId: string;
 }
 
@@ -48,14 +50,18 @@ function mapPriorityItem(item: WorkbenchPriorityItem): PrioritizedInvestigation 
     id: item.id,
     tier: item.tier,
     title: item.title,
+    reason: item.reason || reasons[0],
     riskScore: item.risk_score,
     estimatedReviewMinutes: item.estimated_review_minutes,
-    reason: reasons[0],
     priorityReasons: reasons,
     evidenceCount: item.evidence_count,
     confidence: item.confidence,
     claimStatus: item.claim_status,
     businessImpact: item.business_impact,
+    confidenceExplanation: item.confidence_explanation || `Composite confidence ${item.confidence}%.`,
+    immediateAction: item.immediate_action || reasons[0],
+    evidenceSources: item.evidence_sources ?? [],
+    affectedAssets: item.affected_assets ?? [],
     evidenceItems: item.evidence_items ?? [],
     missingEvidence: item.missing_evidence ?? [],
     detailSectionId: item.detail_section_id,
@@ -63,8 +69,11 @@ function mapPriorityItem(item: WorkbenchPriorityItem): PrioritizedInvestigation 
 }
 
 function buildPrioritizedInvestigations(workbench: WorkbenchData): PrioritizedInvestigation[] {
-  if (workbench.priority_queue?.length) {
-    return workbench.priority_queue.map(mapPriorityItem);
+  const queue = workbench.investigations?.length
+    ? workbench.investigations
+    : workbench.priority_queue;
+  if (queue?.length) {
+    return queue.map(mapPriorityItem);
   }
   return [];
 }

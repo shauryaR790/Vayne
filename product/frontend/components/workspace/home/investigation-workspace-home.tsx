@@ -1,6 +1,7 @@
 "use client";
 
 import { InvestigationComposer } from "@/components/workspace/home/investigation-composer";
+import { PriorityInvestigationsPanel } from "@/components/workspace/home/priority-investigations-panel";
 import { RecentInvestigationList } from "@/components/workspace/home/recent-investigation-list";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 
@@ -50,6 +51,8 @@ export function InvestigationWorkspaceHome({
           onBeginSession={onBeginSession}
           onUpload={onUpload}
         />
+
+        <PriorityInvestigationsPanel onOpenInvestigation={onOpenInvestigation} />
 
         <div className="mt-8">
           <RecentInvestigationList onOpen={onOpenInvestigation} />

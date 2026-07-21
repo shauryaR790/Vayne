@@ -42,8 +42,10 @@ def test_priority_queue_includes_explicit_reasons():
     assert queue
     top = queue[0]
     assert top["tier"] in ("Critical", "High", "Medium")
-    assert any("scanner" in r.lower() for r in top["priority_reasons"])
+    assert top["kind"] == "investigation"
+    assert any("scanner" in r.lower() or "corroborat" in r.lower() for r in top["priority_reasons"])
     assert top["evidence_count"] >= 1
+    assert " on " not in top["title"].lower() or "internet" in top["title"].lower()
 
 
 def test_self_review_flags_incomplete_findings():

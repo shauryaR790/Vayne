@@ -1,5 +1,5 @@
 import type { InvestigationBundle } from "./investigation-bundle";
-import type { FindingsData, InvestigationDetail, InvestigationReport } from "./types";
+import type { FindingsData, InvestigationDetail, InvestigationReport, WorkbenchData } from "./types";
 
 export type RiskLevel = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO";
 
@@ -130,38 +130,29 @@ function isEnterpriseScope(
 
 function activityTitle(tech: TechLabel | null, activity: ActivityKind): string {
   const map: Record<ActivityKind, string> = {
-    rce: "RCE Investigation",
-    lateral: "Lateral Movement Assessment",
-    credential: "Credential Exposure",
-    kerberos: "Kerberos Attack Surface Review",
-    external: "External Exposure",
-    chain: "Attack Path Analysis",
-    review: "Exposure Analysis",
+    rce: "Remote Code Execution Investigation",
+    lateral: "Lateral Movement Opportunity",
+    credential: "Credential Reuse",
+    kerberos: "Active Directory Weakness",
+    external: "Public Data Exposure",
+    chain: "Validated Attack Chain",
+    review: "Security Investigation",
   };
 
-  if (tech === "Apache" && activity === "rce") return "Apache RCE Investigation";
-  if (tech === "Apache" && activity === "review") return "Apache HTTP Service Review";
-  if (tech === "SMB" && activity === "lateral") return "SMB Lateral Movement Assessment";
+  if (tech === "Apache" && activity === "rce") return "Internet-Facing Apache RCE";
+  if (tech === "SMB" && activity === "lateral") return "Lateral Movement Opportunity";
   if (tech === "Active Directory" && activity === "kerberos") {
-    return "Kerberos Attack Surface Review";
+    return "Active Directory Weakness";
   }
-  if (tech === "Active Directory") return "Active Directory Exposure Analysis";
-  if (tech === "Jenkins" && activity === "credential") return "Jenkins Credential Exposure";
+  if (tech === "Active Directory") return "Active Directory Weakness";
+  if (tech === "Jenkins" && activity === "credential") return "Secrets Exposure";
+  if (tech === "Container Platform") return "Misconfigured Kubernetes";
 
-  if (tech) {
-    const suffix = map[activity] ?? "Exposure Analysis";
-    if (suffix === "Exposure Analysis" || suffix === "Attack Path Analysis") {
-      return `${tech} ${suffix}`;
-    }
-    return `${tech} ${suffix}`;
+  if (tech && map[activity]) {
+    return map[activity];
   }
 
-  if (activity === "external") return "External Exposure Analysis";
-  if (activity === "rce") return "Remote Code Execution Investigation";
-  if (activity === "lateral") return "Lateral Movement Assessment";
-  if (activity === "credential") return "Credential Exposure Analysis";
-  if (activity === "chain") return "Validated Attack Path Analysis";
-  return "Security Exposure Review";
+  return map[activity] ?? "Security Investigation";
 }
 
 function humanizePathTitle(pathTitle: string): string | null {
@@ -172,11 +163,34 @@ function humanizePathTitle(pathTitle: string): string | null {
   return truncate(segment, 56);
 }
 
+export function titleFromClusteredInvestigations(workbench?: WorkbenchData | null): string | null {
+  const queue = workbench?.investigations?.length
+    ? workbench.investigations
+    : workbench?.priority_queue;
+  const top = queue?.[0];
+  if (top?.title?.trim() && top.kind === "investigation") {
+    return truncate(top.title.trim(), 56);
+  }
+  if (top?.title?.trim() && !looksLikeServiceObservation(top.title)) {
+    return truncate(top.title.trim(), 56);
+  }
+  return null;
+}
+
+function looksLikeServiceObservation(title: string): boolean {
+  const t = title.trim().toLowerCase();
+  return /^(ssh|http|https|smb|ftp)\b/.test(t) || /\bon [a-z0-9.-]+$/i.test(title);
+}
+
 export function generateInvestigationTitle(
   detail: InvestigationDetail,
   report: InvestigationReport,
   findings: FindingsData,
+  workbench?: WorkbenchData | null,
 ): string {
+  const clustered = titleFromClusteredInvestigations(workbench);
+  if (clustered) return clustered;
+
   const corpus = buildCorpus(detail, report, findings);
   const hasPaths = detail.attack_paths.length > 0;
   const tech = detectTechnology(corpus);
@@ -200,14 +214,6 @@ export function generateInvestigationTitle(
   }
 
   const title = activityTitle(tech, activity);
-  const primaryHost =
-    findings.validated[0]?.host ||
-    (report.assets?.[0] as { host?: string } | undefined)?.host ||
-    (report.discovered_assets?.[0] as { host?: string } | undefined)?.host;
-  if (primaryHost && /exposure analysis|attack path analysis|attack surface review/i.test(title)) {
-    const shortHost = primaryHost.split(".")[0] || primaryHost;
-    return `${title} · ${truncate(shortHost, 24)}`;
-  }
   return title;
 }
 
@@ -215,7 +221,12 @@ export function generateInvestigationSummary(
   detail: InvestigationDetail,
   report: InvestigationReport,
   findings: FindingsData,
+  workbench?: WorkbenchData | null,
 ): string {
+  const top = workbench?.investigations?.[0] ?? workbench?.priority_queue?.[0];
+  if (top?.reason?.trim()) {
+    return truncate(top.reason.trim(), 72);
+  }
   const path = detail.attack_paths[0];
   const finding = findings.validated[0];
   const corpus = buildCorpus(detail, report, findings);
@@ -305,10 +316,11 @@ export function buildInvestigationCardMeta(
   report: InvestigationReport,
   findings: FindingsData,
   sourceFileLabel?: string,
+  workbench?: WorkbenchData | null,
 ): InvestigationCardMeta {
   return {
-    title: generateInvestigationTitle(detail, report, findings),
-    summary: generateInvestigationSummary(detail, report, findings),
+    title: generateInvestigationTitle(detail, report, findings, workbench),
+    summary: generateInvestigationSummary(detail, report, findings, workbench),
     risk: deriveRiskLevel(detail, report),
     findingsHash: computeFindingsHash(detail, report, findings),
     sourceFile: extractSourceFile(sourceFileLabel, report),
@@ -324,6 +336,7 @@ export function buildInvestigationCardMetaFromBundle(
     bundle.report,
     bundle.findings,
     sourceFileLabel,
+    bundle.workbench,
   );
 }
 
