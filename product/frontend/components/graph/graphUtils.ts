@@ -11,6 +11,7 @@ export function normalizeGraphType(node: GraphNode): string {
   if (id.startsWith("software:")) return "software";
   if (id.startsWith("vuln") || id.includes("cve")) return "vulnerability";
   if (id.startsWith("group:")) return "group";
+  if (t === "investigation_cluster" || t === "subnet_cluster" || t === "service_cluster" || t === "cve_cluster" || t === "cloud_cluster") return "group";
   return "unknown";
 }
 

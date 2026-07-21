@@ -395,6 +395,7 @@ export function InvestigationWorkstationReport({
                 layout="workstation"
                 graph={presentation.graph}
                 workbench={workbench}
+                investigationId={bundle.detail.summary.id}
                 context={{
                   hasPaths: presentation.hasPaths,
                   attackPaths: executive.attackPaths,
@@ -590,6 +591,8 @@ export function InvestigationWorkstationReport({
               embedded
               layout="workstation"
               graph={presentation.graph}
+              workbench={workbench}
+              investigationId={bundle.detail.summary.id}
               context={{
                 hasPaths: presentation.hasPaths,
                 attackPaths: executive.attackPaths,

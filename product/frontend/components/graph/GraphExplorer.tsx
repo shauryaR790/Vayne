@@ -16,10 +16,14 @@ import { computeElkLayout } from "./elkLayout";
 import { GraphCanvasBackground } from "./GraphCanvasBackground";
 import { GraphEmptyState, type ReasoningCheck } from "./GraphEmptyState";
 import { GraphGroupNode } from "./GraphGroupNode";
+import { GraphLevelNav } from "./GraphLevelNav";
+import { GraphMinimapRail } from "./GraphMinimapRail";
 import { GraphNode } from "./GraphNode";
 import { GraphNodeInspector } from "./GraphNodeInspector";
+import { GraphSearchFilter, type GraphFilterId } from "./GraphSearchFilter";
 import { GraphSearchModal } from "./GraphSearchModal";
 import { VayneEdge } from "./VayneEdge";
+import { bundleGraphEdges } from "./edgeBundling";
 import { applyGraphFit, centerOnNode } from "./graphFit";
 import { computeHighlightState, edgeKey } from "./graphHighlight";
 import {
@@ -27,7 +31,8 @@ import {
   detectServiceGroups,
   type ServiceGroup,
 } from "./graphServiceGroups";
-import { formatEdgeLabel, normalizeGraphType } from "./graphUtils";
+import { formatEdgeLabel, nodeMatchesSearch, normalizeGraphType } from "./graphUtils";
+import { useProgressiveGraph } from "./useProgressiveGraph";
 import { useGraphKeyboard } from "./useGraphKeyboard";
 
 const nodeTypes = { vayne: GraphNode, group: GraphGroupNode };
@@ -52,11 +57,15 @@ function GraphCanvas({
   context,
   layout,
   embedded,
+  workbench,
+  investigationId,
 }: {
   graph: GraphData;
   context?: GraphExplorerContext;
   layout: "default" | "inline" | "hero" | "workstation";
   embedded?: boolean;
+  workbench?: WorkbenchData;
+  investigationId?: string;
 }) {
   const isWorkstation = layout === "workstation";
   const isInline = layout === "inline";
@@ -76,19 +85,72 @@ function GraphCanvas({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchHighlightId, setSearchHighlightId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilters, setActiveFilters] = useState<Set<GraphFilterId>>(() => new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const [layoutPositions, setLayoutPositions] = useState<
     Map<string, { x: number; y: number; width: number; height: number }>
   >(new Map());
   const [layoutLoading, setLayoutLoading] = useState(true);
 
-  const serviceGroups = useMemo(() => detectServiceGroups(graph.nodes), [graph.nodes]);
-  const grouped = useMemo(
-    () => applyServiceGrouping(graph.nodes, graph.edges, serviceGroups, expandedGroups),
-    [graph.nodes, graph.edges, serviceGroups, expandedGroups],
+  const filters = useMemo(
+    () => ({
+      critical: activeFilters.has("critical"),
+      exploitable: activeFilters.has("exploitable"),
+      internet: activeFilters.has("internet"),
+      lateral: activeFilters.has("lateral"),
+    }),
+    [activeFilters],
   );
-  const nodes = grouped.nodes;
-  const edges = grouped.edges;
+
+  const progressive = useProgressiveGraph({
+    investigationId,
+    graph,
+    workbench,
+    filters,
+  });
+
+  const sourceGraph = progressive.progressiveEnabled ? progressive.visibleGraph : graph;
+
+  const serviceGroups = useMemo(
+    () => (progressive.progressiveEnabled ? [] : detectServiceGroups(sourceGraph.nodes)),
+    [sourceGraph.nodes, progressive.progressiveEnabled],
+  );
+
+  const grouped = useMemo(
+    () =>
+      progressive.progressiveEnabled
+        ? { nodes: sourceGraph.nodes, edges: sourceGraph.edges, hiddenNodeIds: new Set<string>(), memberToGroup: new Map() }
+        : applyServiceGrouping(sourceGraph.nodes, sourceGraph.edges, serviceGroups, expandedGroups),
+    [sourceGraph, serviceGroups, expandedGroups, progressive.progressiveEnabled],
+  );
+
+  const filteredNodes = useMemo(() => {
+    let nodes = grouped.nodes;
+    if (searchQuery.trim()) {
+      nodes = nodes.filter((n) => nodeMatchesSearch(n, searchQuery));
+    }
+    if (activeFilters.has("critical")) {
+      nodes = nodes.filter((n) => (n.risk ?? 0) >= 7);
+    }
+    if (activeFilters.has("exploitable")) {
+      nodes = nodes.filter((n) => {
+        const t = normalizeGraphType(n);
+        return ["vulnerability", "attack_path", "cve_cluster", "investigation_cluster"].includes(t) || (n.risk ?? 0) >= 6;
+      });
+    }
+    return nodes;
+  }, [grouped.nodes, searchQuery, activeFilters]);
+
+  const visibleIds = useMemo(() => new Set(filteredNodes.map((n) => n.id)), [filteredNodes]);
+
+  const bundledEdges = useMemo(
+    () => bundleGraphEdges(grouped.edges.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))),
+    [grouped.edges, visibleIds],
+  );
+
+  const nodes = filteredNodes;
+  const edges = bundledEdges;
 
   useEffect(() => {
     let cancelled = false;
@@ -124,6 +186,15 @@ function GraphCanvas({
     });
   }, []);
 
+  const toggleFilter = useCallback((id: GraphFilterId) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   const groupById = useMemo(() => {
     const map = new Map<string, ServiceGroup>();
     serviceGroups.forEach((g) => map.set(g.id, g));
@@ -143,6 +214,7 @@ function GraphCanvas({
         const group = isGroup ? groupById.get(n.id) : undefined;
         const onPath = hasFocus ? highlight.chainIds.has(n.id) : true;
         const dimmed = hasFocus && !onPath;
+        const childCount = Number((n as GraphNodeType & { child_count?: number }).child_count ?? group?.memberIds.length ?? 0);
 
         return {
           id: n.id,
@@ -155,33 +227,30 @@ function GraphCanvas({
             highlighted: focusId === n.id,
             onChain: onPath,
             expanded: expandedGroups.has(n.id),
-            memberCount: group?.memberIds.length ?? 0,
-            onToggle: isGroup ? () => toggleGroup(n.id) : undefined,
+            memberCount: childCount,
+            onToggle: isGroup
+              ? () => {
+                  if (progressive.progressiveEnabled) {
+                    progressive.expandNode(n);
+                  } else {
+                    toggleGroup(n.id);
+                  }
+                }
+              : undefined,
           },
           selected: focusId === n.id,
         };
       });
 
-    const edgeGroups = new Map<string, GraphData["edges"][number][]>();
-    for (const e of edges) {
-      const key = `${e.source}::${e.target}`;
-      if (!edgeGroups.has(key)) edgeGroups.set(key, []);
-      edgeGroups.get(key)!.push(e);
-    }
-
-    const flowEdges: Edge[] = [];
-    let i = 0;
-    for (const [, group] of edgeGroups) {
-      const e = group[0];
+    const flowEdges: Edge[] = edges.map((e, i) => {
       const rel = formatEdgeLabel(e);
-      const count = group.length;
-      const allSameRel = group.every((g) => g.relationship === e.relationship);
-      const displayLabel = count > 1 && allSameRel ? `${rel} ×${count}` : rel;
-      const id = edgeIdByKey.get(edgeKey(e.source, e.target)) ?? `e-${i++}`;
+      const count = Number(e.bundle_count ?? 1);
+      const displayLabel = count > 1 ? `${rel} ×${count}` : rel;
+      const id = edgeIdByKey.get(edgeKey(e.source, e.target)) ?? `e-${i}`;
       const onPath = highlight.chainEdgeIds.has(id);
       const dimmed = hasFocus && !onPath;
 
-      flowEdges.push({
+      return {
         id,
         source: e.source,
         target: e.target,
@@ -194,8 +263,8 @@ function GraphCanvas({
           highlighted: onPath,
           highlightRole: onPath ? "chain" : undefined,
         },
-      });
-    }
+      };
+    });
 
     return { flowNodes, flowEdges };
   }, [
@@ -209,11 +278,12 @@ function GraphCanvas({
     groupById,
     toggleGroup,
     edgeIdByKey,
+    progressive,
   ]);
 
   const selectedNode = useMemo(
-    () => graph.nodes.find((n) => n.id === selectedId) ?? null,
-    [graph.nodes, selectedId],
+    () => sourceGraph.nodes.find((n) => n.id === selectedId) ?? graph.nodes.find((n) => n.id === selectedId) ?? null,
+    [sourceGraph.nodes, graph.nodes, selectedId],
   );
 
   const fitGraph = useCallback(() => {
@@ -237,10 +307,18 @@ function GraphCanvas({
     setSearchHighlightId(null);
   }, []);
 
-  const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
-    if (!flowRef.current) return;
-    centerOnNode(flowRef.current, node, 1.08);
-  }, []);
+  const onNodeDoubleClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      if (progressive.progressiveEnabled) {
+        const raw = sourceGraph.nodes.find((n) => n.id === node.id);
+        if (raw) progressive.expandNode(raw);
+        return;
+      }
+      if (!flowRef.current) return;
+      centerOnNode(flowRef.current, node, 1.08);
+    },
+    [progressive, sourceGraph.nodes],
+  );
 
   const jumpToNode = useCallback(
     (nodeId: string) => {
@@ -276,17 +354,11 @@ function GraphCanvas({
     return () => ro.disconnect();
   }, [flowReady, layoutLoading, fitGraph]);
 
-  useEffect(() => {
-    if (!flowReady || layoutLoading) return;
-    const t = window.setTimeout(fitGraph, 320);
-    return () => window.clearTimeout(t);
-  }, [selectedId, flowReady, layoutLoading, fitGraph]);
-
   const hasGraphData = nodes.length > 0;
   const showEmptyState = Boolean(
     isWorkstation
-      ? !hasGraphData
-      : context && !context.hasPaths && context.emptyChecks?.length && !hasGraphData,
+      ? !hasGraphData && !progressive.loading
+      : context && !context.hasPaths && context.emptyChecks?.length && !hasGraphData && !progressive.loading,
   );
 
   if (showEmptyState) {
@@ -322,6 +394,15 @@ function GraphCanvas({
         }`}
       >
         <div ref={canvasRef} className="vx-graph-canvas relative min-h-0 flex-1 overflow-hidden transition-[flex-grow] duration-300 ease-out">
+          <GraphSearchFilter
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            activeFilters={activeFilters}
+            onToggleFilter={toggleFilter}
+            matchCount={nodes.length}
+            totalCount={grouped.nodes.length}
+          />
+
           <GraphCanvasBackground />
           <ReactFlow
             nodes={flowNodes}
@@ -343,10 +424,12 @@ function GraphCanvas({
             nodesDraggable={false}
             nodesConnectable={false}
             elementsSelectable
+            onlyRenderVisibleElements
             proOptions={{ hideAttribution: true }}
             className="!bg-transparent"
             style={{ width: "100%", height: "100%" }}
           >
+            <GraphMinimapRail />
             <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden>
               <defs>
                 <marker id="vayne-arrow-default" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
@@ -358,6 +441,16 @@ function GraphCanvas({
               </defs>
             </svg>
           </ReactFlow>
+
+          {progressive.progressiveEnabled ? (
+            <GraphLevelNav
+              stack={progressive.stack}
+              onNavigate={progressive.navigateTo}
+              visibleCount={progressive.statistics?.visible_nodes ?? nodes.length}
+              hiddenCount={progressive.statistics?.hidden_nodes}
+              loading={progressive.loading}
+            />
+          ) : null}
         </div>
 
         <div
@@ -369,8 +462,8 @@ function GraphCanvas({
           {selectedNode ? (
             <GraphNodeInspector
               node={selectedNode}
-              graphNodes={graph.nodes}
-              graphEdges={graph.edges}
+              graphNodes={sourceGraph.nodes}
+              graphEdges={sourceGraph.edges}
               onClose={() => setSelectedId(null)}
             />
           ) : null}
@@ -386,6 +479,7 @@ function GraphExplorerInner(props: {
   embedded?: boolean;
   layout?: "default" | "inline" | "hero" | "workstation";
   workbench?: WorkbenchData;
+  investigationId?: string;
 }) {
   return <GraphCanvas {...props} layout={props.layout ?? "default"} />;
 }
@@ -396,12 +490,14 @@ export function GraphExplorer({
   embedded,
   layout = "default",
   workbench,
+  investigationId,
 }: {
   graph: GraphData;
   context?: GraphExplorerContext;
   embedded?: boolean;
   layout?: "default" | "inline" | "hero" | "workstation";
   workbench?: WorkbenchData;
+  investigationId?: string;
 }) {
   return (
     <ReactFlowProvider>
@@ -411,6 +507,7 @@ export function GraphExplorer({
         embedded={embedded}
         layout={layout}
         workbench={workbench}
+        investigationId={investigationId}
       />
     </ReactFlowProvider>
   );

@@ -592,6 +592,29 @@ class InvestigationService:
             "statistics": {},
         }
 
+    def get_progressive_graph(
+        self,
+        inv_id: str,
+        *,
+        level: int = 1,
+        parent_id: str | None = None,
+        filters: dict | None = None,
+    ) -> dict | None:
+        from product.backend.services.investigation_progressive_graph import build_progressive_graph
+
+        inv = self.get_investigation(inv_id)
+        if not inv:
+            return None
+        graph = self.get_full_graph(inv_id)
+        workbench = self.get_workbench(inv_id)
+        return build_progressive_graph(
+            graph=graph,
+            workbench=workbench,
+            level=level,
+            parent_id=parent_id,
+            filters=filters,
+        )
+
     def get_attack_paths_export(self, inv_id: str) -> list[dict]:
         data = self.load_artifact(inv_id, "attack_paths.json")
         return data if isinstance(data, list) else []

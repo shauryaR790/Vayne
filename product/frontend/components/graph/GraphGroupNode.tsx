@@ -49,7 +49,7 @@ function GraphGroupNodeComponent({ data, selected }: NodeProps) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.12em] text-white/45">
             <Layers className="size-3" strokeWidth={1.5} />
-            Group
+            {String(data.type || "").includes("investigation") ? "Investigation" : "Group"}
           </div>
           {expanded ? (
             <ChevronDown className="size-3.5 text-white/50" />

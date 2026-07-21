@@ -99,6 +99,15 @@ class GraphResponse(BaseModel):
     statistics: dict[str, Any] = Field(default_factory=dict)
 
 
+class ProgressiveGraphResponse(BaseModel):
+    level: int = 1
+    parent_id: str | None = None
+    nodes: list[dict[str, Any]] = Field(default_factory=list)
+    edges: list[dict[str, Any]] = Field(default_factory=list)
+    breadcrumb: list[dict[str, str]] = Field(default_factory=list)
+    statistics: dict[str, Any] = Field(default_factory=dict)
+
+
 class InvestigationStats(BaseModel):
     findings_loaded: int = 0
     findings_correlated: int = 0

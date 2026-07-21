@@ -15,6 +15,7 @@ from product.backend.schemas.investigation import (
     AttackSurfaceSummary,
     FindingsResponse,
     GraphResponse,
+    ProgressiveGraphResponse,
     InvestigationDetail,
     InvestigationListResponse,
     InvestigationListItem,
@@ -166,6 +167,41 @@ def get_graph(inv_id: str, db: Session = Depends(get_db)) -> GraphResponse:
         attack_paths=g.get("attack_paths") or [],
         statistics=g.get("statistics") or {},
     )
+
+
+@router.get("/investigation/{inv_id}/graph/progressive", response_model=ProgressiveGraphResponse)
+def get_progressive_graph(
+    inv_id: str,
+    level: int = 1,
+    parent_id: str | None = None,
+    critical: bool = False,
+    exploitable: bool = False,
+    internet: bool = False,
+    lateral: bool = False,
+    db: Session = Depends(get_db),
+) -> ProgressiveGraphResponse:
+    svc = _svc(db)
+    if not svc.get_investigation(inv_id):
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    filters = {
+        k: v
+        for k, v in {
+            "critical": critical,
+            "exploitable": exploitable,
+            "internet": internet,
+            "lateral": lateral,
+        }.items()
+        if v
+    }
+    data = svc.get_progressive_graph(
+        inv_id,
+        level=level,
+        parent_id=parent_id,
+        filters=filters or None,
+    )
+    if not data:
+        raise HTTPException(status_code=404, detail="Progressive graph unavailable")
+    return ProgressiveGraphResponse(**data)
 
 
 @router.get("/investigation/{inv_id}/reports/{report_type}")
