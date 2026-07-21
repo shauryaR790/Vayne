@@ -22,6 +22,7 @@ from product.backend.services.investigation_evidence import (
     build_investigation_timeline,
     build_next_actions,
 )
+from product.backend.services.investigation_action_plan import build_action_plan
 from product.backend.services.investigation_prioritization import (
     build_executive_metrics,
     build_investigation_audit,
@@ -85,6 +86,7 @@ def build_workbench(
     created_at: datetime | None = None,
     remediation: dict | None = None,
     review: dict | None = None,
+    evidence_ledger: dict | None = None,
 ) -> dict:
     report = report or {}
     graph = graph or {}
@@ -413,8 +415,20 @@ def build_workbench(
         cross_source_matches=cross_source_matches,
         validated_paths=validated_count,
     )
+    action_plan = build_action_plan(
+        priority_queue=priority_queue,
+        confirmed_findings=confirmed_findings,
+        hypotheses=hypotheses,
+        missing_evidence=unknowns,
+        next_actions=build_next_actions(hypotheses, remediation, unknowns),
+        investigation_audit=investigation_audit,
+    )
 
-    next_actions = build_next_actions(hypotheses, remediation, unknowns)
+    next_actions = (
+        [t["action"] for t in action_plan.get("tasks", [])]
+        if action_plan.get("tasks")
+        else build_next_actions(hypotheses, remediation, unknowns)
+    )
     executive_summary = build_executive_summary(
         file_count=file_count,
         source_count=len(evidence_sources),
@@ -525,6 +539,8 @@ def build_workbench(
         "priority_queue": priority_queue,
         "investigation_audit": investigation_audit,
         "executive_metrics": executive_metrics,
+        "action_plan": action_plan,
+        "evidence_ledger": evidence_ledger or {},
         "totals": {
             "files": file_count,
             "sources": len(evidence_sources),

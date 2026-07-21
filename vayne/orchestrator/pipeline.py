@@ -74,12 +74,15 @@ class Orchestrator:
         on_stage: StageCallback | None = None,
         on_thinking: ThinkingCallback | None = None,
         proof: bool = False,
+        cache_dir: Path | None = None,
     ):
         self.name = name
         self.paths = paths
         self.on_stage = on_stage or (lambda *_: None)
         self.on_thinking = on_thinking or (lambda _: None)
         self.proof = proof
+        self.cache_dir = cache_dir
+        self.parse_manifest: dict | None = None
         self.thinking_log: list[str] = []
         self.proof_log: list[str] = []
         self._start = 0.0
@@ -94,7 +97,14 @@ class Orchestrator:
 
         self.on_stage(1, STAGES[0], "Reading scanner outputs")
         self._think("Initializing investigation workspace...")
-        raw_findings, raw_assets = load_scan_files(self.paths)
+        load_result = load_scan_files(self.paths, cache_dir=self.cache_dir)
+        raw_findings, raw_assets = load_result
+        self.parse_manifest = load_result.manifest
+        if self.parse_manifest.get("cache_hits"):
+            self._think(
+                f"Incremental parse: {self.parse_manifest['cache_hits']} file(s) loaded from cache, "
+                f"{self.parse_manifest['cache_misses']} re-parsed."
+            )
         self._think(f"Loaded {len(raw_findings)} raw findings from {len(self.paths)} path(s).")
 
         self.on_stage(2, STAGES[1], f"Normalized {len(raw_findings)} findings")
@@ -284,7 +294,9 @@ class Orchestrator:
         )
 
         if export_dir:
-            export_production_artifacts(report, graph_proof, export_dir)
+            export_production_artifacts(
+                report, graph_proof, export_dir, parse_manifest=self.parse_manifest
+            )
             report = enrich_report(report, graph_proof)
             self._think(f"Reports exported to {export_dir}")
 

@@ -168,12 +168,20 @@ def compute_finding_confidence(
     )
 
     for conflict in finding.conflicts or []:
-        if conflict.kind == "severity":
-            factors.append(_Factor("Conflicting severity claims", -10, "observation", "negative"))
-        elif conflict.kind == "version":
-            factors.append(_Factor("Conflicting version claims", -12, "observation", "negative"))
-        elif conflict.kind == "host":
-            factors.append(_Factor("Conflicting host identity", -12, "observation", "negative"))
+        impact = int(getattr(conflict, "confidence_impact", 0) or 0)
+        if not impact:
+            impact = {
+                "severity": -10,
+                "version": -12,
+                "host": -12,
+                "reachability": -18,
+                "port_state": -10,
+                "service_identity": -11,
+            }.get(conflict.kind, -8)
+        label = conflict.detail or f"Conflicting {conflict.kind} claims"
+        factors.append(
+            _Factor(label[:80], impact, "observation", "negative")
+        )
 
     fp = _false_positive_factor(body, finding.title or "")
     if fp:

@@ -10,12 +10,26 @@ def count_false_positives(validations: list[ValidationResult]) -> int:
 
 
 def estimate_hours_saved(
-    raw_count: int, false_positives: int, correlated_count: int
+    raw_count: int,
+    false_positives: int,
+    correlated_count: int,
+    *,
+    duplicates_merged: int = 0,
+    investigations_queued: int = 0,
 ) -> float:
-    # Analyst ~3 min per raw finding to triage manually
-    minutes = raw_count * 3 + correlated_count * 5
-    saved = (false_positives * 4) + (raw_count * 1.5)
-    return round(max(saved, minutes * 0.4) / 60, 1)
+    """Estimate analyst hours saved vs manual triage of raw scanner output.
+
+    Assumes ~3 min per raw finding to read, ~5 min per correlated cluster to
+    validate, plus savings from deduplication and false-positive elimination.
+    """
+    manual_triage_minutes = raw_count * 3.0
+    manual_correlation_minutes = max(0, raw_count - correlated_count) * 1.5
+    dedup_saved = duplicates_merged * 2.5
+    fp_saved = false_positives * 4.0
+    investigation_reduction = max(0, raw_count - investigations_queued) * 1.2
+    saved_minutes = dedup_saved + fp_saved + investigation_reduction + (manual_correlation_minutes * 0.6)
+    baseline = manual_triage_minutes + manual_correlation_minutes
+    return round(max(saved_minutes, baseline * 0.35) / 60.0, 1)
 
 
 def build_stats(
@@ -50,7 +64,13 @@ def build_stats(
         and v.classification != Classification.FALSE_POSITIVE
     )
 
-    hours = estimate_hours_saved(raw_count, fp, len(correlated))
+    hours = estimate_hours_saved(
+        raw_count,
+        fp,
+        len(correlated),
+        duplicates_merged=max(0, raw_count - len(correlated)),
+        investigations_queued=len(correlated) - fp,
+    )
     minutes = analyst_minutes_saved or round(hours * 60 * 0.6, 1)
 
     return InvestigationStats(

@@ -121,6 +121,7 @@ class Finding(BaseModel):
     evidence: str = ""
     confidence: int = 50
     source_tool: str
+    source_file: str = ""
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -132,6 +133,7 @@ class Asset(BaseModel):
     ports: list[int] = Field(default_factory=list)
     services: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
+    source_file: str = ""
 
 
 class AssetService(BaseModel):
@@ -197,9 +199,11 @@ class VersionAgreement(BaseModel):
 class EvidenceConflict(BaseModel):
     """A recorded contradiction between scanner observations."""
 
-    kind: str  # severity | version | host | service
+    kind: str  # severity | version | host | service | reachability | port_state
     statements: list[str] = Field(default_factory=list)
     detail: str = ""
+    confidence_impact: int = 0
+    suggested_action: str = ""
 
 
 class CorrelatedFinding(BaseModel):
@@ -224,6 +228,7 @@ class CorrelatedFinding(BaseModel):
     conflicts: list[EvidenceConflict] = Field(default_factory=list)
     aliases: list[str] = Field(default_factory=list)
     evidence_ids: list[str] = Field(default_factory=list)
+    source_files: list[str] = Field(default_factory=list)
 
 
 class ValidationResult(BaseModel):

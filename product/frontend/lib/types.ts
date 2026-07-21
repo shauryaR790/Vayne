@@ -531,6 +531,49 @@ export interface WorkbenchInvestigationAudit {
   unsupported_claims_blocked: number;
 }
 
+export interface WorkbenchActionTask {
+  priority: string;
+  action: string;
+  finding_id?: string;
+  validation_type: string;
+  expected_gain?: string;
+}
+
+export interface WorkbenchActionPlan {
+  tasks: WorkbenchActionTask[];
+  immediate_count: number;
+  summary: string;
+}
+
+export interface WorkbenchEvidenceLedgerEntry {
+  finding_id: string;
+  title: string;
+  host: string;
+  source_files: string[];
+  contributions: Array<{
+    source_file: string;
+    source_tool: string;
+    severity: string;
+    title: string;
+    evidence: string;
+  }>;
+  conflicts: Array<{
+    kind: string;
+    detail: string;
+    confidence_impact: number;
+    suggested_action: string;
+  }>;
+  claim_status: string;
+  recommended_next_step?: string;
+}
+
+export interface WorkbenchEvidenceLedger {
+  entries: WorkbenchEvidenceLedgerEntry[];
+  file_index: Array<{ file: string; finding_ids: string[]; count: number }>;
+  total_findings: number;
+  total_source_files: number;
+}
+
 export interface WorkbenchData {
   generated_at: string;
   duration_seconds: number;
@@ -555,6 +598,8 @@ export interface WorkbenchData {
   priority_queue?: WorkbenchPriorityItem[];
   investigation_audit?: WorkbenchInvestigationAudit;
   executive_metrics?: WorkbenchExecutiveMetrics;
+  action_plan?: WorkbenchActionPlan;
+  evidence_ledger?: WorkbenchEvidenceLedger;
   totals: {
     files: number;
     sources: number;

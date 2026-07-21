@@ -88,6 +88,13 @@ def _stable_list(items: list[Any], sort_key) -> list[Any]:
     return sorted(items, key=sort_key)
 
 
+def compute_input_fingerprint(file_hashes: list[str]) -> str:
+    """SHA-256 of sorted file content hashes — for incremental input tracking."""
+    from vayne.parsers.cache import compute_input_fingerprint as _fp
+
+    return _fp(file_hashes)
+
+
 def compute_investigation_key(
     source_filename: str,
     validated_findings: list[Any],

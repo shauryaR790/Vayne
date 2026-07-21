@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from vayne.attack_paths.proof import GraphProof
+from vayne.evidence.ledger import build_evidence_ledger
 from vayne.intelligence import build_investigation_intelligence
 from vayne.models import AttackPath, InvestigationReport
 from vayne.production.analyst_report import render_analyst_report
@@ -55,6 +56,8 @@ def export_production_artifacts(
     report: InvestigationReport,
     graph_proof: GraphProof | None,
     output_dir: Path,
+    *,
+    parse_manifest: dict | None = None,
 ) -> dict[str, Path]:
     """Write all Phase I production artifacts alongside legacy investigation export."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -108,7 +111,17 @@ def export_production_artifacts(
         render_proof_txt(enriched, graph_proof), encoding="utf-8"
     )
 
-    # Phase 2/3 — Facts Before LLM. The engine emits its structured intelligence
+    if parse_manifest:
+        manifest_path = output_dir / "evidence_manifest.json"
+        manifest_path.write_text(json.dumps(parse_manifest, indent=2), encoding="utf-8")
+        artifacts["evidence_manifest.json"] = manifest_path
+
+    ledger = build_evidence_ledger(enriched.findings)
+    ledger_path = output_dir / "evidence_ledger.json"
+    ledger_path.write_text(json.dumps(ledger, indent=2), encoding="utf-8")
+    artifacts["evidence_ledger.json"] = ledger_path
+
+    # Phase 2/3 — Facts Before LLM.
     # artifacts (including the full autonomous investigation and rejected-path
     # reasoning); the LLM narrator may only explain these files.
     intelligence = build_investigation_intelligence(enriched, graph_proof)

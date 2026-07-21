@@ -105,8 +105,14 @@ class InvestigationService:
         try:
             engine_started = time.perf_counter()
             logger.info("Engine run started for %s", source)
+            parse_cache_dir = self.storage_root / "parse_cache"
             report = analyze(
-                name, uploaded_paths, work_dir, proof=proof, on_stage=_on_stage
+                name,
+                uploaded_paths,
+                work_dir,
+                proof=proof,
+                on_stage=_on_stage,
+                cache_dir=parse_cache_dir,
             )
             logger.info(
                 "Engine run finished for %s in %.0f ms",
@@ -531,6 +537,7 @@ class InvestigationService:
         findings = self.get_findings_export(inv_id)
         remediation = self.get_remediation_export(inv_id)
         review = self.load_artifact(inv_id, "review.json")
+        evidence_ledger = self.load_artifact(inv_id, "evidence_ledger.json")
         return build_workbench(
             report,
             graph,
@@ -539,6 +546,7 @@ class InvestigationService:
             created_at=inv.created_at,
             remediation=remediation,
             review=review,
+            evidence_ledger=evidence_ledger,
         )
 
     def get_findings_export(self, inv_id: str) -> dict:

@@ -52,6 +52,24 @@ _CAPABLE_BY_KIND: dict[str, tuple[str, ...]] = {
 # Kinds whose grouping we deliberately do NOT change (keeps attack-path parity).
 _LEGACY_KEYED_KINDS = frozenset({"vulnerability", "credential"})
 
+_CONFLICT_IMPACT = {
+    "severity": -4,
+    "version": -13,
+    "host": -12,
+    "reachability": -18,
+    "port_state": -10,
+    "service_identity": -11,
+}
+
+_CONFLICT_ACTIONS = {
+    "severity": "Normalize severity to a single taxonomy before prioritizing.",
+    "version": "Replay service fingerprint to establish authoritative version.",
+    "host": "Confirm host identity and DNS/IP mapping.",
+    "reachability": "Re-test reachability from a consistent vantage point.",
+    "port_state": "Re-probe port state to resolve open/filtered disagreement.",
+    "service_identity": "Run targeted service probe to disambiguate identity.",
+}
+
 _SEV_RANK = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
 
 
@@ -88,8 +106,6 @@ def findings_dataframe(findings: list[Finding]) -> pd.DataFrame:
 def _bucket_key(f: Finding) -> str:
     cves = CVE_RE.findall(f"{f.title} {f.cve} {f.evidence}")
     if cves:
-        # CVE identity is preserved exactly (host|port|CVE) — unchanged from the
-        # prior engine, so no attack path shifts.
         port = f.port or 0
         return f"{f.host.lower()}|{port}|{cves[0].upper()}"
 
@@ -100,14 +116,16 @@ def _bucket_key(f: Finding) -> str:
         cve="",
         severity=f.severity,
     )
-    if resolution.kind in _LEGACY_KEYED_KINDS:
-        # Non-CVE vulnerability/credential findings keep legacy title keying so
-        # the security findings that feed the graph are grouped as before.
-        port = f.port or 0
-        return f"{f.host.lower()}|{port}|{f.title.lower()[:48]}"
 
-    # Inventory-class findings (service/software/db/web/net/info) collapse across
-    # scanner terminology into one canonical entity per host+entity+port.
+    # Identity / credential findings correlate by host + canonical identity.
+    blob = f"{f.title} {f.service} {f.evidence}".lower()
+    if resolution.kind in _LEGACY_KEYED_KINDS or any(
+        k in blob for k in ("credential", "password", "kerberos", "ntlm", "bloodhound", "spn")
+    ):
+        port = f.port or 0
+        identity_key = resolution.key(f.host, f.port) if resolution.key(f.host, f.port) else f.title.lower()[:48]
+        return f"{f.host.lower()}|{port}|{identity_key}"
+
     return resolution.key(f.host, f.port)
 
 
@@ -137,6 +155,7 @@ def _merge_group(group: list[Finding], tools_in_run: list[str]) -> CorrelatedFin
     conflicts = _conflicts(group, version_agreement)
     aliases = _aliases(group, entity.label)
     evidence_ids = [f.id for f in group if f.id]
+    source_files = sorted({f.source_file for f in group if f.source_file})
     confidence = _correlation_confidence(agreement, evidence, group)
 
     canonical = CanonicalEntity(
@@ -170,6 +189,7 @@ def _merge_group(group: list[Finding], tools_in_run: list[str]) -> CorrelatedFin
         conflicts=conflicts,
         aliases=aliases,
         evidence_ids=evidence_ids,
+        source_files=source_files,
     )
 
 
@@ -232,6 +252,8 @@ def _conflicts(
                     f"{f.source_tool}: {f.severity}" for f in group if f.severity
                 ][:6],
                 detail="Scanners assigned different severity taxonomies to the same entity.",
+                confidence_impact=_CONFLICT_IMPACT["severity"],
+                suggested_action=_CONFLICT_ACTIONS["severity"],
             )
         )
 
@@ -241,6 +263,8 @@ def _conflicts(
                 kind="version",
                 statements=list(version_agreement.observed)[:6],
                 detail="Scanners reported different versions for the same entity.",
+                confidence_impact=_CONFLICT_IMPACT["version"],
+                suggested_action=_CONFLICT_ACTIONS["version"],
             )
         )
 

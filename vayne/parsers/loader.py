@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from vayne.models import Asset, Finding
@@ -21,6 +22,7 @@ from vayne.parsers import (
     rapid7,
     sarif,
 )
+from vayne.parsers.cache import ScanLoadResult, build_manifest, file_content_hash, load_cached_parse
 
 PARSER_BY_HINT = {
     "nuclei": nuclei.parse,
@@ -31,7 +33,6 @@ PARSER_BY_HINT = {
     "httpx": httpx.parse,
     "naabu": naabu.parse,
     "katana": katana.parse,
-    # Phase 4 — enterprise scanner breadth.
     "qualys": qualys.parse,
     "rapid7": rapid7.parse,
     "nexpose": rapid7.parse,
@@ -40,6 +41,9 @@ PARSER_BY_HINT = {
     "prowler": generic.parse_json,
     "scoutsuite": generic.parse_json,
 }
+
+PARALLEL_THRESHOLD = 8
+MAX_PARSE_WORKERS = 8
 
 
 def _uid() -> str:
@@ -54,18 +58,27 @@ def parse_file(path: Path) -> tuple[list[Finding], list[Asset]]:
         return [], []
     name = path.name.lower()
     parser = _resolve_parser(path, name)
-    return parser(path)
+    findings, assets = parser(path)
+    return _stamp_source(path, findings, assets)
+
+
+def _stamp_source(
+    path: Path, findings: list[Finding], assets: list[Asset]
+) -> tuple[list[Finding], list[Asset]]:
+    name = path.name
+    out_f = [
+        f if f.source_file else f.model_copy(update={"source_file": name}) for f in findings
+    ]
+    out_a = [
+        a if a.source_file else a.model_copy(update={"source_file": name}) for a in assets
+    ]
+    return out_f, out_a
 
 
 def _resolve_parser(path: Path, name: str):
     suffix = path.suffix.lower()
-    # CSV is always resolved by the CSV router: several dedicated parsers
-    # (e.g. nessus) are XML-only, so a "nessus.csv" filename hint must NOT route
-    # there. The router sniffs content (Qualys / Nessus / generic).
     if suffix == ".csv":
         return lambda p: _auto_csv(p)
-    # SARIF is JSON but carries a dedicated extension; route it before filename
-    # hints so a "burp.sarif" is not captured by the Burp XML parser.
     if suffix == ".sarif":
         return sarif.parse
     for hint, fn in PARSER_BY_HINT.items():
@@ -93,7 +106,6 @@ def _auto_json(path: Path) -> tuple[list[Finding], list[Asset]]:
                 return naabu.parse(path)
             if "request" in sample and "endpoint" in sample:
                 return katana.parse(path)
-    # Cloud posture / EDR / arbitrary findings dumps.
     return generic.parse_json(path)
 
 
@@ -123,31 +135,77 @@ def _auto_csv(path: Path) -> tuple[list[Finding], list[Asset]]:
     return generic.parse_csv(path)
 
 
-def load_scan_files(paths: list[Path]) -> tuple[list[Finding], list[Asset]]:
+def _collect_files(paths: list[Path]) -> list[Path]:
     files: list[Path] = []
     for p in paths:
         if p.is_dir():
-            # Directory scans stay json/xml to preserve deterministic fixtures.
-            # CSV (Qualys/Nessus/generic) is parsed when a file is passed
-            # explicitly — the real upload path — via parse_file().
-            for ext in ("*.json", "*.xml"):
+            for ext in ("*.json", "*.xml", "*.csv", "*.sarif"):
                 files.extend(sorted(p.rglob(ext)))
         elif p.is_file():
             files.append(p)
         else:
             raise FileNotFoundError(str(p))
+    return [f for f in files if f.name.lower() not in SKIP_FILE_NAMES]
 
+
+def _parse_one(path: Path, cache_dir: Path | None) -> tuple[list[Finding], list[Asset], dict]:
+    digest = file_content_hash(path)
+    findings, assets, from_cache = load_cached_parse(path, cache_dir, parse_fn=parse_file)
+    return findings, assets, {
+        "file": path.name,
+        "content_hash": digest,
+        "from_cache": from_cache,
+        "findings": len(findings),
+        "assets": len(assets),
+    }
+
+
+def load_scan_files(
+    paths: list[Path],
+    *,
+    cache_dir: Path | None = None,
+) -> ScanLoadResult:
+    """Load and parse scan files. Unpacks as (findings, assets) for compatibility."""
+    files = _collect_files(paths)
     if not files:
         raise ValueError("No scan files found")
 
     findings: list[Finding] = []
     assets: list[Asset] = []
-    for f in files:
-        fnds, asts = parse_file(f)
-        findings.extend(fnds)
-        assets.extend(asts)
-    return findings, assets
+    manifest_entries: list[dict] = []
+    cache_hits = 0
+    cache_misses = 0
+
+    if len(files) >= PARALLEL_THRESHOLD:
+        with ThreadPoolExecutor(max_workers=min(MAX_PARSE_WORKERS, len(files))) as pool:
+            futures = {pool.submit(_parse_one, f, cache_dir): f for f in files}
+            for fut in as_completed(futures):
+                fnds, asts, meta = fut.result()
+                findings.extend(fnds)
+                assets.extend(asts)
+                manifest_entries.append(meta)
+                if meta["from_cache"]:
+                    cache_hits += 1
+                else:
+                    cache_misses += 1
+    else:
+        for f in files:
+            fnds, asts, meta = _parse_one(f, cache_dir)
+            findings.extend(fnds)
+            assets.extend(asts)
+            manifest_entries.append(meta)
+            if meta["from_cache"]:
+                cache_hits += 1
+            else:
+                cache_misses += 1
+
+    manifest = build_manifest(
+        sorted(manifest_entries, key=lambda e: e["file"]),
+        cache_hits=cache_hits,
+        cache_misses=cache_misses,
+    )
+    return ScanLoadResult(findings=findings, assets=assets, manifest=manifest)
 
 
-def load_scan_directory(path: Path) -> tuple[list[Finding], list[Asset]]:
-    return load_scan_files([path])
+def load_scan_directory(path: Path, *, cache_dir: Path | None = None) -> ScanLoadResult:
+    return load_scan_files([path], cache_dir=cache_dir)

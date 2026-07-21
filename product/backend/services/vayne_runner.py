@@ -18,12 +18,10 @@ def analyze(
     *,
     proof: bool = True,
     on_stage: StageCallback | None = None,
+    cache_dir: Path | None = None,
 ) -> InvestigationReport:
-    """Run VAYNE Core and write production exports to export_dir.
-
-    ``on_stage`` is forwarded to the engine orchestrator so the product layer
-    can time each internal stage (loading, correlation, attack graph, report)
-    without modifying engine code.
-    """
-    orch = Orchestrator(name, uploaded_files, on_stage=on_stage, proof=proof)
+    """Run VAYNE Core and write production exports to export_dir."""
+    orch = Orchestrator(
+        name, uploaded_files, on_stage=on_stage, proof=proof, cache_dir=cache_dir
+    )
     return orch.run(export_dir=export_dir)
