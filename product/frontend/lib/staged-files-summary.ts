@@ -3,6 +3,7 @@
 import { evidenceFormatLabel } from "@/components/workspace/evidence-queue";
 
 export const STAGED_FILES_COMPACT_THRESHOLD = 6;
+export const EVIDENCE_LIST_COMPACT_THRESHOLD = 6;
 
 export function formatTotalFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -10,10 +11,10 @@ export function formatTotalFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function stagedFilesTypeSummary(files: File[]): string {
+export function filenameTypeSummary(filenames: string[]): string {
   const counts = new Map<string, number>();
-  for (const file of files) {
-    const label = evidenceFormatLabel(file.name);
+  for (const name of filenames) {
+    const label = evidenceFormatLabel(name);
     counts.set(label, (counts.get(label) || 0) + 1);
   }
   return [...counts.entries()]
@@ -21,6 +22,10 @@ export function stagedFilesTypeSummary(files: File[]): string {
     .slice(0, 4)
     .map(([label, count]) => `${count} ${label}`)
     .join(" · ");
+}
+
+export function stagedFilesTypeSummary(files: File[]): string {
+  return filenameTypeSummary(files.map((f) => f.name));
 }
 
 export function analysisPromptForFiles(filenames: string[]): string {

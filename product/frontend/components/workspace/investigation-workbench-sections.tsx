@@ -9,6 +9,7 @@ import {
 import { ChevronDown } from "lucide-react";
 
 import { SourceFileBadge } from "@/components/shared/source-file-badge";
+import { EVIDENCE_LIST_COMPACT_THRESHOLD } from "@/lib/staged-files-summary";
 
 import type {
   WorkbenchCandidatePath,
@@ -1465,12 +1466,26 @@ export function DeveloperDetailsSection({
         ) : null}
 
         {workbench.file_contributions.length ? (
-          <CollapsibleSection title="File Contribution" defaultOpen>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {workbench.file_contributions.map((f, i) => (
-                <FileContributionCard key={i} file={f} />
-              ))}
-            </div>
+          <CollapsibleSection title="File Contribution" defaultOpen={false}>
+            {workbench.file_contributions.length > EVIDENCE_LIST_COMPACT_THRESHOLD ? (
+              <div className="space-y-3">
+                <p className="text-[13px] text-white/70">
+                  {workbench.file_contributions.length.toLocaleString()} source files contributed
+                  evidence. Top contributors by signal volume:
+                </p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {workbench.file_contributions.slice(0, 8).map((f, i) => (
+                    <FileContributionCard key={i} file={f} />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {workbench.file_contributions.map((f, i) => (
+                  <FileContributionCard key={i} file={f} />
+                ))}
+              </div>
+            )}
           </CollapsibleSection>
         ) : null}
 
