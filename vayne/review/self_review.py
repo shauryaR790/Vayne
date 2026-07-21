@@ -72,10 +72,17 @@ def _recommendations_derived(bundle: dict[str, Any]) -> tuple[bool, str]:
 def _justified(validation: ValidationResult, bundle: dict[str, Any]) -> tuple[bool, str]:
     quality = bundle.get("evidence_quality", {})
     items = quality.get("evidence", []) if isinstance(quality, dict) else []
+    classification = str(getattr(validation.classification, "value", validation.classification) or "").upper()
     if validation.overall_confidence <= 0:
         return True, "no positive confidence asserted"
+    # Strong compromise language requires explicit exploit proof.
+    if "CONFIRMED" in classification and str(validation.exploitability_status or "") != "confirmed":
+        if not validation.reproducible:
+            return False, "confirmed classification without reproducible exploit evidence"
     if items:
         return True, f"confidence backed by {len(items)} classified evidence item(s)"
+    if validation.supporting_evidence:
+        return True, f"confidence backed by {len(validation.supporting_evidence)} supporting item(s)"
     return False, "confidence asserted without classified evidence"
 
 

@@ -18,6 +18,7 @@ from vayne.investigation.attack_story import build_attack_story
 from vayne.investigation.evidence_primitives import primitives_for
 from vayne.investigation.hypotheses import build_hypotheses
 from vayne.investigation.notebook import build_notebook
+from vayne.investigation.structured_notebook import build_structured_notebook
 from vayne.investigation.self_challenge import run_self_challenge
 from vayne.investigation.tasks import build_investigation_tasks
 from vayne.models import AttackPath, CorrelatedFinding, ValidationResult
@@ -49,6 +50,16 @@ def build_investigation(
     attack_story = build_attack_story(finding, validation, profile, business_impact, attack_paths)
     tasks = build_investigation_tasks(finding, validation)
     notebook = build_notebook(finding, validation, timeline, primitives, self_challenge)
+    structured_notebook = build_structured_notebook(
+        finding,
+        validation,
+        primitives=primitives,
+        reasoning=reasoning,
+        hypotheses=hypotheses,
+        recommendations=[],  # filled at intelligence hub layer when available
+        tasks=tasks,
+        self_challenge=self_challenge,
+    )
 
     # Phase 4 — ground-truth validation loop. Distinguishes verified evidence
     # from observed evidence and emits the concrete probes that would confirm it.
@@ -69,6 +80,7 @@ def build_investigation(
         "attack_story": attack_story,
         "investigation_tasks": tasks,
         "notebook": notebook,
+        "structured_notebook": structured_notebook,
         "human_reasoning": reasoning,
         "conclusion": conclusion,
         "investigation_confidence": inv_conf,

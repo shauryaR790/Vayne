@@ -947,6 +947,21 @@ def _business_from_engine(bi: dict) -> dict[str, Any]:
     }
 
 
+def _claim_status_from_validation(validation: dict, *, exploit_confirmed: bool) -> str:
+    classification = str(validation.get("classification") or "").upper()
+    if exploit_confirmed:
+        return "confirmed"
+    if "CONFIRMED" in classification:
+        return "confirmed"
+    if "LIKELY" in classification or "UNCONFIRMED" in classification:
+        return "suspected"
+    if "OBSERVED" in classification:
+        return "observed"
+    if "FALSE POSITIVE" in classification:
+        return "rejected"
+    return "needs_validation"
+
+
 def _build_business_impact(analyst: dict, *, title: str, host: str, cve: str) -> dict[str, str]:
     impact = str(analyst.get("impact_assessment") or "").strip()
     why = str(analyst.get("why_this_matters") or "").strip()
@@ -955,50 +970,52 @@ def _build_business_impact(analyst: dict, *, title: str, host: str, cve: str) ->
         scenario = ""
     actions = [str(a).strip() for a in (analyst.get("likely_attacker_actions") or []) if str(a).strip()]
     prereqs = [str(p).strip() for p in (analyst.get("prerequisites") or []) if str(p).strip()]
-    # Drop engine boilerplate that isn't real attacker gain language.
     actions = [
         a
         for a in actions
         if "insufficient" not in a.lower() and "validate finding manually" not in a.lower()
     ]
 
+    has_engine_fields = any([impact, why, scenario, actions])
+    if not has_engine_fields:
+        return {
+            "attacker_gains": "Unknown — exploitation not validated.",
+            "systems_exposed": f"{host or 'Affected host'} — exposure scope needs validation.",
+            "process_affected": "Unknown until business context and exploit path are confirmed.",
+            "importance": "Needs validation before operational impact can be assessed.",
+            "summary": "Needs validation — insufficient evidence to quantify business impact.",
+            "claim_status": "unknown",
+        }
+
     attacker_gains = actions[0] if actions else (
-        scenario.split(".")[0].strip() if scenario else
-        (
-            f"An attacker could remotely control systems on {host or 'this host'} and access business data."
-            if cve
-            else f"An attacker could abuse {title} to disrupt operations or steal data on {host or 'the target'}."
-        )
+        scenario.split(".")[0].strip() if scenario else "Unknown — no validated attacker outcome."
     )
     systems_exposed = (
-        f"{host or 'This host'} is exposed on the internet — anyone worldwide can attempt to reach it."
-        if "internet" in (impact + why + scenario).lower() or "remote" in (impact + why).lower()
-        else f"Internal systems on {host or 'the affected host'}."
+        f"{host or 'This host'} is exposed on the internet — reachability evidence supports external access."
+        if "internet" in (impact + why + scenario).lower() or validation_reachable_hint(impact, why)
+        else f"Internal systems on {host or 'the affected host'} — external exposure not confirmed."
     )
 
     process_affected = (
-        "Customer-facing websites, portals, and services your users rely on every day"
-        if "internet" in (impact + why).lower() or "remote" in (impact + why).lower()
-        else "Internal apps, employee data, and operations on the affected server"
+        "Customer-facing websites, portals, and services (if internet-facing exposure is confirmed)"
+        if "internet" in (impact + why).lower() or validation_reachable_hint(impact, why)
+        else "Internal apps and operations on the affected server — scope needs validation."
     )
-    importance = why or impact or (
-        f"If exploited, this could lead to data theft, service outage, or further access inside your network."
-    )
-    # Avoid dumping the generic engine boilerplate as "importance"
-    if "Exploitability not assessed" in importance and scenario:
+    importance = why or impact or "Needs validation before operational impact can be assessed."
+    if "Exploitability not assessed" in importance:
         importance = (
-            f"If exploited: {scenario.split('.')[0].strip()}."
+            f"If exploited (unvalidated): {scenario.split('.')[0].strip()}."
             if scenario
-            else "Could disrupt business operations or expose sensitive data if an attacker acts on this finding."
+            else "Needs validation — exploit path not confirmed."
         )
-    elif "Exploitability not assessed" in importance and actions:
-        importance = f"If exploited, an attacker could: {actions[0]}"
+    elif scenario and not why and not impact:
+        importance = f"Analyst scenario (unvalidated): {scenario.split('.')[0].strip()}."
 
-    summary = (
-        importance
-        if importance and "Exploitability not assessed" not in importance
-        else f"{title} on {host or 'target'} could disrupt operations or expose business data if left unaddressed."
-    )
+    summary = importance
+    if "needs validation" not in summary.lower() and "unknown" not in summary.lower():
+        summary = summary[:280]
+    else:
+        summary = "Needs validation — insufficient evidence to quantify business impact."
 
     return {
         "attacker_gains": attacker_gains[:220],
@@ -1006,7 +1023,13 @@ def _build_business_impact(analyst: dict, *, title: str, host: str, cve: str) ->
         "process_affected": process_affected[:180],
         "importance": importance[:280],
         "summary": summary[:280],
+        "claim_status": "suspected" if scenario or actions else "unknown",
     }
+
+
+def validation_reachable_hint(*texts: str) -> bool:
+    blob = " ".join(texts).lower()
+    return "remote" in blob or "internet" in blob or "external" in blob
 
 
 def analyze_findings(
@@ -1118,6 +1141,43 @@ def analyze_findings(
         reason_bits = [f"{f['label']} ({f['delta']:+d})" for f in top_pos + top_neg]
         unique_reason = "; ".join(reason_bits) if reason_bits else ""
 
+        exploit_confirmed = str(validation.get("exploitability_status") or "") == "confirmed"
+        claim_status = _claim_status_from_validation(validation, exploit_confirmed=exploit_confirmed)
+        sr = intelligence.get("self_review") or {}
+        review_incomplete = sr.get("complete") is False
+        if review_incomplete and claim_status == "confirmed":
+            claim_status = "suspected"
+
+        investigation_payload = intelligence.get("investigation") or {}
+        structured_nb = investigation_payload.get("structured_notebook") or {}
+        if not structured_nb and investigation_payload and not investigation_payload.get("deferred"):
+            structured_nb = {
+                "observation": investigation_payload.get("conclusion") or "",
+                "evidence": [
+                    str(p.get("display") or "") for p in (investigation_payload.get("evidence_primitives") or [])[:6]
+                ],
+                "reasoning": investigation_payload.get("human_reasoning") or reasoning[:4],
+                "alternative_explanations": [
+                    str(h.get("label") or h.get("title") or "")
+                    for h in (investigation_payload.get("hypotheses") or [])
+                    if h.get("category") != "primary"
+                ][:4],
+                "confidence": {
+                    "score": primary_score,
+                    "band": _analyst_confidence(classification, primary_score),
+                    "status": claim_status,
+                },
+                "missing_evidence": [
+                    str(t.get("label") or t.get("action") or "")
+                    for t in (investigation_payload.get("investigation_tasks") or [])[:4]
+                ],
+                "recommended_next_step": (
+                    str((investigation_payload.get("investigation_tasks") or [{}])[0].get("label") or "")
+                    or "Validate finding manually before asserting compromise."
+                ),
+            }
+            investigation_payload = {**investigation_payload, "structured_notebook": structured_nb}
+
         confirmed.append(
             {
                 "id": corr.get("id") or title,
@@ -1127,6 +1187,8 @@ def analyze_findings(
                 "severity_rank": _SEV_RANK.get(severity.lower(), 0),
                 "classification": classification,
                 "status": status,
+                "claim_status": claim_status,
+                "review_incomplete": review_incomplete,
                 "machine_confidence": primary_score,
                 "analyst_confidence": _analyst_confidence(classification, primary_score),
                 "sources": sources,
@@ -1164,7 +1226,7 @@ def analyze_findings(
                 "self_review": intelligence.get("self_review") or {},
                 # Phase 3 autonomous investigation (stages, hypotheses, evidence
                 # primitives, self-challenge, attack story, tasks, notebook).
-                "investigation": intelligence.get("investigation") or {},
+                "investigation": investigation_payload,
             }
         )
 
@@ -1202,7 +1264,7 @@ def analyze_findings(
                     "title": f"Possible exploitation of {title}",
                     "status": "Hypothesis",
                     "reason": scenario
-                    or f"{title} is present and fingerprinted, so exploitation may be feasible.",
+                    or f"{title} is present and fingerprinted — needs validation before asserting exploitation.",
                     "current_evidence": "Observation confirmed by scanners; exploit execution not validated.",
                     "required_validation": "Attempt controlled, safe exploit validation in a test window.",
                     "confidence": primary_score,

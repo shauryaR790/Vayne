@@ -530,6 +530,7 @@ class InvestigationService:
         graph = self.get_full_graph(inv_id)
         findings = self.get_findings_export(inv_id)
         remediation = self.get_remediation_export(inv_id)
+        review = self.load_artifact(inv_id, "review.json")
         return build_workbench(
             report,
             graph,
@@ -537,6 +538,7 @@ class InvestigationService:
             source_filename=inv.source_filename or "",
             created_at=inv.created_at,
             remediation=remediation,
+            review=review,
         )
 
     def get_findings_export(self, inv_id: str) -> dict:

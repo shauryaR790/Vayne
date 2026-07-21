@@ -227,6 +227,8 @@ export interface WorkbenchConfirmedFinding {
   severity: string;
   classification: string;
   status: "Observed" | "Correlated" | "Hypothesized" | "Validated" | "Rejected";
+  claim_status?: string;
+  review_incomplete?: boolean;
   /** Primary decision-relevant score among displayed semantic metrics. */
   machine_confidence: number;
   analyst_confidence: string;
@@ -490,6 +492,45 @@ export interface WorkbenchNotes {
   summary: string;
 }
 
+export interface WorkbenchPriorityItem {
+  id: string;
+  kind: "finding" | "attack_path" | "hypothesis";
+  tier: "Critical" | "High" | "Medium" | "Low";
+  title: string;
+  risk_score: number;
+  evidence_count: number;
+  confidence: number;
+  claim_status: string;
+  priority_reasons: string[];
+  business_impact: string;
+  estimated_review_minutes: number;
+  detail_section_id: string;
+  evidence_items?: string[];
+  missing_evidence?: string[];
+}
+
+export interface WorkbenchExecutiveMetrics {
+  files: number;
+  assets: number;
+  findings_raw: number;
+  findings_retained: number;
+  duplicates_removed: number;
+  investigations: number;
+  require_attention: number;
+  analyst_hours_saved: number;
+  cross_source_matches: number;
+  validated_paths: number;
+}
+
+export interface WorkbenchInvestigationAudit {
+  complete: boolean;
+  findings_reviewed: number;
+  findings_complete: number;
+  completeness_ratio: number;
+  flagged_findings: Array<{ finding_id: string; title: string; issues: string }>;
+  unsupported_claims_blocked: number;
+}
+
 export interface WorkbenchData {
   generated_at: string;
   duration_seconds: number;
@@ -511,6 +552,9 @@ export interface WorkbenchData {
   evidence_trail?: WorkbenchEvidenceTrailEvent[];
   investigation_timeline?: WorkbenchTimelineStep[];
   closing_line: string;
+  priority_queue?: WorkbenchPriorityItem[];
+  investigation_audit?: WorkbenchInvestigationAudit;
+  executive_metrics?: WorkbenchExecutiveMetrics;
   totals: {
     files: number;
     sources: number;

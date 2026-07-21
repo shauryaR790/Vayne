@@ -22,6 +22,11 @@ from product.backend.services.investigation_evidence import (
     build_investigation_timeline,
     build_next_actions,
 )
+from product.backend.services.investigation_prioritization import (
+    build_executive_metrics,
+    build_investigation_audit,
+    build_priority_queue,
+)
 
 # Human labels + display order for known scanner source tools.
 _TOOL_LABELS = {
@@ -79,6 +84,7 @@ def build_workbench(
     source_filename: str = "",
     created_at: datetime | None = None,
     remediation: dict | None = None,
+    review: dict | None = None,
 ) -> dict:
     report = report or {}
     graph = graph or {}
@@ -378,6 +384,36 @@ def build_workbench(
     confirmed_findings = evidence["confirmed_findings"]
     hypotheses = evidence["hypotheses"]
     unknowns = evidence["unknowns"]
+
+    # Self-review gating — incomplete findings are flagged, not silently trusted.
+    incomplete_ids = set((review or {}).get("findings_incomplete") or [])
+    for finding in confirmed_findings:
+        fid = str(finding.get("id") or "")
+        if fid in incomplete_ids:
+            finding["review_incomplete"] = True
+            if finding.get("claim_status") == "confirmed":
+                finding["claim_status"] = "suspected"
+
+    priority_queue = build_priority_queue(
+        confirmed_findings=confirmed_findings,
+        candidate_paths=candidate_paths,
+        hypotheses=hypotheses,
+        cross_source_matches=cross_source_matches,
+    )
+    investigation_audit = build_investigation_audit(review, confirmed_findings)
+    executive_metrics = build_executive_metrics(
+        file_count=file_count,
+        asset_count=asset_count,
+        findings_loaded=findings_loaded,
+        duplicates_removed=duplicates_removed,
+        confirmed_count=len(confirmed_findings),
+        priority_queue=priority_queue,
+        hours_saved=hours_saved,
+        minutes_saved=minutes_saved,
+        cross_source_matches=cross_source_matches,
+        validated_paths=validated_count,
+    )
+
     next_actions = build_next_actions(hypotheses, remediation, unknowns)
     executive_summary = build_executive_summary(
         file_count=file_count,
@@ -486,6 +522,9 @@ def build_workbench(
         "evidence_trail": evidence_trail,
         "investigation_timeline": investigation_timeline,
         "closing_line": "Everything above is traceable to raw scanner evidence.",
+        "priority_queue": priority_queue,
+        "investigation_audit": investigation_audit,
+        "executive_metrics": executive_metrics,
         "totals": {
             "files": file_count,
             "sources": len(evidence_sources),

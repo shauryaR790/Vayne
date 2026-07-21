@@ -19,6 +19,7 @@ from vayne.contradiction import build_conflicts
 from vayne.evidence.evidence_graph import build_evidence_graph
 from vayne.evidence.quality import aggregate_quality
 from vayne.investigation import build_investigation, build_rejected_path_investigations
+from vayne.investigation.structured_notebook import build_structured_notebook
 from vayne.models import AttackPath, CorrelatedFinding, InvestigationReport, ValidationResult
 from vayne.reasoning import build_confidence_timeline, build_reasoning
 from vayne.review.self_review import review_finding, review_investigation
@@ -92,7 +93,19 @@ def build_finding_intelligence(
     }
     # Phase 3 — the full autonomous investigation for this finding.
     if full_investigation:
-        bundle["investigation"] = build_investigation(correlated, validation, attack_paths)
+        inv = build_investigation(correlated, validation, attack_paths)
+        # Enrich structured notebook with recommendations once the full bundle exists.
+        inv["structured_notebook"] = build_structured_notebook(
+            correlated,
+            validation,
+            primitives=inv.get("evidence_primitives") or [],
+            reasoning=reasoning,
+            hypotheses=inv.get("hypotheses") or [],
+            recommendations=recommendations,
+            tasks=inv.get("investigation_tasks") or [],
+            self_challenge=inv.get("self_challenge") or {},
+        )
+        bundle["investigation"] = inv
     else:
         bundle["investigation"] = {"deferred": True,
                                    "reason": "Full investigation deferred at scale; "

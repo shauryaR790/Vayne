@@ -1,6 +1,9 @@
 import type { InvestigationBundle } from "./investigation-bundle";
 import type { InvestigationPresentation } from "./investigation-presentation";
-import type { WorkbenchCandidatePath, WorkbenchConfirmedFinding, WorkbenchData } from "./types";
+import type {
+  WorkbenchData,
+  WorkbenchPriorityItem,
+} from "./types";
 import { recommendationTasks } from "./workbench-report-helpers";
 
 export type PriorityTier = "Critical" | "High" | "Medium" | "Low";
@@ -11,7 +14,15 @@ export interface PrioritizedInvestigation {
   title: string;
   riskScore: number;
   estimatedReviewMinutes: number;
+  /** Primary reason — full list in priorityReasons. */
   reason: string;
+  priorityReasons: string[];
+  evidenceCount: number;
+  confidence: number;
+  claimStatus: string;
+  businessImpact: string;
+  evidenceItems: string[];
+  missingEvidence: string[];
   /** Collapsible detail section to expand when the analyst opens this item. */
   detailSectionId: string;
 }
@@ -22,6 +33,8 @@ export interface ExecutiveInvestigationOverview {
   statistics: Array<{ label: string; value: string | number }>;
   keyObservations: string[];
   recommendedActions: string[];
+  auditComplete?: boolean;
+  unsupportedClaimsBlocked?: number;
 }
 
 function statValue(workbench: WorkbenchData, label: string): string | number {
@@ -29,124 +42,50 @@ function statValue(workbench: WorkbenchData, label: string): string | number {
   return row?.value ?? "—";
 }
 
-function riskDisplayScore(path: WorkbenchCandidatePath): number {
-  const fromRisk = Math.round((path.risk || 0) * 10);
-  const fromConfidence = path.confidence || 0;
-  return Math.min(99, Math.max(fromRisk, fromConfidence));
-}
-
-function tierFromScore(score: number, severity?: string): PriorityTier {
-  const sev = (severity || "").toUpperCase();
-  if (score >= 85 || sev === "CRITICAL") return "Critical";
-  if (score >= 70 || sev === "HIGH") return "High";
-  if (score >= 45 || sev === "MEDIUM") return "Medium";
-  return "Low";
-}
-
-function reviewMinutes(tier: PriorityTier, steps: number): number {
-  const base = tier === "Critical" ? 5 : tier === "High" ? 8 : tier === "Medium" ? 12 : 15;
-  return Math.min(30, base + Math.max(0, steps - 3));
-}
-
-function pathTitle(path: WorkbenchCandidatePath): string {
-  if (path.steps.length >= 2) {
-    return `${path.steps[0]} → ${path.steps[path.steps.length - 1]} attack path`;
-  }
-  if (path.steps.length === 1) return `${path.steps[0]} exposure path`;
-  return "Validated attack path";
-}
-
-function findingTitle(finding: WorkbenchConfirmedFinding): string {
-  const host = finding.host ? ` on ${finding.host.split(".")[0]}` : "";
-  return `${finding.title}${host}`;
+function mapPriorityItem(item: WorkbenchPriorityItem): PrioritizedInvestigation {
+  const reasons = item.priority_reasons?.length ? item.priority_reasons : ["Retained for analyst review."];
+  return {
+    id: item.id,
+    tier: item.tier,
+    title: item.title,
+    riskScore: item.risk_score,
+    estimatedReviewMinutes: item.estimated_review_minutes,
+    reason: reasons[0],
+    priorityReasons: reasons,
+    evidenceCount: item.evidence_count,
+    confidence: item.confidence,
+    claimStatus: item.claim_status,
+    businessImpact: item.business_impact,
+    evidenceItems: item.evidence_items ?? [],
+    missingEvidence: item.missing_evidence ?? [],
+    detailSectionId: item.detail_section_id,
+  };
 }
 
 function buildPrioritizedInvestigations(workbench: WorkbenchData): PrioritizedInvestigation[] {
-  const items: PrioritizedInvestigation[] = [];
-
-  const validatedPaths = workbench.candidate_paths.filter((p) => p.status === "VALIDATED");
-  for (const [i, path] of validatedPaths.entries()) {
-    const riskScore = riskDisplayScore(path);
-    const tier = tierFromScore(riskScore);
-    items.push({
-      id: `path-${i}`,
-      tier,
-      title: pathTitle(path),
-      riskScore,
-      estimatedReviewMinutes: reviewMinutes(tier, path.steps.length),
-      reason: path.reason || "Validated chain with supporting evidence across the environment.",
-      detailSectionId: "attack-graph",
-    });
+  if (workbench.priority_queue?.length) {
+    return workbench.priority_queue.map(mapPriorityItem);
   }
-
-  for (const [i, finding] of workbench.confirmed_findings.entries()) {
-    const score = finding.machine_confidence || 0;
-    const riskScore =
-      finding.severity === "CRITICAL"
-        ? Math.max(score, 88)
-        : finding.severity === "HIGH"
-          ? Math.max(score, 72)
-          : score;
-    const tier = tierFromScore(riskScore, finding.severity);
-    if (items.some((row) => row.title.toLowerCase().includes(finding.title.toLowerCase().slice(0, 12)))) {
-      continue;
-    }
-    items.push({
-      id: finding.id || `finding-${i}`,
-      tier,
-      title: findingTitle(finding),
-      riskScore,
-      estimatedReviewMinutes: reviewMinutes(tier, 2),
-      reason:
-        finding.why_it_matters ||
-        finding.investigation?.conclusion ||
-        "Retained finding with analyst-review-worthy exposure or impact.",
-      detailSectionId: "findings",
-    });
-  }
-
-  for (const [i, hyp] of workbench.hypotheses.slice(0, 3).entries()) {
-    const score = hyp.confidence || 50;
-    const tier = tierFromScore(score);
-    items.push({
-      id: `hyp-${i}`,
-      tier,
-      title: hyp.title,
-      riskScore: score,
-      estimatedReviewMinutes: reviewMinutes(tier, 3),
-      reason: hyp.reason || hyp.required_validation || "Hypothesis requires validation before closing.",
-      detailSectionId: "reasoning",
-    });
-  }
-
-  const tierOrder: Record<PriorityTier, number> = {
-    Critical: 0,
-    High: 1,
-    Medium: 2,
-    Low: 3,
-  };
-
-  return items
-    .sort((a, b) => tierOrder[a.tier] - tierOrder[b.tier] || b.riskScore - a.riskScore)
-    .slice(0, 8);
+  return [];
 }
 
 function buildExecutiveSummarySentences(
   workbench: WorkbenchData,
   prioritized: PrioritizedInvestigation[],
 ): string[] {
-  const files = workbench.totals.files || Number(statValue(workbench, "Files Parsed")) || 0;
-  const signals = Number(statValue(workbench, "Evidence Signals")) || 0;
-  const duplicates = Number(statValue(workbench, "Duplicate Findings Removed")) || 0;
-  const retained = workbench.totals.confirmed_findings ?? workbench.confirmed_findings.length;
-  const immediate = prioritized.filter((p) => p.tier === "Critical" || p.tier === "High").length;
-  const reviewCount = prioritized.length || retained;
+  const metrics = workbench.executive_metrics;
+  const files = metrics?.files ?? workbench.totals.files ?? Number(statValue(workbench, "Files Parsed")) ?? 0;
+  const signals = metrics?.findings_raw ?? Number(statValue(workbench, "Evidence Signals")) ?? 0;
+  const duplicates = metrics?.duplicates_removed ?? Number(statValue(workbench, "Duplicate Findings Removed")) ?? 0;
+  const retained = metrics?.findings_retained ?? workbench.totals.confirmed_findings ?? workbench.confirmed_findings.length;
+  const reviewCount = metrics?.investigations ?? (prioritized.length || retained);
+  const immediate = metrics?.require_attention ?? prioritized.filter((p) => p.tier === "Critical" || p.tier === "High").length;
 
   const sentences: string[] = [];
 
   if (files > 0 && signals > 0) {
     sentences.push(
-      `${files} scan file${files === 1 ? "" : "s"} containing approximately ${signals.toLocaleString()} findings were analyzed.`,
+      `${files} scan file${files === 1 ? "" : "s"} containing approximately ${signals.toLocaleString()} raw findings were analyzed.`,
     );
   } else if (files > 0) {
     sentences.push(`${files} evidence file${files === 1 ? "" : "s"} were analyzed.`);
@@ -156,46 +95,47 @@ function buildExecutiveSummarySentences(
 
   if (duplicates > 0) {
     sentences.push(
-      "Most findings were repetitive and automatically merged.",
-    );
-    sentences.push(
-      `${duplicates.toLocaleString()} duplicate finding${duplicates === 1 ? "" : "s"} were removed before review.`,
+      `${duplicates.toLocaleString()} duplicate finding${duplicates === 1 ? "" : "s"} were merged before review.`,
     );
   }
 
   sentences.push(
-    `VANE identified ${reviewCount} investigation${reviewCount === 1 ? "" : "s"} requiring analyst review.`,
+    `${reviewCount} investigation${reviewCount === 1 ? "" : "s"} require analyst review (ranked by evidence, not scanner noise).`,
   );
 
   if (immediate > 0) {
     sentences.push(
-      `Only ${immediate} investigation${immediate === 1 ? " represents immediate business risk" : "s represent immediate business risk"}.`,
+      `${immediate} investigation${immediate === 1 ? " has" : "s have"} immediate priority based on validated evidence signals.`,
     );
   } else {
-    sentences.push("No investigation currently meets immediate business-risk thresholds.");
+    sentences.push("No investigation currently meets immediate business-risk thresholds from validated evidence.");
   }
 
-  const lowPriority = Math.max(0, retained - immediate);
-  if (lowPriority > 0) {
+  const audit = workbench.investigation_audit;
+  if (audit && audit.unsupported_claims_blocked > 0) {
     sentences.push(
-      "The remaining findings are informational or can wait until critical investigations are complete.",
+      `${audit.unsupported_claims_blocked} finding${audit.unsupported_claims_blocked === 1 ? "" : "s"} flagged by self-review — treat as needs validation.`,
     );
   }
 
-  if (workbench.executive_summary && sentences.length < 4) {
-    sentences.push(workbench.executive_summary.split(/(?<=[.!?])\s+/)[0]?.trim() || workbench.executive_summary);
+  if (workbench.executive_summary && sentences.length < 5) {
+    const first = workbench.executive_summary.split(/(?<=[.!?])\s+/)[0]?.trim();
+    if (first) sentences.push(first);
   }
 
   return sentences.filter(Boolean).slice(0, 6);
 }
 
 function buildStatistics(workbench: WorkbenchData, presentation: InvestigationPresentation) {
-  const files = workbench.totals.files || statValue(workbench, "Files Parsed");
-  const assets = statValue(workbench, "Assets");
-  const uniqueVulns = statValue(workbench, "Validated Findings");
-  const duplicates = statValue(workbench, "Duplicate Findings Removed");
-  const highRiskPaths = workbench.totals.validated_paths ?? presentation.executive.attackPaths;
-  const hoursSaved = statValue(workbench, "Analyst Time Saved");
+  const metrics = workbench.executive_metrics;
+  const files = metrics?.files ?? workbench.totals.files ?? statValue(workbench, "Files Parsed");
+  const assets = metrics?.assets ?? statValue(workbench, "Assets");
+  const uniqueVulns = metrics?.findings_retained ?? statValue(workbench, "Validated Findings");
+  const duplicates = metrics?.duplicates_removed ?? statValue(workbench, "Duplicate Findings Removed");
+  const highRiskPaths = metrics?.validated_paths ?? workbench.totals.validated_paths ?? presentation.executive.attackPaths;
+  const hoursSaved = metrics?.analyst_hours_saved
+    ? `${metrics.analyst_hours_saved}h`
+    : statValue(workbench, "Analyst Time Saved");
 
   const criticalHosts = new Set(
     workbench.confirmed_findings
@@ -204,20 +144,25 @@ function buildStatistics(workbench: WorkbenchData, presentation: InvestigationPr
       .filter(Boolean),
   );
 
-  const signals = Number(statValue(workbench, "Evidence Signals")) || 0;
+  const signals = metrics?.findings_raw ?? Number(statValue(workbench, "Evidence Signals")) ?? 0;
   const dupNum = Number(duplicates) || 0;
   const reviewReduction =
     signals > 0 && dupNum > 0 ? `${Math.min(99, Math.round((dupNum / signals) * 100))}%` : "—";
 
+  const investigations = metrics?.investigations ?? workbench.priority_queue?.length ?? "—";
+  const requireAttention = metrics?.require_attention ?? "—";
+
   return [
     { label: "Files processed", value: files },
     { label: "Assets discovered", value: assets },
-    { label: "Unique vulnerabilities", value: uniqueVulns },
+    { label: "Findings retained", value: uniqueVulns },
     { label: "Duplicate findings merged", value: duplicates },
+    { label: "Investigations queued", value: investigations },
+    { label: "Require attention", value: requireAttention },
     { label: "Critical assets", value: criticalHosts.size || "—" },
-    { label: "Internet-facing assets", value: presentation.executive.assets || assets },
     { label: "High-risk attack paths", value: highRiskPaths },
-    { label: "Estimated analyst review reduction", value: reviewReduction },
+    { label: "Cross-source matches", value: metrics?.cross_source_matches ?? workbench.totals.cross_source_matches ?? "—" },
+    { label: "Estimated review reduction", value: reviewReduction },
     { label: "Estimated manual hours saved", value: hoursSaved },
   ];
 }
@@ -227,12 +172,20 @@ function buildKeyObservations(
   prioritized: PrioritizedInvestigation[],
 ): string[] {
   const observations: string[] = [];
-  const signals = Number(statValue(workbench, "Evidence Signals")) || 0;
-  const duplicates = Number(statValue(workbench, "Duplicate Findings Removed")) || 0;
+  const metrics = workbench.executive_metrics;
+  const signals = metrics?.findings_raw ?? Number(statValue(workbench, "Evidence Signals")) ?? 0;
+  const duplicates = metrics?.duplicates_removed ?? Number(statValue(workbench, "Duplicate Findings Removed")) ?? 0;
 
   if (signals > 0 && duplicates > 0) {
     observations.push(
-      `${Math.round((duplicates / signals) * 100)}% of raw findings were duplicates.`,
+      `${Math.round((duplicates / signals) * 100)}% of raw findings were duplicates merged by the correlator.`,
+    );
+  }
+
+  const crossMatches = metrics?.cross_source_matches ?? workbench.totals.cross_source_matches ?? 0;
+  if (crossMatches > 0) {
+    observations.push(
+      `${crossMatches} finding${crossMatches === 1 ? "" : "s"} independently corroborated across multiple scanners.`,
     );
   }
 
@@ -246,10 +199,10 @@ function buildKeyObservations(
   const topHosts = [...hostCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2);
   if (topHosts.length >= 2) {
     observations.push(
-      `Two hosts (${topHosts[0][0].split(".")[0]}, ${topHosts[1][0].split(".")[0]}) account for most critical risk.`,
+      `Two hosts (${topHosts[0][0].split(".")[0]}, ${topHosts[1][0].split(".")[0]}) account for most high-severity retained findings.`,
     );
   } else if (topHosts.length === 1) {
-    observations.push(`${topHosts[0][0].split(".")[0]} concentrates the highest-priority exposure.`);
+    observations.push(`${topHosts[0][0].split(".")[0]} concentrates the highest-priority retained findings.`);
   }
 
   const smbCount = workbench.confirmed_findings.filter((f) =>
@@ -259,20 +212,16 @@ function buildKeyObservations(
     observations.push(`SMB-related exposure appears across ${smbCount} retained finding${smbCount === 1 ? "" : "s"}.`);
   }
 
-  if (workbench.totals.cross_source_matches > 1) {
-    observations.push(
-      `Credential or service reuse signals detected across ${workbench.totals.cross_source_matches} correlated matches.`,
-    );
-  }
-
-  const low = workbench.confirmed_findings.filter((f) => f.severity === "LOW" || f.severity === "INFO").length;
-  if (low > workbench.confirmed_findings.length / 2 && workbench.confirmed_findings.length > 2) {
-    observations.push("Most remaining findings are low-severity configuration or informational issues.");
-  }
-
   if (workbench.totals.rejected_paths > 0) {
     observations.push(
       `${workbench.totals.rejected_paths} candidate attack path${workbench.totals.rejected_paths === 1 ? " was" : "s were"} ruled out for insufficient evidence.`,
+    );
+  }
+
+  const needsValidation = prioritized.filter((p) => p.claimStatus === "needs_validation" || p.claimStatus === "unknown").length;
+  if (needsValidation > 0) {
+    observations.push(
+      `${needsValidation} queued investigation${needsValidation === 1 ? "" : "s"} require validation before asserting compromise.`,
     );
   }
 
@@ -291,7 +240,10 @@ function buildRecommendedActions(
 
   const top = prioritized[0];
   if (top) {
-    actions.push(`Review "${top.title}" immediately.`);
+    const next =
+      top.missingEvidence[0] ||
+      (top.claimStatus === "needs_validation" ? `Validate: ${top.title}` : `Review: ${top.title}`);
+    actions.push(next.endsWith(".") ? next : `${next}.`);
   }
 
   for (const task of recommendationTasks(workbench).slice(0, 4)) {
@@ -305,12 +257,6 @@ function buildRecommendedActions(
     }
   }
 
-  if (prioritized.some((p) => p.tier === "Low" || p.tier === "Medium")) {
-    actions.push(
-      "Defer informational SSL/TLS and configuration findings until critical investigations are complete.",
-    );
-  }
-
   return [...new Set(actions)].slice(0, 6);
 }
 
@@ -321,6 +267,7 @@ export function buildExecutiveInvestigationOverview(
 ): ExecutiveInvestigationOverview {
   void bundle;
   const prioritizedInvestigations = buildPrioritizedInvestigations(workbench);
+  const audit = workbench.investigation_audit;
 
   return {
     executiveSummary: buildExecutiveSummarySentences(workbench, prioritizedInvestigations),
@@ -328,6 +275,8 @@ export function buildExecutiveInvestigationOverview(
     statistics: buildStatistics(workbench, presentation),
     keyObservations: buildKeyObservations(workbench, prioritizedInvestigations),
     recommendedActions: buildRecommendedActions(workbench, prioritizedInvestigations),
+    auditComplete: audit?.complete,
+    unsupportedClaimsBlocked: audit?.unsupported_claims_blocked,
   };
 }
 
