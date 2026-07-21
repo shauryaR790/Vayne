@@ -23,6 +23,7 @@ export function WorkstationSection({
   aside,
   reveal = 0,
   large = false,
+  embedded = false,
 }: {
   title: string;
   children: React.ReactNode;
@@ -30,7 +31,22 @@ export function WorkstationSection({
   aside?: React.ReactNode;
   reveal?: number;
   large?: boolean;
+  embedded?: boolean;
 }) {
+  if (embedded) {
+    return (
+      <div
+        className={cn(
+          "min-w-0 bg-vx-section-body text-white",
+          large ? "px-6 py-8" : "px-6 py-6",
+          bodyClassName,
+        )}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 10 }}
@@ -67,6 +83,9 @@ export function CollapsibleSection({
   children,
   defaultOpen = true,
   forceOpen,
+  open: controlledOpen,
+  onOpenChange,
+  sectionId,
   aside,
   reveal = 0,
   bodyClassName,
@@ -75,19 +94,30 @@ export function CollapsibleSection({
   children: React.ReactNode;
   defaultOpen?: boolean;
   forceOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  sectionId?: string;
   aside?: React.ReactNode;
   reveal?: number;
   bodyClassName?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const isOpen = forceOpen ?? open;
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = forceOpen ?? (isControlled ? controlledOpen : open);
 
   useEffect(() => {
     if (forceOpen !== undefined) setOpen(forceOpen);
   }, [forceOpen]);
 
+  const toggle = () => {
+    const next = !isOpen;
+    if (!isControlled) setOpen(next);
+    onOpenChange?.(next);
+  };
+
   return (
     <motion.section
+      id={sectionId ? `investigation-detail-${sectionId}` : undefined}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: reveal, ease: "easeOut" }}
@@ -103,7 +133,8 @@ export function CollapsibleSection({
       ) : (
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={toggle}
+          aria-expanded={isOpen}
           className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4 text-left transition-colors hover:bg-white/[0.02]"
         >
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
@@ -129,7 +160,7 @@ export function CollapsibleSection({
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className={cn("bg-vx-section-body px-6 py-6 text-white", bodyClassName)}>
+            <div className={cn("bg-vx-section-body text-white", bodyClassName ?? "px-0 py-0")}>
               {children}
             </div>
           </motion.div>
