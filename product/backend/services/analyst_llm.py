@@ -33,22 +33,22 @@ from vayne.llm.providers.openai_provider import OpenAIProvider, TokenUsage
 logger = logging.getLogger(__name__)
 
 REPORT_MODE_HINTS: dict[str, str] = {
-    "executive": "Format as an executive summary for CEOs and management. Non-technical, business-focused. Use Cursor-style markdown sections.",
-    "technical": "Format as a technical summary for SOC analysts and penetration testers. Use Cursor-style markdown sections.",
-    "remediation": "Format as a remediation plan for engineers. Prioritized, actionable steps only. Use Cursor-style markdown sections.",
-    "audit": "Format for compliance and governance auditors. Evidence citations and control gaps. Use Cursor-style markdown sections.",
+    "executive": "Format for CEOs and management. Plain English only — no jargon without translation. Business impact and recommended actions. Use Cursor-style markdown sections.",
+    "technical": "Format for SOC analysts and pentesters. Start with **In plain terms** (2–3 sentences), then technical proof (CVEs, hosts, paths, evidence). Balance clarity with depth — explain what each finding means, not just what was detected.",
+    "remediation": "Format for engineers. Start with **In plain terms** (what to fix and why), then prioritized actionable steps. Use Cursor-style markdown sections.",
+    "audit": "Format for compliance auditors. Plain summary first, then evidence citations and control gaps. Use Cursor-style markdown sections.",
 }
 
 PRESET_HINTS: dict[str, str] = {
-    "finding": "Explain the most significant validated finding and cite evidence.",
-    "attack_chain": "Explain the validated attack chain step by step.",
-    "rejected_chain": "Explain why attack paths were rejected and what evidence was missing.",
-    "graph": "Explain the attack graph structure, key nodes, and relationships.",
-    "root_cause": "Perform root cause analysis for the primary validated finding.",
-    "evidence": "List what evidence supports the top validated finding and attack path.",
-    "business": "Explain business impact if the validated attack path is exploited.",
-    "next": "Recommend next actions for the security team based on engine results.",
-    "time_saved": "Estimate analyst time saved by this automated investigation.",
+    "finding": "Explain the most significant validated finding. Start with **In plain terms** (what it means in everyday language), then cite evidence.",
+    "attack_chain": "Explain the validated attack chain. Start with **In plain terms** (the story of how an attacker could move), then step-by-step technical detail.",
+    "rejected_chain": "Explain why attack paths were rejected. Start with **In plain terms**, then what evidence was missing.",
+    "graph": "Explain the attack graph. Start with **In plain terms** (how pieces connect), then key nodes and relationships.",
+    "root_cause": "Root cause analysis for the primary finding. Plain English first, then technical root cause.",
+    "evidence": "What evidence supports the top finding and path. Plain summary first, then per-scanner proof.",
+    "business": "Business impact if the attack path is exploited. Plain English for leadership, then specifics.",
+    "next": "Recommend next actions. Plain English priorities first, then concrete steps.",
+    "time_saved": "Estimate analyst time saved. Explain in human terms what manual work was skipped.",
 }
 
 OFFLINE_MESSAGE = (
@@ -78,25 +78,30 @@ async def _llm_reachable() -> bool:
 
 BRIEF_INSTRUCTION = """Interpret this investigation for a peer analyst. Use ONLY facts from the context.
 
+Write for humans first, specialists second.
+
 Use Cursor-style markdown (required — not plain paragraphs):
 
-Optional one-line lead-in, then:
+1. **In plain terms** — 2–4 sentences in everyday language: what the scan actually found, whether it is confirmed or still needs checking, and why a human should care. No jargon without a quick translation.
 
-1. First block — what happened / strongest exposure (numbered list, 2–4 items)
-2. Second block — why VANE believes it / evidence (numbered or bullets)
-3. Third block — confidence + what would change it
-4. Fourth block — **Next steps** (bullets)
+2. **What happened** — numbered list (2–4 items). Each item: plain-English clause first, then `backticks` for hosts/CVEs/services.
 
-Section titles on their own line — use each title once: **What happened**, **Why VANE believes it**, **How certain**, **Missing evidence**, **Next steps**.
-Do not repeat the same section title. Do not embed labels like "What happened:" inside body text.
-Use **bold** for key terms. Use `backticks` for hosts, CVEs, services, paths, and scanner names.
+3. **Why VANE believes it** — bullets; explain what the evidence means, not just scanner names.
+
+4. **How certain** — one short paragraph in words (e.g. "moderately confident because…"), then optional scores. Never lead with percentages alone.
+
+5. **Next steps** — bullets; concrete actions anyone can follow.
+
+Section titles on their own line — use each title once. Do not repeat titles or embed "What happened:" inside body text.
+Use **bold** for key ideas. Use `backticks` for technical identifiers.
 Never invent facts. No ALL CAPS headers or divider lines.
 """
 
 CURSOR_FORMAT_REMINDER = (
-    "OUTPUT FORMAT: Reply in Cursor-style markdown — "
-    "**Section title** lines, numbered lists for ordered points, `-` bullets for actions/evidence, "
-    "`backticks` for technical identifiers. No prose-only walls of text.\n\n"
+    "OUTPUT FORMAT: Reply in Cursor-style markdown. "
+    "Always start with **In plain terms** (2–4 human sentences), then technical sections. "
+    "Numbered lists for what happened; `-` bullets for evidence and actions; "
+    "`backticks` for hosts/CVEs. Explain what things *mean*, not just what was detected.\n\n"
 )
 
 def estimate_cost_usd(usage: TokenUsage) -> float:

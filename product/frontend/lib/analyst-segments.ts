@@ -85,24 +85,35 @@ function appendSectionChunks(
 }
 
 function certaintySnippet(wb: WorkbenchData): string {
+  const inv = wb.investigations?.[0] ?? wb.priority_queue?.[0];
+  if (inv?.confidence_explanation?.trim()) {
+    return `**How certain**\n${inv.confidence_explanation.trim()}`;
+  }
+
   const top = wb.confirmed_findings[0];
   if (!top) return "**How certain**\nNo retained finding.";
 
   const sem = semanticConfidence(top);
-  const metricLine = displayedConfidenceMetrics(top)
-    .map(({ label, metric }) => `${label} ${metric.score}%`)
-    .join(" · ");
+  const score = top.machine_confidence;
+  const label =
+    score >= 85 ? "Fairly confident" : score >= 70 ? "Moderately confident" : score >= 50 ? "Cautiously confident" : "Low confidence";
 
   const line =
-    `${metricLine || `${top.machine_confidence}%`} on ${top.title}` +
+    `${label} (${score}%) on ${top.title}` +
     (sem
-      ? ` — primary is ${CONFIDENCE_METRIC_LABEL[sem.primary.metric]}.`
-      : ".");
+      ? ` — primary signal is ${CONFIDENCE_METRIC_LABEL[sem.primary.metric]}.`
+      : ".") +
+    " This reflects evidence strength, not proof of exploitation.";
 
   return `**How certain**\n${line}`;
 }
 
 function nextStepSnippet(wb: WorkbenchData): string {
+  const inv = wb.investigations?.[0] ?? wb.priority_queue?.[0];
+  if (inv?.immediate_action?.trim()) {
+    return `**What should happen next**\n- ${inv.immediate_action.trim()}`;
+  }
+
   const missing = missingEvidenceRows(wb);
   const recommendation =
     missing[0]?.topic ||
@@ -143,6 +154,7 @@ export function buildBriefingSegments(
     options?.narrative ?? "",
   );
 
+  const plainTerms = sections.find((s) => s.startsWith("**In plain terms")) ?? "";
   const whatHappened = sections.find((s) => s.startsWith("**What happened")) ?? sections[0] ?? "";
   const whySection = sections.find((s) => s.startsWith("**Why VANE")) ?? "";
   const missingSection =
@@ -156,6 +168,10 @@ export function buildBriefingSegments(
       detail: fileInsights[0].tool,
     });
     segments.push({ type: "file", fileIndex: 0 });
+  }
+
+  if (plainTerms) {
+    appendSectionChunks(segments, plainTerms, "In plain terms", 240);
   }
 
   appendSectionChunks(segments, whatHappened || "", "What happened", 220);

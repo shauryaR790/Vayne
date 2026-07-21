@@ -5,6 +5,7 @@ import { buildEngineFileInsights } from "@/lib/engine-file-insights";
 import {
   buildAnalystNarrative,
   buildMissingSection,
+  buildPlainTermsSection,
   buildWhySection,
   reconstructRejection,
 } from "@/lib/analyst-narrative";
@@ -16,20 +17,37 @@ import {
   semanticConfidence,
 } from "@/lib/workbench-report-helpers";
 
+function topInvestigationReason(wb: WorkbenchData): string | null {
+  const inv = wb.investigations?.[0] ?? wb.priority_queue?.[0];
+  return inv?.reason?.trim() || buildPlainTermsSection(wb);
+}
+
 function reconstructConfidence(finding: WorkbenchConfirmedFinding): string {
+  const score = finding.machine_confidence;
+  const label =
+    score >= 85 ? "fairly confident" : score >= 70 ? "moderately confident" : score >= 50 ? "cautiously confident" : "not very confident";
+
+  const lead = [
+    "**In plain terms**",
+    `We are **${label}** (${score}%) about **${finding.title}** on \`${finding.host || "target"}\`. ` +
+      "That score measures how strong the evidence is — not whether someone already broke in.",
+    "",
+    "**Factor breakdown**",
+  ].join("\n");
+
   const metrics = displayedConfidenceMetrics(finding);
   if (!metrics.length) {
-    return `${finding.title} has no analytically meaningful confidence percentage.`;
+    return `${lead}\n${finding.title} has no analytically meaningful confidence percentage.`;
   }
 
   const blocks: string[] = [];
-  for (const { key, label, metric } of metrics) {
+  for (const { key, label: metricLabel, metric } of metrics) {
     const lines = metric.factors.map(
       (f) => `  ${f.label.padEnd(32)} ${f.delta >= 0 ? `+${f.delta}` : f.delta}`,
     );
     blocks.push(
       [
-        `${label} confidence for ${finding.title}: ${metric.score}%`,
+        `${metricLabel} confidence: ${metric.score}%`,
         metric.question,
         "",
         "Built from",
@@ -44,7 +62,7 @@ function reconstructConfidence(finding: WorkbenchConfirmedFinding): string {
     ? `\nPrimary decision metric: ${CONFIDENCE_METRIC_LABEL[sem.primary.metric]} (${sem.primary.score}%).`
     : "";
 
-  return blocks.join("\n\n") + primaryNote;
+  return lead + "\n" + blocks.join("\n\n") + primaryNote;
 }
 
 /**
@@ -83,6 +101,10 @@ export function interpretAnalystQuestion(
 
   if (q.includes("missing") || q.includes("what next") || q.includes("next step")) {
     return [
+      "**In plain terms**",
+      missingEvidenceRows(wb)[0]?.reason ||
+        "Focus on closing the biggest evidence gap before asserting compromise.",
+      "",
       "**Missing evidence**",
       buildMissingSection(wb),
       "",
@@ -92,7 +114,13 @@ export function interpretAnalystQuestion(
   }
 
   if (q.includes("proof") || q.includes("evidence") || q.includes("why believe")) {
-    return ["**Why VANE believes it**", buildWhySection(wb)].join("\n\n");
+    return [
+      "**In plain terms**",
+      topInvestigationReason(wb) || "Evidence from multiple scanners supports the top retained finding.",
+      "",
+      "**Why VANE believes it**",
+      buildWhySection(wb),
+    ].join("\n\n");
   }
 
   return null;
@@ -147,10 +175,10 @@ export function buildAnalystBriefingMessages(
     messages.push({
       id: `brief-fallback-${bundle.detail.summary.id}`,
       role: "assistant",
-      content: `${label ? `[${label}]\n\n` : ""}**What happened**\n${
+      content: `${label ? `[${label}]\n\n` : ""}**In plain terms**\n${
         retained
-          ? `1. Retained ${retained} finding${retained === 1 ? "" : "s"} across ${assets} asset${assets === 1 ? "" : "s"}.\n2. Attack surface risk: ${risk}.`
-          : "1. No findings met the evidence threshold."
+          ? `The scan kept ${retained} finding${retained === 1 ? "" : "s"} across ${assets} asset${assets === 1 ? "" : "s"} — review the highest-priority investigation first. Overall risk: ${risk}.`
+          : "Nothing met the evidence threshold for a retained finding."
       }\n\n**What should happen next**\n- Run targeted validation on the highest-severity exposure first.`,
     });
   });
