@@ -17,10 +17,9 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
 
-from product.backend.config import get_storage_root
-from product.backend.db.session import get_db
+from product.backend.config import expose_error_details, upload_limits
+from product.backend.deps import get_investigation_service
 from product.backend.logging_config import get_logger
 from product.backend.schemas.investigation import (
     AnalyzeInvestigationItem,
@@ -41,18 +40,43 @@ def _error_response(status_code: int, payload: dict) -> JSONResponse:
     return JSONResponse(status_code=status_code, content=payload)
 
 
+def _sanitize_error_payload(payload: dict) -> dict:
+    if expose_error_details():
+        return payload
+    sanitized = dict(payload)
+    sanitized.pop("details", None)
+    return sanitized
+
+
 @router.post("/analyze")
 async def analyze_upload(
     files: list[UploadFile] = File(...),
     name: str = Form(default="web-investigation"),
     prompt: str = Form(default=""),
     mode: str = Form(default=""),
-    db: Session = Depends(get_db),
+    svc: InvestigationService = Depends(get_investigation_service),
 ):
+    limits = upload_limits()
+    if len(files) > limits["max_files"]:
+        return _error_response(
+            413,
+            _sanitize_error_payload(
+                {
+                    "success": False,
+                    "stage": "intake",
+                    "error": f"Too many files (max {limits['max_files']})",
+                    "error_kind": "upload_limit",
+                    "files_processed": 0,
+                    "files_skipped": len(files),
+                }
+            ),
+        )
+
     request_started = time.perf_counter()
     tmp = Path(tempfile.mkdtemp(prefix="vayne_upload_"))
     uploads: list[tuple[Path, str]] = []
     unsupported: list[str] = []
+    total_bytes = 0
     try:
         for uf in files:
             original = uf.filename or ""
@@ -60,9 +84,56 @@ async def analyze_upload(
             if suffix not in ALLOWED_SUFFIXES:
                 unsupported.append(original or "(unnamed)")
                 continue
+
+            chunks: list[bytes] = []
+            file_bytes = 0
+            while True:
+                chunk = await uf.read(1024 * 1024)
+                if not chunk:
+                    break
+                file_bytes += len(chunk)
+                total_bytes += len(chunk)
+                if file_bytes > limits["max_file_bytes"]:
+                    return _error_response(
+                        413,
+                        _sanitize_error_payload(
+                            {
+                                "success": False,
+                                "stage": "intake",
+                                "file": original,
+                                "error": (
+                                    f"File exceeds size limit "
+                                    f"({limits['max_file_bytes'] // (1024 * 1024)} MB)"
+                                ),
+                                "error_kind": "upload_limit",
+                                "files_processed": 0,
+                                "files_skipped": 1,
+                            }
+                        ),
+                    )
+                if total_bytes > limits["max_total_bytes"]:
+                    return _error_response(
+                        413,
+                        _sanitize_error_payload(
+                            {
+                                "success": False,
+                                "stage": "intake",
+                                "error": (
+                                    f"Upload exceeds total size limit "
+                                    f"({limits['max_total_bytes'] // (1024 * 1024)} MB)"
+                                ),
+                                "error_kind": "upload_limit",
+                                "files_processed": 0,
+                                "files_skipped": len(files),
+                            }
+                        ),
+                    )
+                chunks.append(chunk)
+
             dest = tmp / f"{uuid.uuid4().hex}{suffix}"
             with dest.open("wb") as f:
-                shutil.copyfileobj(uf.file, f)
+                for chunk in chunks:
+                    f.write(chunk)
             uploads.append((dest, original))
 
         if not uploads:
@@ -72,26 +143,26 @@ async def analyze_upload(
             )
             return _error_response(
                 422,
-                {
-                    "success": False,
-                    "stage": "intake",
-                    "file": ", ".join(unsupported),
-                    "error": "Unsupported file format",
-                    "error_kind": "unsupported_file",
-                    "details": (
-                        "No valid scan files uploaded. Accepted: "
-                        ".xml, .json, .txt, .csv, .nessus"
-                    ),
-                    "files_processed": 0,
-                    "files_skipped": len(unsupported),
-                    "warnings": [f"{n}: unsupported file type" for n in unsupported],
-                },
+                _sanitize_error_payload(
+                    {
+                        "success": False,
+                        "stage": "intake",
+                        "file": ", ".join(unsupported),
+                        "error": "Unsupported file format",
+                        "error_kind": "unsupported_file",
+                        "details": (
+                            "No valid scan files uploaded. Accepted: "
+                            ".xml, .json, .txt, .csv, .nessus"
+                        ),
+                        "files_processed": 0,
+                        "files_skipped": len(unsupported),
+                        "warnings": [f"{n}: unsupported file type" for n in unsupported],
+                    }
+                ),
             )
 
-        # Stage 1: pre-flight parse each file individually.
         preflight = preflight_parse(uploads)
 
-        # Every file failed — surface the first real failure with a stack trace.
         if not preflight.has_any_success:
             first = preflight.failed[0]
             status = preflight.worst_status_code()
@@ -109,16 +180,14 @@ async def analyze_upload(
                 len(preflight.failed),
                 status,
             )
-            return _error_response(status, payload)
+            return _error_response(status, _sanitize_error_payload(payload))
 
-        # Stage 2: run the engine on the files that parsed cleanly.
         good_uploads = [
             (path, original)
             for (path, original), outcome in zip(uploads, preflight.outcomes)
             if outcome.ok
         ]
 
-        svc = InvestigationService(db, get_storage_root())
         try:
             batch = svc.run_analysis_batch(
                 name,
@@ -127,23 +196,22 @@ async def analyze_upload(
                 explicit_mode=mode or None,
                 proof=True,
             )
-        except Exception as exc:  # engine/correlation/graph/report failure
+        except Exception as exc:
             tb = traceback.format_exc()
             logger.error("Engine stage failed:\n%s", tb)
-            return _error_response(
-                500,
-                {
-                    "success": False,
-                    "stage": "engine",
-                    "file": ", ".join(o.filename for o in preflight.succeeded),
-                    "error": f"Investigation engine failed: {exc}",
-                    "error_kind": "internal_error",
-                    "details": tb,
-                    "files_processed": len(preflight.succeeded),
-                    "files_skipped": len(preflight.failed),
-                    "warnings": preflight.warnings(),
-                },
-            )
+            payload = {
+                "success": False,
+                "stage": "engine",
+                "file": ", ".join(o.filename for o in preflight.succeeded),
+                "error": f"Investigation engine failed: {exc}",
+                "error_kind": "internal_error",
+                "files_processed": len(preflight.succeeded),
+                "files_skipped": len(preflight.failed),
+                "warnings": preflight.warnings(),
+            }
+            if expose_error_details():
+                payload["details"] = tb
+            return _error_response(500, payload)
 
         primary = batch.primary
         skipped = [

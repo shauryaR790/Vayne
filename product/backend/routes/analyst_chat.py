@@ -6,10 +6,8 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 
-from product.backend.config import get_storage_root
-from product.backend.db.session import get_db
+from product.backend.deps import get_investigation_service
 from product.backend.schemas.analyst_chat import AnalystChatRequest
 from product.backend.services.analyst_context import build_analyst_context
 from product.backend.services.analyst_llm import (
@@ -20,10 +18,6 @@ from product.backend.services.analyst_llm import (
 from product.backend.services.investigation_service import InvestigationService
 
 router = APIRouter(prefix="/api", tags=["analyst"])
-
-
-def _svc(db: Session) -> InvestigationService:
-    return InvestigationService(db, get_storage_root())
 
 
 async def _event_stream(inv_id: str, body: AnalystChatRequest, svc: InvestigationService):
@@ -93,9 +87,8 @@ async def general_chat(body: AnalystChatRequest):
 @router.get("/investigation/{inv_id}/brief")
 async def investigation_brief(
     inv_id: str,
-    db: Session = Depends(get_db),
+    svc: InvestigationService = Depends(get_investigation_service),
 ):
-    svc = _svc(db)
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
 
@@ -114,9 +107,8 @@ async def investigation_brief(
 async def analyst_chat(
     inv_id: str,
     body: AnalystChatRequest,
-    db: Session = Depends(get_db),
+    svc: InvestigationService = Depends(get_investigation_service),
 ):
-    svc = _svc(db)
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
 

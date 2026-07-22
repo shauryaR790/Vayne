@@ -10,6 +10,7 @@ import type {
   RemediationData,
   WorkbenchData,
 } from "./types";
+import { workspaceHeaders } from "./workspace-id";
 
 const LOCAL_DEV_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
@@ -96,20 +97,29 @@ export function parseApiError(status: number, body: string): string {
 }
 
 export async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(apiUrl(path), { cache: "no-store" });
+  const res = await fetch(apiUrl(path), {
+    cache: "no-store",
+    headers: workspaceHeaders(),
+  });
   if (!res.ok) throw new Error(parseApiError(res.status, await res.text()));
   return res.json() as Promise<T>;
 }
 
 async function fetchText(path: string): Promise<string> {
-  const res = await fetch(apiUrl(path), { cache: "no-store" });
+  const res = await fetch(apiUrl(path), {
+    cache: "no-store",
+    headers: workspaceHeaders(),
+  });
   if (!res.ok) throw new Error(parseApiError(res.status, await res.text()));
   return res.text();
 }
 
 export async function checkHealth(): Promise<boolean> {
   try {
-    const res = await fetch(apiUrl("/api/health"), { cache: "no-store" });
+    const res = await fetch(apiUrl("/api/health"), {
+      cache: "no-store",
+      headers: workspaceHeaders(),
+    });
     if (!res.ok) return false;
     const body = (await res.json()) as { status?: string };
     return body.status === "ok";
@@ -220,6 +230,7 @@ export async function analyzeFiles(
       method: "POST",
       body: form,
       signal: controller.signal,
+      headers: workspaceHeaders(),
     });
   } catch (error) {
     clearTimeout(timer);
@@ -309,7 +320,10 @@ export async function resetWorkspace(): Promise<{
   storage_dirs_removed: number;
   storage_files_removed: number;
 }> {
-  const res = await fetch(apiUrl("/api/dev/reset-workspace"), { method: "POST" });
+  const res = await fetch(apiUrl("/api/dev/reset-workspace"), {
+    method: "POST",
+    headers: workspaceHeaders(),
+  });
   if (!res.ok) {
     const detail = await res.text();
     throw new Error(detail || `Workspace reset failed (${res.status})`);

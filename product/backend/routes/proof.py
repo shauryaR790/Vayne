@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
-from sqlalchemy.orm import Session
 
-from product.backend.config import get_storage_root
-from product.backend.db.session import get_db
+from product.backend.deps import get_investigation_service
 from product.backend.services.investigation_service import InvestigationService
 
 router = APIRouter(prefix="/api", tags=["proof"])
 
 
 @router.get("/investigation/{inv_id}/proof")
-def get_proof(inv_id: str, db: Session = Depends(get_db)):
-    svc = InvestigationService(db, get_storage_root())
+def get_proof(
+    inv_id: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+):
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     proof_path = svc.export_dir(inv_id) / "proof.txt"
@@ -25,7 +25,11 @@ def get_proof(inv_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/investigation/{inv_id}/artifact/{filename}")
-def get_artifact(inv_id: str, filename: str, db: Session = Depends(get_db)):
+def get_artifact(
+    inv_id: str,
+    filename: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+):
     allowed = {
         "graph.json", "attack_paths.json", "findings.json", "investigation.json",
         "executive_report.md", "analyst_report.md", "remediation_plan.json",
@@ -33,7 +37,6 @@ def get_artifact(inv_id: str, filename: str, db: Session = Depends(get_db)):
     }
     if filename not in allowed:
         raise HTTPException(status_code=400, detail="Artifact not allowed")
-    svc = InvestigationService(db, get_storage_root())
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     path = svc.export_dir(inv_id) / filename

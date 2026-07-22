@@ -6,10 +6,8 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
-from sqlalchemy.orm import Session
 
-from product.backend.config import get_storage_root
-from product.backend.db.session import get_db
+from product.backend.deps import get_investigation_service
 from product.backend.schemas.investigation import (
     AttackPathSummary,
     AttackSurfaceSummary,
@@ -29,20 +27,19 @@ from product.backend.services.investigation_service import InvestigationService
 router = APIRouter(prefix="/api", tags=["investigations"])
 
 
-def _svc(db: Session) -> InvestigationService:
-    return InvestigationService(db, get_storage_root())
-
-
 @router.get("/investigations", response_model=InvestigationListResponse)
-def list_investigations(db: Session = Depends(get_db)) -> InvestigationListResponse:
-    svc = _svc(db)
+def list_investigations(
+    svc: InvestigationService = Depends(get_investigation_service),
+) -> InvestigationListResponse:
     items = [InvestigationListItem(**row) for row in svc.list_investigations()]
     return InvestigationListResponse(investigations=items)
 
 
 @router.get("/investigation/{inv_id}", response_model=InvestigationDetail)
-def get_investigation(inv_id: str, db: Session = Depends(get_db)) -> InvestigationDetail:
-    svc = _svc(db)
+def get_investigation(
+    inv_id: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+) -> InvestigationDetail:
     inv = svc.get_investigation(inv_id)
     if not inv:
         raise HTTPException(status_code=404, detail="Investigation not found")
@@ -87,8 +84,10 @@ def get_investigation(inv_id: str, db: Session = Depends(get_db)) -> Investigati
 
 
 @router.get("/investigation/{inv_id}/report", response_model=InvestigationReportView)
-def get_report(inv_id: str, db: Session = Depends(get_db)) -> InvestigationReportView:
-    svc = _svc(db)
+def get_report(
+    inv_id: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+) -> InvestigationReportView:
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     raw = svc.get_report_view(inv_id)
@@ -121,8 +120,10 @@ def get_report(inv_id: str, db: Session = Depends(get_db)) -> InvestigationRepor
 
 
 @router.get("/investigation/{inv_id}/workbench")
-def get_workbench(inv_id: str, db: Session = Depends(get_db)):
-    svc = _svc(db)
+def get_workbench(
+    inv_id: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+):
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     data = svc.get_workbench(inv_id)
@@ -132,8 +133,10 @@ def get_workbench(inv_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/investigation/{inv_id}/findings", response_model=FindingsResponse)
-def get_findings(inv_id: str, db: Session = Depends(get_db)) -> FindingsResponse:
-    svc = _svc(db)
+def get_findings(
+    inv_id: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+) -> FindingsResponse:
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     data = svc.get_findings_export(inv_id)
@@ -144,8 +147,10 @@ def get_findings(inv_id: str, db: Session = Depends(get_db)) -> FindingsResponse
 
 
 @router.get("/investigation/{inv_id}/remediation", response_model=RemediationResponse)
-def get_remediation(inv_id: str, db: Session = Depends(get_db)) -> RemediationResponse:
-    svc = _svc(db)
+def get_remediation(
+    inv_id: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+) -> RemediationResponse:
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     data = svc.get_remediation_export(inv_id)
@@ -156,8 +161,10 @@ def get_remediation(inv_id: str, db: Session = Depends(get_db)) -> RemediationRe
 
 
 @router.get("/investigation/{inv_id}/graph", response_model=GraphResponse)
-def get_graph(inv_id: str, db: Session = Depends(get_db)) -> GraphResponse:
-    svc = _svc(db)
+def get_graph(
+    inv_id: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+) -> GraphResponse:
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     g = svc.get_full_graph(inv_id)
@@ -178,9 +185,8 @@ def get_progressive_graph(
     exploitable: bool = False,
     internet: bool = False,
     lateral: bool = False,
-    db: Session = Depends(get_db),
+    svc: InvestigationService = Depends(get_investigation_service),
 ) -> ProgressiveGraphResponse:
-    svc = _svc(db)
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     filters = {
@@ -205,7 +211,11 @@ def get_progressive_graph(
 
 
 @router.get("/investigation/{inv_id}/reports/{report_type}")
-def get_report_markdown(inv_id: str, report_type: str, db: Session = Depends(get_db)):
+def get_report_markdown(
+    inv_id: str,
+    report_type: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+):
     allowed = {"executive", "analyst", "attack_story", "remediation"}
     if report_type not in allowed:
         raise HTTPException(status_code=400, detail="Report type not allowed")
@@ -215,7 +225,6 @@ def get_report_markdown(inv_id: str, report_type: str, db: Session = Depends(get
         "attack_story": "attack_story.md",
         "remediation": "remediation_plan.md",
     }[report_type]
-    svc = _svc(db)
     if not svc.get_investigation(inv_id):
         raise HTTPException(status_code=404, detail="Investigation not found")
     path = svc.export_dir(inv_id) / filename

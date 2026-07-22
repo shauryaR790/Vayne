@@ -168,7 +168,11 @@ def test_duplicate_analysis_reuses_investigation(product_client, metasploit_path
     captured = capsys.readouterr()
     assert "existing investigation found" in captured.out
 
-    inv_dirs = [p for p in storage.iterdir() if p.is_dir() and not p.name.startswith("_work_")]
+    inv_dirs = [
+        p
+        for p in storage.iterdir()
+        if p.is_dir() and not p.name.startswith("_work_") and p.name != "parse_cache"
+    ]
     assert len(inv_dirs) == 1
 
 
@@ -195,6 +199,10 @@ def test_separate_mode_creates_multiple_investigations(product_client, metasploi
         detail = client.get(f"/api/investigation/{inv_id}").json()
         assert detail["summary"]["path_count"] == 4
 
-    inv_dirs = [p for p in storage.iterdir() if p.is_dir() and not p.name.startswith("_work_")]
+    inv_dirs = [
+        p
+        for p in storage.iterdir()
+        if p.is_dir() and not p.name.startswith("_work_") and p.name != "parse_cache"
+    ]
     assert len(inv_dirs) == 2
 

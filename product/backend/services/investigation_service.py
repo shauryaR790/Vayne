@@ -62,10 +62,16 @@ class AnalysisBatchResult:
 
 
 class InvestigationService:
-    def __init__(self, db: Session, storage_root: Path):
+    def __init__(self, db: Session, storage_root: Path, *, workspace_id: str = "default"):
         self.db = db
         self.storage_root = storage_root
+        self.workspace_id = workspace_id
         self.storage_root.mkdir(parents=True, exist_ok=True)
+
+    def _investigations_query(self):
+        return self.db.query(InvestigationORM).filter(
+            InvestigationORM.workspace_id == self.workspace_id
+        )
 
     def run_analysis(
         self,
@@ -132,7 +138,7 @@ class InvestigationService:
             summary = build_investigation_summary(validated, attack_paths_json)
 
             existing = (
-                self.db.query(InvestigationORM)
+                self._investigations_query()
                 .filter(InvestigationORM.investigation_key == investigation_key)
                 .order_by(InvestigationORM.updated_at.desc(), InvestigationORM.created_at.desc())
                 .first()
@@ -172,6 +178,7 @@ class InvestigationService:
                 now = _utcnow()
                 inv = InvestigationORM(
                     id=inv_id,
+                    workspace_id=self.workspace_id,
                     name=display_name,
                     status="running",
                     investigation_key=investigation_key,
@@ -383,11 +390,15 @@ class InvestigationService:
             return default
 
     def get_investigation(self, inv_id: str) -> InvestigationORM | None:
-        return self.db.get(InvestigationORM, inv_id)
+        return (
+            self._investigations_query()
+            .filter(InvestigationORM.id == inv_id)
+            .first()
+        )
 
     def find_by_investigation_key(self, key: str) -> InvestigationORM | None:
         return (
-            self.db.query(InvestigationORM)
+            self._investigations_query()
             .filter(InvestigationORM.investigation_key == key)
             .order_by(InvestigationORM.updated_at.desc(), InvestigationORM.created_at.desc())
             .first()
@@ -395,7 +406,7 @@ class InvestigationService:
 
     def list_investigations(self, limit: int = 500) -> list[dict]:
         rows = (
-            self.db.query(InvestigationORM)
+            self._investigations_query()
             .order_by(
                 InvestigationORM.updated_at.desc(),
                 InvestigationORM.created_at.desc(),
@@ -441,7 +452,12 @@ class InvestigationService:
         return items
 
     def get_attack_path(self, path_id: str) -> AttackPathORM | None:
-        return self.db.get(AttackPathORM, path_id)
+        ap = self.db.get(AttackPathORM, path_id)
+        if not ap:
+            return None
+        if not self.get_investigation(ap.investigation_id):
+            return None
+        return ap
 
     def list_paths(self, inv_id: str) -> list[AttackPathORM]:
         inv = self.get_investigation(inv_id)
@@ -456,7 +472,7 @@ class InvestigationService:
         if not group_id:
             return []
         return (
-            self.db.query(InvestigationORM)
+            self._investigations_query()
             .filter(InvestigationORM.investigation_group_id == group_id)
             .order_by(InvestigationORM.group_index.asc(), InvestigationORM.created_at.asc())
             .all()
@@ -641,9 +657,10 @@ class InvestigationService:
             shutil.rmtree(export_dir, ignore_errors=True)
 
     def reset_workspace(self) -> dict[str, int]:
-        """Delete every investigation, related rows, and on-disk export artifacts."""
-        rows = self.db.query(InvestigationORM).all()
+        """Delete investigations and export artifacts for the current workspace only."""
+        rows = self._investigations_query().all()
         investigation_count = len(rows)
+        inv_ids = {inv.id for inv in rows}
         for inv in rows:
             self.db.delete(inv)
         self.db.commit()
@@ -652,12 +669,13 @@ class InvestigationService:
         storage_files_removed = 0
         if self.storage_root.exists():
             for child in list(self.storage_root.iterdir()):
-                if child.is_dir():
+                if child.is_dir() and child.name in inv_ids:
                     shutil.rmtree(child, ignore_errors=True)
                     storage_dirs_removed += 1
-                elif child.is_file():
-                    child.unlink(missing_ok=True)
-                    storage_files_removed += 1
+                elif child.is_dir() and child.name.startswith("_work_"):
+                    continue
+                elif child.is_dir() and child.name == "parse_cache":
+                    continue
 
         return {
             "investigations_deleted": investigation_count,

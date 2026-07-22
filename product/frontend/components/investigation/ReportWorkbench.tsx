@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { API_BASE } from "@/lib/api";
+import { workspaceHeaders } from "@/lib/workspace-id";
 import { Panel, SidePanel, StatRow, WorkstationLayout } from "@/components/ui/Workstation";
 
 const TABS = [
@@ -40,7 +41,7 @@ export function ReportWorkbench({
     try {
       const res = await fetch(
         `${API_BASE}/api/investigation/${investigationId}/reports/${type}`,
-        { cache: "no-store" },
+        { cache: "no-store", headers: workspaceHeaders() },
       );
       setContent(await res.text());
     } catch {

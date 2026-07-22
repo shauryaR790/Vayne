@@ -66,6 +66,10 @@ def _ensure_investigation_columns() -> None:
         statements.append(
             "ALTER TABLE investigations ADD COLUMN group_index INTEGER DEFAULT 0"
         )
+    if "workspace_id" not in existing:
+        statements.append(
+            "ALTER TABLE investigations ADD COLUMN workspace_id VARCHAR(64) DEFAULT 'default'"
+        )
     if not statements:
         pass
     else:

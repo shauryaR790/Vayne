@@ -5,10 +5,8 @@ from __future__ import annotations
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 
-from product.backend.config import get_storage_root
-from product.backend.db.session import get_db
+from product.backend.deps import get_investigation_service
 from product.backend.schemas.investigation import PathDetail
 from product.backend.services.investigation_service import InvestigationService
 
@@ -16,8 +14,10 @@ router = APIRouter(prefix="/api", tags=["attack_paths"])
 
 
 @router.get("/path/{path_id}", response_model=PathDetail)
-def get_path(path_id: str, db: Session = Depends(get_db)) -> PathDetail:
-    svc = InvestigationService(db, get_storage_root())
+def get_path(
+    path_id: str,
+    svc: InvestigationService = Depends(get_investigation_service),
+) -> PathDetail:
     ap = svc.get_attack_path(path_id)
     if not ap:
         raise HTTPException(status_code=404, detail="Attack path not found")

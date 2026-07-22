@@ -30,6 +30,7 @@ from product.backend.services.investigation_prioritization import (
     build_priority_queue,
 )
 from vayne.investigation.contract import finalize_investigation_list, build_investigation_queue_status
+from vayne.investigation.clustering import build_findings_fallback_investigations
 from vayne.investigation.summary import build_summary_panel
 
 # Human labels + display order for known scanner source tools.
@@ -416,6 +417,10 @@ def build_workbench(
     )
     product_final = finalize_investigation_list(clustered[:12])
     investigations = engine_final or product_final
+    if not investigations and confirmed_findings:
+        investigations = finalize_investigation_list(
+            build_findings_fallback_investigations(confirmed_findings)[:12]
+        )
 
     priority_queue = finalize_investigation_list(
         build_priority_queue(

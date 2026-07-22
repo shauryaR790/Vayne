@@ -15,6 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from product.backend.config import expose_error_details
 from product.backend.db.session import init_db
 from product.backend.logging_config import configure_logging
 from product.backend.routes import analyst_chat, attack_paths, dev, investigations, proof, upload
@@ -62,20 +63,17 @@ app.add_middleware(
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     tb = traceback.format_exc()
-    # Print the FULL traceback in the terminal instead of swallowing it, so we
-    # know exactly which parser or stage failed.
     logger.error("Unhandled exception on %s:\n%s", request.url.path, tb)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "success": False,
-            "stage": "internal",
-            "error": str(exc),
-            "error_kind": "internal_error",
-            "details": tb,
-            "path": str(request.url.path),
-        },
-    )
+    content: dict = {
+        "success": False,
+        "stage": "internal",
+        "error": str(exc),
+        "error_kind": "internal_error",
+        "path": str(request.url.path),
+    }
+    if expose_error_details():
+        content["details"] = tb
+    return JSONResponse(status_code=500, content=content)
 
 
 app.include_router(upload.router)
