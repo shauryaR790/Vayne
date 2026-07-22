@@ -41,15 +41,14 @@ def is_analyst_facing_investigation(inv: dict[str, Any]) -> bool:
     has_path = bool(inv.get("path"))
     has_evidence = bool(inv.get("evidence_ledger") or inv.get("evidence"))
     has_sources = bool(inv.get("evidence_sources"))
+    has_signals = int(inv.get("evidence_count") or 0) > 0
 
-    if not finding_ids and not has_path:
-        return False
-    if not finding_ids and not has_evidence and not has_sources:
+    if not (finding_ids or has_path or has_sources or has_evidence or has_signals):
         return False
 
     tier = str(inv.get("tier") or "Low")
     score = int(inv.get("priority_score") or inv.get("risk_score") or 0)
-    if tier == "Low" and score < 55 and len(finding_ids) < 1:
+    if tier == "Low" and score < 40 and not finding_ids and not has_sources:
         return False
 
     return True
@@ -128,6 +127,69 @@ def finalize_investigation(
         }
     )
     return out
+
+
+def build_investigation_queue_status(
+    investigations: list[dict[str, Any]],
+    confirmed_findings: list[dict[str, Any]],
+    *,
+    noise_meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Explain an empty or partial investigation queue for analysts."""
+    count = len(investigations)
+    retained = len(confirmed_findings)
+    if count > 0:
+        urgent = sum(1 for inv in investigations if inv.get("tier") in ("Critical", "High"))
+        return {
+            "empty": False,
+            "count": count,
+            "urgent": urgent,
+            "retained_findings": retained,
+            "headline": f"{count} investigation{'s' if count != 1 else ''} ranked for review",
+        }
+
+    reasons: list[str] = []
+    if retained == 0:
+        reasons.append(
+            "No findings passed retention after correlation, deduplication, and false-positive review."
+        )
+    else:
+        high = sum(
+            1
+            for f in confirmed_findings
+            if str(f.get("severity") or "").upper() in ("CRITICAL", "HIGH")
+            or int(f.get("severity_rank") or 0) >= 3
+        )
+        reasons.append(
+            f"{retained} finding{'s' if retained != 1 else ''} retained — "
+            "clustering did not produce a ranked investigation queue from this evidence set."
+        )
+        if high:
+            reasons.append(
+                f"{high} high-severity retained finding{'s' if high != 1 else ''} — review them in Findings below."
+            )
+        incomplete = sum(1 for f in confirmed_findings if f.get("review_incomplete"))
+        if incomplete:
+            reasons.append(
+                f"{incomplete} finding{'s' if incomplete != 1 else ''} flagged by self-review — validation still required."
+            )
+
+    noise_stats = (noise_meta or {}).get("statistics") or {}
+    suppressed = int(noise_stats.get("suppressed") or 0)
+    if suppressed:
+        reasons.append(
+            f"{suppressed} additional signal{'s' if suppressed != 1 else ''} suppressed as noise or duplicate."
+        )
+
+    return {
+        "empty": True,
+        "count": 0,
+        "urgent": 0,
+        "retained_findings": retained,
+        "headline": "No ranked investigations from this upload",
+        "reasons": reasons[:5],
+        "next_step": "Expand Findings below — retained evidence may still require analyst review.",
+    }
 
 
 def _why_ranked_here(

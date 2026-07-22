@@ -554,6 +554,16 @@ export interface WorkbenchSummaryPanel {
   noise_suppressed?: number;
 }
 
+export interface WorkbenchInvestigationQueueStatus {
+  empty: boolean;
+  count: number;
+  urgent?: number;
+  retained_findings: number;
+  headline: string;
+  reasons?: string[];
+  next_step?: string;
+}
+
 export type WorkbenchInvestigation = WorkbenchPriorityItem;
 
 export interface WorkbenchExecutiveMetrics {
@@ -647,6 +657,7 @@ export interface WorkbenchData {
   investigation_audit?: WorkbenchInvestigationAudit;
   executive_metrics?: WorkbenchExecutiveMetrics;
   summary_panel?: WorkbenchSummaryPanel;
+  investigation_queue_status?: WorkbenchInvestigationQueueStatus;
   action_plan?: WorkbenchActionPlan;
   evidence_ledger?: WorkbenchEvidenceLedger;
   totals: {

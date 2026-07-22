@@ -360,6 +360,7 @@ export function InvestigationWorkstationReport({
           {overview ? (
             <ExecutiveInvestigationOverviewPanel
               overview={overview}
+              workbench={workbench}
               onOpenSection={openDetailSection}
             />
           ) : null}

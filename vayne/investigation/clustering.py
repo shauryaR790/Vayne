@@ -584,7 +584,76 @@ def build_investigation_clusters(
             -int(x.get("evidence_count") or 0),
         )
     )
+    if not investigations and confirmed_findings:
+        investigations = build_findings_fallback_investigations(confirmed_findings)
     return investigations[:12]
+
+
+def build_findings_fallback_investigations(
+    confirmed_findings: list[dict[str, Any]],
+    *,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    """Build analyst queue items from retained findings when clustering yields none."""
+    candidates = [
+        f
+        for f in confirmed_findings
+        if str(f.get("classification") or "").upper() != "FALSE POSITIVE"
+        and str(f.get("claim_status") or "") not in ("rejected",)
+    ]
+    candidates.sort(
+        key=lambda f: (
+            -int(f.get("severity_rank") or 0),
+            -int(f.get("machine_confidence") or f.get("final_confidence") or 0),
+        )
+    )
+
+    out: list[dict[str, Any]] = []
+    for finding in candidates[:limit]:
+        fid = str(finding.get("id") or "").strip()
+        if not fid:
+            continue
+        ctype, _key = _cluster_key_for_finding(finding)
+        if ctype == "observation":
+            ctype = "asset"
+        tier = _tier_from_score(
+            int(finding.get("machine_confidence") or finding.get("final_confidence") or 50),
+            str(finding.get("severity") or "medium"),
+            str(finding.get("claim_status") or "needs_validation"),
+        )
+        sources = list(finding.get("sources") or [])
+        host = str(finding.get("host") or "").strip()
+        score = int(finding.get("machine_confidence") or finding.get("final_confidence") or 50)
+        title = _generate_title(ctype, [finding])
+        out.append(
+            {
+                "id": f"finding:{fid}",
+                "cluster_type": ctype,
+                "kind": "investigation",
+                "tier": tier,
+                "title": title,
+                "reason": str(finding.get("why_it_matters") or finding.get("business_impact") or title),
+                "risk_score": score,
+                "confidence": score,
+                "claim_status": str(finding.get("claim_status") or "needs_validation"),
+                "priority_reasons": [
+                    f"Retained {str(finding.get('severity') or 'finding').lower()} severity evidence",
+                    "Promoted from retained findings because clustering produced no queue",
+                ],
+                "business_impact": str(finding.get("business_impact") or ""),
+                "confidence_explanation": str(finding.get("analyst_confidence") or ""),
+                "estimated_review_minutes": _review_minutes(tier, 1),
+                "immediate_action": "Validate finding manually before asserting compromise.",
+                "evidence_sources": sources[:8],
+                "affected_assets": [host] if host else [],
+                "evidence_count": max(1, len(sources)),
+                "finding_ids": [fid],
+                "evidence_items": list(finding.get("evidence") or [])[:4],
+                "missing_evidence": [],
+                "detail_section_id": "findings",
+            }
+        )
+    return out
 
 
 def _merge_host_clusters(clusters: dict[str, dict[str, Any]]) -> None:

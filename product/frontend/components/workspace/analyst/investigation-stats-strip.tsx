@@ -100,6 +100,7 @@ export function InvestigationStatisticsSection({
   uploadedFileCount?: number;
 }) {
   const panel = workbench.summary_panel;
+  const queueStatus = workbench.investigation_queue_status;
 
   return (
     <div className="border-b border-vx-border bg-vx-section-body px-6 py-5">
@@ -115,6 +116,22 @@ export function InvestigationStatisticsSection({
           />
         )}
       </div>
+      {queueStatus?.empty && (queueStatus.retained_findings ?? 0) > 0 ? (
+        <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <p className="text-[13px] font-medium text-amber-100">{queueStatus.headline}</p>
+          <ul className="mt-2 space-y-1.5">
+            {(queueStatus.reasons ?? []).map((reason) => (
+              <li key={reason} className="flex gap-2 text-[12px] leading-relaxed text-amber-100/85">
+                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-amber-300/80" aria-hidden />
+                <span>{reason}</span>
+              </li>
+            ))}
+          </ul>
+          {queueStatus.next_step ? (
+            <p className="mt-2 text-[12px] text-amber-100/75">{queueStatus.next_step}</p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

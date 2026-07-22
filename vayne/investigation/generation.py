@@ -12,7 +12,7 @@ from typing import Any
 from vayne.attack_paths.proof import GraphProof
 from vayne.investigation.clustering import build_investigation_clusters
 from vayne.investigation.confidence_bridge import apply_confidence_bridge
-from vayne.investigation.contract import finalize_investigation
+from vayne.investigation.contract import finalize_investigation, finalize_investigation_list
 from vayne.investigation.noise_filter import filter_investigated_findings
 from vayne.investigation.quality_score import composite_priority_score, compute_quality_score
 from vayne.investigation.reasoning_chain import build_reasoning_chain
@@ -95,6 +95,13 @@ def build_analyst_investigations(
         ]
         finalized.append(finalize_investigation(inv, rank=rank, members=members))
     investigations = finalized
+
+    if not investigations and finding_dicts:
+        from vayne.investigation.clustering import build_findings_fallback_investigations
+
+        investigations = finalize_investigation_list(
+            build_findings_fallback_investigations(finding_dicts)
+        )
 
     payload: dict[str, Any] = {
         "investigations": investigations,

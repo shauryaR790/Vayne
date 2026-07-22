@@ -144,6 +144,14 @@ function buildExecutiveSummarySentences(
     sentences.push(
       `${immediate} investigation${immediate === 1 ? " has" : "s have"} immediate priority based on validated evidence signals.`,
     );
+  } else if (workbench.investigation_queue_status?.empty && retained > 0) {
+    sentences.push(
+      workbench.investigation_queue_status.headline ||
+        "Retained findings did not form a ranked investigation queue — review Findings below.",
+    );
+    for (const reason of (workbench.investigation_queue_status.reasons ?? []).slice(0, 2)) {
+      sentences.push(reason);
+    }
   } else {
     sentences.push("No investigation currently meets immediate business-risk thresholds from validated evidence.");
   }

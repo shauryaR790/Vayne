@@ -92,3 +92,26 @@ def test_filter_rejects_internal_hypotheses():
     assert panel["investigations_generated"] == 3
     assert panel["investigations_requiring_immediate_review"] == 2
     assert panel["estimated_analyst_hours_saved"] == 18.5
+
+
+def test_build_findings_fallback_investigations_from_retained():
+    from vayne.investigation.clustering import build_findings_fallback_investigations
+
+    findings = [
+        {
+            "id": "f1",
+            "title": ".git/config exposed",
+            "host": "10.0.0.5",
+            "severity": "HIGH",
+            "severity_rank": 3,
+            "machine_confidence": 71,
+            "claim_status": "suspected",
+            "classification": "OBSERVED",
+            "sources": ["Burp"],
+            "evidence": ["HTTP 200 on /.git/config"],
+        }
+    ]
+    invs = build_findings_fallback_investigations(findings)
+    assert len(invs) == 1
+    assert invs[0]["finding_ids"] == ["f1"]
+    assert "Source Code" in invs[0]["title"] or "Exposure" in invs[0]["title"]

@@ -5,6 +5,7 @@ import type {
   PrioritizedInvestigation,
   PriorityTier,
 } from "@/lib/executive-investigation-overview";
+import type { WorkbenchData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function tierStyles(tier: PriorityTier): string {
@@ -129,9 +130,11 @@ export { PriorityInvestigationRow };
 
 export function ExecutiveInvestigationOverview({
   overview,
+  workbench,
   onOpenSection,
 }: {
   overview: ExecutiveInvestigationOverview;
+  workbench?: WorkbenchData;
   onOpenSection: (sectionId: string) => void;
 }) {
   return (
@@ -170,10 +173,31 @@ export function ExecutiveInvestigationOverview({
               ))}
             </div>
           ) : (
-            <p className="mt-4 text-[14px] text-white/70">
-              No investigations require immediate analyst review. Expand detailed sections below if
-              you need supporting evidence.
-            </p>
+            <div className="mt-4 space-y-3">
+              <p className="text-[14px] text-white/70">
+                {overview.prioritizedInvestigations.length
+                  ? null
+                  : workbench?.investigation_queue_status?.headline ||
+                    "No investigations require immediate analyst review."}
+              </p>
+              {!overview.prioritizedInvestigations.length &&
+              workbench?.investigation_queue_status?.reasons?.length ? (
+                <ul className="space-y-2">
+                  {workbench.investigation_queue_status.reasons.map((reason) => (
+                    <li key={reason} className="flex gap-2 text-[13px] leading-relaxed text-white/65">
+                      <span className="mt-1.5 size-1 shrink-0 rounded-full bg-white/40" aria-hidden />
+                      <span>{reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {!overview.prioritizedInvestigations.length ? (
+                <p className="text-[13px] text-white/55">
+                  {workbench?.investigation_queue_status?.next_step ||
+                    "Expand detailed sections below if you need supporting evidence."}
+                </p>
+              ) : null}
+            </div>
           )}
         </div>
 
