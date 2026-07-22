@@ -105,9 +105,9 @@ function GraphCanvas({
   );
 
   const progressive = useProgressiveGraph({
-    investigationId,
+    investigationId: plain ? undefined : investigationId,
     graph,
-    workbench,
+    workbench: plain ? null : workbench,
     filters,
   });
 
@@ -290,8 +290,12 @@ function GraphCanvas({
   const fitGraph = useCallback(() => {
     if (!flowRef.current || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    applyGraphFit(flowRef.current, flowNodes, { width: rect.width, height: rect.height });
-  }, [flowNodes]);
+    applyGraphFit(flowRef.current, flowNodes, {
+      width: rect.width,
+      height: rect.height,
+      maxZoom: plain && flowNodes.length <= 3 ? 1.35 : undefined,
+    });
+  }, [flowNodes, plain]);
 
   const onInit = useCallback((instance: ReactFlowInstance) => {
     flowRef.current = instance;

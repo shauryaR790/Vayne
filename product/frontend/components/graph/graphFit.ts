@@ -9,7 +9,7 @@ export const FIT_MIN_ZOOM = 0.04;
 export function applyGraphFit(
   instance: ReactFlowInstance,
   flowNodes: Node[],
-  _container?: { width: number; height: number },
+  options?: { width: number; height: number; maxZoom?: number },
 ): void {
   const targets = flowNodes.filter((n) => !n.hidden);
   if (!targets.length) return;
@@ -18,7 +18,7 @@ export function applyGraphFit(
     nodes: targets,
     padding: FIT_PADDING,
     duration: FIT_DURATION,
-    maxZoom: FIT_MAX_ZOOM,
+    maxZoom: options?.maxZoom ?? FIT_MAX_ZOOM,
     minZoom: FIT_MIN_ZOOM,
     includeHiddenNodes: false,
   });
