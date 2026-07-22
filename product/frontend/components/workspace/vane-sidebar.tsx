@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Target, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 import { VaneSidebarBrand } from "@/components/brand/vane-logo";
 import { DeveloperMenu } from "@/components/dev/developer-menu";
@@ -176,25 +176,20 @@ export function VaneSidebar() {
 
       <div className="shrink-0 px-4 py-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3 px-1">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-vx-panel text-white">
-              <Target className="size-4" strokeWidth={1.5} />
-            </div>
-            <div className="min-w-0">
-              {authProfile ? (
-                <>
-                  <p className="truncate text-[15px] text-white">{authProfile.name || authProfile.email}</p>
-                  <p className="truncate text-[13px] text-white">{authProfile.team_name}</p>
-                </>
-              ) : (
-                <>
-                  <Link href="/login" className="truncate text-[15px] text-white hover:underline">
-                    Sign in
-                  </Link>
-                  <p className="truncate text-[13px] text-white">Team workspace</p>
-                </>
-              )}
-            </div>
+          <div className="min-w-0 flex-1 px-1">
+            {authProfile ? (
+              <>
+                <p className="truncate text-[15px] text-white">{authProfile.name || authProfile.email}</p>
+                <p className="truncate text-[13px] text-white/60">{authProfile.team_name}</p>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="truncate text-[15px] text-white hover:underline">
+                  Sign in
+                </Link>
+                <p className="truncate text-[13px] text-white/60">Team workspace</p>
+              </>
+            )}
           </div>
           <DeveloperMenu placement="above" />
         </div>

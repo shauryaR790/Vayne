@@ -10,7 +10,6 @@ import { AnalystThinking } from "@/components/workspace/analyst/analyst-thinking
 import type { InvestigationBundle } from "@/lib/investigation-bundle";
 import { resolveMessageFileInsights } from "@/lib/engine-file-insights";
 import type { AgentActivityFeed } from "@/lib/analyst-activity";
-import { ANALYST_NAME } from "@/lib/brand";
 import type { StoredChatMessage } from "@/lib/conversation-session";
 import { cn } from "@/lib/utils";
 
@@ -87,18 +86,10 @@ export function VaneAnalystPanel({
   const disabled = busy;
   const empty = !messages.length && !thinking && !activityFeed?.lines.length && !briefingPrompt;
   const activeBundles = bundles?.length ? bundles : bundle ? [bundle] : [];
-  const panelContextLabel =
-    contextLabel ||
-    (activeBundles.length > 1
-      ? `${activeBundles.length} analyses`
-      : activeBundles[0]?.report.name?.trim() ||
-        activeBundles[0]?.detail.summary.id ||
-        ANALYST_NAME);
 
   return (
     <aside className="flex h-full w-full min-w-[300px] flex-col border-l border-vx-border bg-vx-analyst">
       <AnalystPanelHeader
-        contextLabel={panelContextLabel}
         onDismiss={messages.length && onClearChat ? onClearChat : undefined}
       />
       <div
