@@ -1,7 +1,6 @@
 /** Ask VAYNE — streaming chat client (OpenAI GPT analyst). */
 
-import { getApiBase } from "./api";
-import { workspaceHeaders } from "./workspace-id";
+import { getApiBase, requestHeaders } from "./api";
 import type { ChatTurn } from "./vayne-analyst";
 
 export type AnalystStreamEvent =
@@ -163,7 +162,7 @@ export async function fetchAnalystStatus(): Promise<AnalystStatus | null> {
   try {
     const res = await fetch(`${getApiBase()}/api/analyst/status`, {
       cache: "no-store",
-      headers: workspaceHeaders(),
+      headers: requestHeaders(),
     });
     if (!res.ok) return null;
     return (await res.json()) as AnalystStatus;
@@ -202,7 +201,7 @@ export async function* streamAnalystChat(
   const url = `${getApiBase()}/api/investigation/${investigationId}/chat`;
   const res = await fetch(url, {
     method: "POST",
-    headers: workspaceHeaders({ "Content-Type": "application/json" }),
+    headers: requestHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       message,
       history: history
@@ -236,7 +235,7 @@ export async function* streamGeneralChat(
   const url = `${getApiBase()}/api/chat`;
   const res = await fetch(url, {
     method: "POST",
-    headers: workspaceHeaders({ "Content-Type": "application/json" }),
+    headers: requestHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       message,
       history: history
@@ -265,7 +264,7 @@ export async function* streamInvestigationBrief(
   const res = await fetch(url, {
     method: "GET",
     cache: "no-store",
-    headers: workspaceHeaders(),
+    headers: requestHeaders(),
     signal: options?.signal,
   });
 

@@ -197,6 +197,7 @@ class InvestigationService:
 
             self.db.commit()
             self.db.refresh(inv)
+            self.write_workbench_cache(inv.id)
             return inv
         except Exception:
             logger.exception("Engine run failed for %s", source)
@@ -549,11 +550,29 @@ class InvestigationService:
 
     def get_workbench(self, inv_id: str) -> dict | None:
         """Rich analyst-workstation payload derived from engine exports."""
-        from product.backend.services.investigation_workbench import build_workbench
-
         inv = self.get_investigation(inv_id)
         if not inv:
             return None
+
+        cached = self.load_artifact(inv_id, "workbench.json")
+        if cached:
+            return cached
+
+        payload = self._build_workbench_payload(inv)
+        self._save_workbench_cache(inv_id, payload)
+        return payload
+
+    def write_workbench_cache(self, inv_id: str) -> None:
+        inv = self.get_investigation(inv_id)
+        if not inv:
+            return
+        payload = self._build_workbench_payload(inv)
+        self._save_workbench_cache(inv_id, payload)
+
+    def _build_workbench_payload(self, inv: InvestigationORM) -> dict:
+        from product.backend.services.investigation_workbench import build_workbench
+
+        inv_id = inv.id
         report = self.get_report_view(inv_id) or {}
         graph = self.get_full_graph(inv_id)
         findings = self.get_findings_export(inv_id)
@@ -572,6 +591,11 @@ class InvestigationService:
             evidence_ledger=evidence_ledger,
             analyst_investigations=analyst_investigations,
         )
+
+    def _save_workbench_cache(self, inv_id: str, payload: dict) -> None:
+        path = self.export_dir(inv_id) / "workbench.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload), encoding="utf-8")
 
     def get_findings_export(self, inv_id: str) -> dict:
         disk = self.load_artifact(inv_id, "findings.json")

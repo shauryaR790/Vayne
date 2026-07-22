@@ -22,7 +22,8 @@ class SkippedFile(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
-    investigation_id: str
+    job_id: str | None = None
+    investigation_id: str = ""
     status: str
     mode: str = "combined"
     investigation_group_id: str | None = None

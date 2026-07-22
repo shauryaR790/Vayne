@@ -17,6 +17,8 @@ def product_client(tmp_path, monkeypatch):
     storage = tmp_path / "storage"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
     monkeypatch.setenv("VAYNE_STORAGE", str(storage))
+    monkeypatch.setenv("VAYNE_ASYNC_ANALYZE", "false")
+    monkeypatch.delenv("REDIS_URL", raising=False)
 
     # Fresh imports under test env
     from product.backend.db.session import init_db

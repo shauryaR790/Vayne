@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { API_BASE } from "@/lib/api";
-import { workspaceHeaders } from "@/lib/workspace-id";
+import { getApiBase, requestHeaders } from "@/lib/api";
 import { Panel, SidePanel, StatRow, WorkstationLayout } from "@/components/ui/Workstation";
 
 const TABS = [
@@ -40,8 +39,8 @@ export function ReportWorkbench({
     setActive(type);
     try {
       const res = await fetch(
-        `${API_BASE}/api/investigation/${investigationId}/reports/${type}`,
-        { cache: "no-store", headers: workspaceHeaders() },
+        `${getApiBase()}/api/investigation/${investigationId}/reports/${type}`,
+        { cache: "no-store", headers: requestHeaders() },
       );
       setContent(await res.text());
     } catch {
@@ -98,7 +97,7 @@ export function ReportWorkbench({
             </SidePanel>
             <SidePanel title="Export">
               <a
-                href={`${API_BASE}/api/investigation/${investigationId}/artifact/${active === "remediation" ? "remediation_plan.json" : active === "attack_story" ? "attack_story.md" : `${active}_report.md`}`}
+                href={`${getApiBase()}/api/investigation/${investigationId}/artifact/${active === "remediation" ? "remediation_plan.json" : active === "attack_story" ? "attack_story.md" : `${active}_report.md`}`}
                 className="vx-btn w-full text-center text-body"
                 target="_blank"
                 rel="noreferrer"

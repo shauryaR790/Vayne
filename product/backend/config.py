@@ -32,3 +32,36 @@ def upload_limits() -> dict[str, int]:
             os.getenv("VAYNE_MAX_TOTAL_UPLOAD_BYTES", str(200 * 1024 * 1024))
         ),
     }
+
+
+def jwt_settings() -> dict:
+    secret = os.getenv("VAYNE_JWT_SECRET", "").strip()
+    if not secret:
+        secret = "vayne-dev-only-change-me"
+    return {
+        "secret": secret,
+        "ttl_hours": int(os.getenv("VAYNE_JWT_TTL_HOURS", "168")),
+        "api_key_pepper": os.getenv("VAYNE_API_KEY_PEPPER", secret),
+    }
+
+
+def auth_required() -> bool:
+    flag = os.getenv("VAYNE_REQUIRE_AUTH", "").strip().lower()
+    if flag in {"1", "true", "yes"}:
+        return True
+    if flag in {"0", "false", "no"}:
+        return False
+    return is_production()
+
+
+def async_analyze_enabled() -> bool:
+    flag = os.getenv("VAYNE_ASYNC_ANALYZE", "").strip().lower()
+    if flag in {"0", "false", "no"}:
+        return False
+    if flag in {"1", "true", "yes"}:
+        return bool(os.getenv("REDIS_URL", "").strip())
+    return bool(os.getenv("REDIS_URL", "").strip())
+
+
+def redis_url() -> str:
+    return os.getenv("REDIS_URL", "redis://localhost:6379/0").strip()

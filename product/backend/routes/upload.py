@@ -17,9 +17,12 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
-from product.backend.config import expose_error_details, upload_limits
+from product.backend.config import async_analyze_enabled, expose_error_details, upload_limits
+from product.backend.db.session import get_db
 from product.backend.deps import get_investigation_service
+from product.backend.auth import resolve_workspace_id
 from product.backend.logging_config import get_logger
 from product.backend.schemas.investigation import (
     AnalyzeInvestigationItem,
@@ -27,6 +30,7 @@ from product.backend.schemas.investigation import (
     SkippedFile,
 )
 from product.backend.services.investigation_service import InvestigationService
+from product.backend.services.job_service import JobService
 from product.backend.services.upload_pipeline import preflight_parse
 
 router = APIRouter(prefix="/api", tags=["analyze"])
@@ -55,6 +59,8 @@ async def analyze_upload(
     prompt: str = Form(default=""),
     mode: str = Form(default=""),
     svc: InvestigationService = Depends(get_investigation_service),
+    db: Session = Depends(get_db),
+    workspace_id: str = Depends(resolve_workspace_id),
 ):
     limits = upload_limits()
     if len(files) > limits["max_files"]:
@@ -188,6 +194,42 @@ async def analyze_upload(
             if outcome.ok
         ]
 
+        skipped = [
+            SkippedFile(
+                file=o.filename,
+                stage=o.stage,
+                error=o.error or "",
+                error_kind=o.error_kind or "",
+            )
+            for o in preflight.failed
+        ]
+
+        if async_analyze_enabled():
+            job_svc = JobService(db)
+            job = job_svc.create_job(
+                workspace_id=workspace_id,
+                name=name,
+                prompt=prompt,
+                mode_hint=mode,
+                uploads=good_uploads,
+                preflight_failed=preflight.failed,
+            )
+            from vayne.worker.tasks import enqueue_analysis_job
+
+            enqueue_analysis_job(job.id)
+            logger.info("Queued async analysis job %s", job.id)
+            return AnalyzeResponse(
+                job_id=job.id,
+                investigation_id="",
+                status="queued",
+                mode=mode or "combined",
+                investigations=[],
+                files_processed=len(preflight.succeeded),
+                files_skipped=len(preflight.failed),
+                warnings=preflight.warnings(),
+                skipped=skipped,
+            )
+
         try:
             batch = svc.run_analysis_batch(
                 name,
@@ -214,15 +256,6 @@ async def analyze_upload(
             return _error_response(500, payload)
 
         primary = batch.primary
-        skipped = [
-            SkippedFile(
-                file=o.filename,
-                stage=o.stage,
-                error=o.error or "",
-                error_kind=o.error_kind or "",
-            )
-            for o in preflight.failed
-        ]
         status = "complete_with_warnings" if preflight.failed else primary.status
 
         logger.info(

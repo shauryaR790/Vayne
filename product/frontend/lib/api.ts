@@ -10,6 +10,7 @@ import type {
   RemediationData,
   WorkbenchData,
 } from "./types";
+import { authHeaders, getAuthToken } from "./auth";
 import { workspaceHeaders } from "./workspace-id";
 
 const LOCAL_DEV_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -59,6 +60,14 @@ function apiUrl(path: string): string {
   return `${getApiBase()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/** Auth token takes precedence; anonymous sessions use workspace header. */
+export function requestHeaders(extra?: Record<string, string>): Record<string, string> {
+  if (getAuthToken()) {
+    return authHeaders(extra);
+  }
+  return workspaceHeaders(extra);
+}
+
 /** Turn FastAPI / fetch error bodies into short user-facing text. */
 export function parseApiError(status: number, body: string): string {
   const trimmed = body.trim();
@@ -99,7 +108,7 @@ export function parseApiError(status: number, body: string): string {
 export async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(apiUrl(path), {
     cache: "no-store",
-    headers: workspaceHeaders(),
+    headers: requestHeaders(),
   });
   if (!res.ok) throw new Error(parseApiError(res.status, await res.text()));
   return res.json() as Promise<T>;
@@ -108,7 +117,7 @@ export async function fetchJson<T>(path: string): Promise<T> {
 async function fetchText(path: string): Promise<string> {
   const res = await fetch(apiUrl(path), {
     cache: "no-store",
-    headers: workspaceHeaders(),
+    headers: requestHeaders(),
   });
   if (!res.ok) throw new Error(parseApiError(res.status, await res.text()));
   return res.text();
@@ -118,7 +127,7 @@ export async function checkHealth(): Promise<boolean> {
   try {
     const res = await fetch(apiUrl("/api/health"), {
       cache: "no-store",
-      headers: workspaceHeaders(),
+      headers: requestHeaders(),
     });
     if (!res.ok) return false;
     const body = (await res.json()) as { status?: string };
@@ -188,6 +197,42 @@ export type AnalyzeSuccess = {
 
 /** Client-side ceiling for a single analysis request. */
 const ANALYZE_TIMEOUT_MS = 300_000;
+const JOB_POLL_MS = 1500;
+
+export type AnalyzeJobStatus = AnalyzeSuccess & {
+  job_id?: string;
+  error?: string;
+  error_kind?: string;
+};
+
+export async function getAnalyzeJob(jobId: string): Promise<AnalyzeJobStatus> {
+  return fetchJson(`/api/jobs/${jobId}`);
+}
+
+async function waitForAnalyzeJob(jobId: string): Promise<AnalyzeSuccess> {
+  const deadline = Date.now() + ANALYZE_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const job = await getAnalyzeJob(jobId);
+    if (job.status === "failed") {
+      throw new AnalyzeError("internal_error", job.error || "Analysis failed");
+    }
+    if (job.status === "complete" || job.status === "complete_with_warnings") {
+      return {
+        investigation_id: job.investigation_id,
+        status: job.status,
+        mode: job.mode,
+        investigation_group_id: job.investigation_group_id,
+        investigations: job.investigations,
+        files_processed: job.files_processed,
+        files_skipped: job.files_skipped,
+        warnings: job.warnings,
+        skipped: job.skipped,
+      };
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, JOB_POLL_MS));
+  }
+  throw new AnalyzeError("timeout", "Analysis exceeded timeout.");
+}
 
 function kindFromStatus(status: number, backendKind?: string): AnalyzeErrorKind {
   switch (backendKind) {
@@ -230,7 +275,7 @@ export async function analyzeFiles(
       method: "POST",
       body: form,
       signal: controller.signal,
-      headers: workspaceHeaders(),
+      headers: requestHeaders(),
     });
   } catch (error) {
     clearTimeout(timer);
@@ -267,7 +312,11 @@ export async function analyzeFiles(
     });
   }
 
-  return res.json() as Promise<AnalyzeSuccess>;
+  const body = (await res.json()) as AnalyzeJobStatus;
+  if (body.job_id && (body.status === "queued" || body.status === "running")) {
+    return waitForAnalyzeJob(body.job_id);
+  }
+  return body;
 }
 
 export async function getInvestigation(id: string): Promise<InvestigationDetail> {
@@ -322,11 +371,45 @@ export async function resetWorkspace(): Promise<{
 }> {
   const res = await fetch(apiUrl("/api/dev/reset-workspace"), {
     method: "POST",
-    headers: workspaceHeaders(),
+    headers: requestHeaders(),
   });
   if (!res.ok) {
     const detail = await res.text();
     throw new Error(detail || `Workspace reset failed (${res.status})`);
   }
   return res.json();
+}
+
+export type AuthSession = {
+  access_token: string;
+  workspace_id: string;
+  team_id: string;
+  team_name: string;
+  email: string;
+  name: string;
+};
+
+export async function loginUser(email: string, password: string): Promise<AuthSession> {
+  const res = await fetch(apiUrl("/api/auth/login"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) throw new Error(parseApiError(res.status, await res.text()));
+  return res.json() as Promise<AuthSession>;
+}
+
+export async function registerUser(input: {
+  email: string;
+  password: string;
+  name?: string;
+  team_name?: string;
+}): Promise<AuthSession> {
+  const res = await fetch(apiUrl("/api/auth/register"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(parseApiError(res.status, await res.text()));
+  return res.json() as Promise<AuthSession>;
 }

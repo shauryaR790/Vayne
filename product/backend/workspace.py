@@ -18,7 +18,14 @@ def normalize_workspace_id(raw: str | None) -> str:
     return DEFAULT_WORKSPACE_ID
 
 
+def get_workspace_header(
+    x_vayne_workspace_id: str | None = Header(default=None, alias=WORKSPACE_HEADER),
+) -> str:
+    return normalize_workspace_id(x_vayne_workspace_id)
+
+
 def get_workspace_id(
     x_vayne_workspace_id: str | None = Header(default=None, alias=WORKSPACE_HEADER),
 ) -> str:
+    """Deprecated alias — prefer resolve_workspace_id from auth deps."""
     return normalize_workspace_id(x_vayne_workspace_id)

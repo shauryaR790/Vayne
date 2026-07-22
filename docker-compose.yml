@@ -17,17 +17,21 @@ services:
 
   api:
     build: .
-    command: uvicorn vayne.api.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn product.backend.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://vayne:vayne@postgres:5432/vayne
       REDIS_URL: redis://redis:6379/0
+      VAYNE_ASYNC_ANALYZE: "true"
+      VAYNE_STORAGE: /data/investigations
+      VAYNE_JWT_SECRET: change-me-in-production
     depends_on:
       - postgres
       - redis
     volumes:
       - .:/app
+      - investigation_data:/data/investigations
 
   worker:
     build: .
@@ -35,11 +39,16 @@ services:
     environment:
       DATABASE_URL: postgresql://vayne:vayne@postgres:5432/vayne
       REDIS_URL: redis://redis:6379/0
+      VAYNE_ASYNC_ANALYZE: "true"
+      VAYNE_STORAGE: /data/investigations
+      VAYNE_JWT_SECRET: change-me-in-production
     depends_on:
       - redis
       - postgres
     volumes:
       - .:/app
+      - investigation_data:/data/investigations
 
 volumes:
   pgdata:
+  investigation_data:

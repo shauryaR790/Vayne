@@ -17,7 +17,7 @@ import {
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
 import { InvestigationHistoryList } from "@/components/workspace/investigation-history-rows";
-import { cn } from "@/lib/utils";
+import { getAuthProfile } from "@/lib/auth";
 
 const TUTORIAL_PROMO_DISMISSED_KEY = "vane-sidebar-tutorial-promo-dismissed";
 
@@ -77,6 +77,9 @@ export function VaneSidebar() {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(TUTORIAL_PROMO_DISMISSED_KEY) === "1";
   });
+  const [authProfile, setAuthProfile] = useState(() =>
+    typeof window === "undefined" ? null : getAuthProfile(),
+  );
 
   const dismissTutorialPromo = useCallback(() => {
     window.localStorage.setItem(TUTORIAL_PROMO_DISMISSED_KEY, "1");
@@ -179,8 +182,19 @@ export function VaneSidebar() {
               <Target className="size-4" strokeWidth={1.5} />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[15px] text-white">Operator</p>
-              <p className="truncate text-[13px] text-white">Workspace</p>
+              {authProfile ? (
+                <>
+                  <p className="truncate text-[15px] text-white">{authProfile.name || authProfile.email}</p>
+                  <p className="truncate text-[13px] text-white">{authProfile.team_name}</p>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="truncate text-[15px] text-white hover:underline">
+                    Sign in
+                  </Link>
+                  <p className="truncate text-[13px] text-white">Team workspace</p>
+                </>
+              )}
             </div>
           </div>
           <DeveloperMenu placement="above" />
