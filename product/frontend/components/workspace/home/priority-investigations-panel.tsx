@@ -108,7 +108,7 @@ export function PriorityInvestigationsPanel({
           </button>
         ) : null}
       </div>
-      <div className="rounded-lg border border-vx-border bg-vx-panel/40 px-4">
+      <div className="divide-y divide-vx-border">
         {items.map((item) => (
           <PriorityInvestigationRow key={item.id} item={item} compact />
         ))}

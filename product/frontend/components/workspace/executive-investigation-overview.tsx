@@ -79,7 +79,7 @@ function PriorityInvestigationRow({
       ) : null}
       {!compact && item.businessImpact ? (
         <p className="mt-3 text-[12px] leading-relaxed text-white/65">
-          <span className="font-medium text-white/80">Business impact: </span>
+          <span className="font-medium text-white/80">Impact: </span>
           {item.businessImpact}
         </p>
       ) : null}

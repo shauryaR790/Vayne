@@ -61,7 +61,7 @@ export function InvestigationsList() {
         <p className="text-[13px] text-white/45">Refreshing…</p>
       ) : null}
 
-      <MotionGroup className="mt-6 flex flex-col gap-2">
+      <MotionGroup className="mt-6 divide-y divide-vx-border">
         {items.map((inv) => {
           const target =
             inv.primaryHost ||
@@ -74,9 +74,9 @@ export function InvestigationsList() {
             <Link
               key={inv.id}
               href={`/?id=${inv.id}`}
-              className="group flex items-center gap-4 rounded-2xl border border-white/[0.1] bg-[#0d0d0d] px-5 py-4 transition-colors hover:border-white/20 hover:bg-[#111111]"
+              className="group flex items-center gap-4 py-4 transition-colors hover:bg-white/[0.02]"
             >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white/45 group-hover:text-white/70">
+              <div className="flex size-9 shrink-0 items-center justify-center text-white/35 group-hover:text-white/60">
                 <MessageSquare className="size-4" strokeWidth={1.5} />
               </div>
               <div className="min-w-0 flex-1">
@@ -99,7 +99,7 @@ export function InvestigationsList() {
                 </p>
               </div>
               <span className="shrink-0 text-[12px] font-medium text-white/35 group-hover:text-white/70">
-                Open chat →
+                Open →
               </span>
             </Link>
           );

@@ -1145,7 +1145,7 @@ export function BusinessImpactSection({
   if (!rows.length) return null;
 
   return (
-    <WorkstationSection title="Business Impact" reveal={reveal} large embedded={embedded}>
+    <WorkstationSection title="Impact" reveal={reveal} large embedded={embedded}>
       <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white/55">
         What could actually happen to your organization if these issues are exploited — not the technical steps, but the real-world damage.
       </p>
@@ -1162,7 +1162,7 @@ export function BusinessImpactSection({
                 {[
                   { label: "What could go wrong", value: row.whatCouldHappen },
                   { label: "Who's at risk", value: row.whoIsAtRisk },
-                  { label: "Business areas affected", value: row.businessAreas },
+                  { label: "Areas affected", value: row.businessAreas },
                 ]
                   .filter((r) => r.value)
                   .map((r) => (

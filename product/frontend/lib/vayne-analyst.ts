@@ -317,11 +317,11 @@ function businessReply(ctx: AnalystContext): string {
   const { briefing, bundle } = ctx;
   const hasPaths = bundle.detail.attack_paths.length > 0;
   if (!hasPaths) {
-    return "Business impact is limited — no validated exploitation path. Residual risk is operational (unpatched observations) rather than confirmed breach exposure.";
+    return "Impact is limited — no validated exploitation path. Residual risk is operational (unpatched observations) rather than confirmed breach exposure.";
   }
   return pick([
     `If exploited, ${shortFinding(briefing.primaryFinding, 60)} could enable movement into internal infrastructure. Blast radius and data exposure depend on what the validated chain reaches — ${briefing.overallRisk} overall risk. ${briefing.recommendedAction}.`,
-    `Business impact: validated path from external exposure toward internal assets. ${briefing.recommendedAction} before active exploitation.`,
+    `Impact: validated path from external exposure toward internal assets. ${briefing.recommendedAction} before active exploitation.`,
   ]);
 }
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { listInvestigations } from "@/lib/api";
 import type { InvestigationListItem } from "@/lib/types";
-import { PageHeader, WorkspaceCard, SectionLabel } from "@/components/shared/workspace-card";
+import { PageHeader } from "@/components/shared/workspace-card";
 
 export function AssetsContent() {
   const [items, setItems] = useState<InvestigationListItem[]>([]);
@@ -22,29 +22,30 @@ export function AssetsContent() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] px-5 py-8 lg:px-8">
+    <div className="mx-auto w-full max-w-[920px] px-5 py-8 lg:px-8">
       <PageHeader title="Assets" subtitle="Discovered assets across investigations" />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="divide-y divide-vx-border">
         {assets.map((asset) => (
-          <WorkspaceCard key={asset.id} className="p-5">
-            <SectionLabel>Target</SectionLabel>
-            <p className="mt-2 font-mono text-[13px] font-medium uppercase">{asset.target}</p>
-            <p className="mt-3 text-[11px] font-bold uppercase tracking-wider text-white/50">
-              {asset.classification} · {asset.findings} findings
-            </p>
+          <div key={asset.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+            <div className="min-w-0">
+              <p className="truncate font-mono text-[14px] font-medium uppercase text-white">
+                {asset.target}
+              </p>
+              <p className="mt-1 text-[12px] text-white/45">
+                {asset.classification} · {asset.findings} findings
+              </p>
+            </div>
             <Link
               href={`/analyze?id=${asset.id}`}
-              className="mt-4 inline-block text-[10px] font-bold uppercase tracking-wider text-white/60 hover:text-white"
+              className="shrink-0 text-[12px] font-medium text-white/50 transition-colors hover:text-white"
             >
-              View investigation →
+              Open investigation →
             </Link>
-          </WorkspaceCard>
+          </div>
         ))}
       </div>
       {!assets.length && (
-        <p className="py-16 text-center text-[11px] font-bold uppercase tracking-wider text-white/50">
-          No assets discovered yet.
-        </p>
+        <p className="py-16 text-center text-[14px] text-white/45">No assets discovered yet.</p>
       )}
     </div>
   );

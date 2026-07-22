@@ -1,5 +1,6 @@
 "use client";
 
+import { MetricTile } from "@/components/shared/workspace-card";
 import type { WorkbenchData } from "@/lib/types";
 import { InvestigationSummaryPanel } from "@/components/workspace/home/investigation-summary-panel";
 
@@ -46,16 +47,6 @@ export function buildInvestigationStatsSnapshot(
   };
 }
 
-function StatCell({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
-  return (
-    <div className="min-w-0 rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-2">
-      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">{label}</p>
-      <p className="mt-1 font-mono text-[15px] font-semibold tabular-nums text-white">{value}</p>
-      {sub ? <p className="mt-0.5 text-[10px] text-white/35">{sub}</p> : null}
-    </div>
-  );
-}
-
 export function InvestigationStatsStrip({
   stats,
 }: {
@@ -63,31 +54,35 @@ export function InvestigationStatsStrip({
 }) {
   return (
     <section
-      className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
+      className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6"
       aria-label="Investigation statistics"
     >
-      <StatCell label="Files ingested" value={stats.files.toLocaleString()} sub="Uploaded evidence" />
-      <StatCell
+      <MetricTile flat label="Files ingested" value={stats.files.toLocaleString()} sub="Uploaded evidence" />
+      <MetricTile
+        flat
         label="Findings retained"
         value={stats.retained.toLocaleString()}
         sub="Passed evidence review"
       />
-      <StatCell
+      <MetricTile
+        flat
         label="Investigations"
         value={stats.investigations.toLocaleString()}
         sub="Clustered analyst queue"
       />
-      <StatCell
+      <MetricTile
+        flat
         label="Cross-source"
         value={stats.crossMatches.toLocaleString()}
         sub={`${stats.sources} scanner type${stats.sources === 1 ? "" : "s"}`}
       />
-      <StatCell
+      <MetricTile
+        flat
         label="Validated paths"
         value={stats.validatedPaths.toLocaleString()}
         sub={`${stats.rejectedPaths} rejected`}
       />
-      <StatCell label="Analyst time saved" value={stats.hoursSaved} sub="Engine triage" />
+      <MetricTile flat label="Analyst time saved" value={stats.hoursSaved} sub="Engine triage" />
     </section>
   );
 }
@@ -117,18 +112,18 @@ export function InvestigationStatisticsSection({
         )}
       </div>
       {queueStatus?.empty && (queueStatus.retained_findings ?? 0) > 0 ? (
-        <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-          <p className="text-[13px] font-medium text-amber-100">{queueStatus.headline}</p>
-          <ul className="mt-2 space-y-1.5">
+        <div className="mt-6 max-w-[72ch] space-y-2">
+          <p className="text-[13px] leading-relaxed text-white/75">{queueStatus.headline}</p>
+          <ul className="space-y-1.5">
             {(queueStatus.reasons ?? []).map((reason) => (
-              <li key={reason} className="flex gap-2 text-[12px] leading-relaxed text-amber-100/85">
-                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-amber-300/80" aria-hidden />
+              <li key={reason} className="flex gap-2 text-[12px] leading-relaxed text-white/60">
+                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-white/40" aria-hidden />
                 <span>{reason}</span>
               </li>
             ))}
           </ul>
           {queueStatus.next_step ? (
-            <p className="mt-2 text-[12px] text-amber-100/75">{queueStatus.next_step}</p>
+            <p className="text-[12px] text-white/55">{queueStatus.next_step}</p>
           ) : null}
         </div>
       ) : null}

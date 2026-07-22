@@ -70,6 +70,7 @@ function GraphCanvas({
   const isWorkstation = layout === "workstation";
   const isInline = layout === "inline";
   const isHero = layout === "hero";
+  const plain = embedded || isWorkstation;
   const heightClass = isWorkstation
     ? "h-[560px] min-h-[520px]"
     : isHero
@@ -364,8 +365,8 @@ function GraphCanvas({
   if (showEmptyState) {
     return (
       <div
-        className={`vx-graph-explorer ${heightClass} border ${
-          isWorkstation ? "border-vx-border bg-vx-app" : "border-white/10 bg-[#050505]"
+        className={`vx-graph-explorer ${heightClass} ${
+          plain ? "bg-vx-app" : isWorkstation ? "border border-vx-border bg-vx-app" : "border border-white/10 bg-[#050505]"
         }`}
       >
         <GraphEmptyState
@@ -389,19 +390,27 @@ function GraphCanvas({
       />
 
       <div
-        className={`vx-graph-explorer flex flex-col overflow-hidden border ${heightClass} ${
-          isWorkstation ? "border-vx-border bg-vx-app" : embedded ? "border-white/10 bg-[#050505]" : "border-white/10 bg-[#050505]"
+        className={`vx-graph-explorer flex flex-col overflow-hidden ${heightClass} ${
+          plain
+            ? "bg-vx-app"
+            : isWorkstation
+              ? "border border-vx-border bg-vx-app"
+              : embedded
+                ? "border border-white/10 bg-[#050505]"
+                : "border border-white/10 bg-[#050505]"
         }`}
       >
         <div ref={canvasRef} className="vx-graph-canvas relative min-h-0 flex-1 overflow-hidden transition-[flex-grow] duration-300 ease-out">
-          <GraphSearchFilter
-            query={searchQuery}
-            onQueryChange={setSearchQuery}
-            activeFilters={activeFilters}
-            onToggleFilter={toggleFilter}
-            matchCount={nodes.length}
-            totalCount={grouped.nodes.length}
-          />
+          {!plain ? (
+            <GraphSearchFilter
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              activeFilters={activeFilters}
+              onToggleFilter={toggleFilter}
+              matchCount={nodes.length}
+              totalCount={grouped.nodes.length}
+            />
+          ) : null}
 
           <GraphCanvasBackground />
           <ReactFlow
@@ -429,7 +438,7 @@ function GraphCanvas({
             className="!bg-transparent"
             style={{ width: "100%", height: "100%" }}
           >
-            <GraphMinimapRail />
+            {!plain ? <GraphMinimapRail /> : null}
             <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden>
               <defs>
                 <marker id="vayne-arrow-default" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
@@ -442,7 +451,7 @@ function GraphCanvas({
             </svg>
           </ReactFlow>
 
-          {progressive.progressiveEnabled ? (
+          {progressive.progressiveEnabled && !plain ? (
             <GraphLevelNav
               stack={progressive.stack}
               onNavigate={progressive.navigateTo}
@@ -453,21 +462,23 @@ function GraphCanvas({
           ) : null}
         </div>
 
-        <div
-          className={`shrink-0 overflow-hidden border-white/10 bg-[#050505] transition-all duration-300 ease-out ${
-            selectedNode ? "max-h-[280px] border-t opacity-100" : "max-h-0 border-t-0 opacity-0"
-          }`}
-          aria-hidden={!selectedNode}
-        >
-          {selectedNode ? (
-            <GraphNodeInspector
-              node={selectedNode}
-              graphNodes={sourceGraph.nodes}
-              graphEdges={sourceGraph.edges}
-              onClose={() => setSelectedId(null)}
-            />
-          ) : null}
-        </div>
+        {!plain ? (
+          <div
+            className={`shrink-0 overflow-hidden border-white/10 bg-[#050505] transition-all duration-300 ease-out ${
+              selectedNode ? "max-h-[280px] border-t opacity-100" : "max-h-0 border-t-0 opacity-0"
+            }`}
+            aria-hidden={!selectedNode}
+          >
+            {selectedNode ? (
+              <GraphNodeInspector
+                node={selectedNode}
+                graphNodes={sourceGraph.nodes}
+                graphEdges={sourceGraph.edges}
+                onClose={() => setSelectedId(null)}
+              />
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </>
   );

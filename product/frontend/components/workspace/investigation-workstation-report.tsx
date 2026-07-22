@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { CombinedEvidenceBanner } from "@/components/workspace/combined-evidence-banner";
 import { InvestigationStatisticsSection } from "@/components/workspace/analyst/investigation-stats-strip";
-import { ExecutiveInvestigationOverview as ExecutiveInvestigationOverviewPanel } from "@/components/workspace/executive-investigation-overview";
 import { GraphExplorer } from "@/components/graph/GraphExplorer";
 import type { ReasoningCheck } from "@/components/graph/GraphEmptyState";
 import {
@@ -22,7 +21,6 @@ import {
 import { cn } from "@/lib/utils";
 import { parseUploadedFilenames } from "@/lib/source-attribution";
 import type { InvestigationMode } from "@/lib/investigation-mode";
-import { buildExecutiveInvestigationOverview } from "@/lib/executive-investigation-overview";
 import {
   createReveal,
   CollapsibleSection,
@@ -314,13 +312,6 @@ export function InvestigationWorkstationReport({
     uploadedFilenames.length > 1;
 
   const nextDelay = createReveal();
-  const overview = useMemo(
-    () =>
-      workbench
-        ? buildExecutiveInvestigationOverview(workbench, bundle, presentation)
-        : null,
-    [workbench, bundle, presentation],
-  );
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   const sectionOpen = useCallback(
@@ -331,18 +322,6 @@ export function InvestigationWorkstationReport({
   const setSectionOpen = useCallback((id: string, open: boolean) => {
     setOpenSections((prev) => ({ ...prev, [id]: open }));
   }, []);
-
-  const openDetailSection = useCallback(
-    (id: string) => {
-      setSectionOpen(id, true);
-      window.setTimeout(() => {
-        document
-          .getElementById(`investigation-detail-${id}`)
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 180);
-    },
-    [setSectionOpen],
-  );
 
   return (
     <article className={cn("flex w-full min-w-0 flex-col gap-1", className)}>
@@ -357,14 +336,6 @@ export function InvestigationWorkstationReport({
       ) : null}
       {workbench ? (
         <ExpertModeProvider expert={false}>
-          {overview ? (
-            <ExecutiveInvestigationOverviewPanel
-              overview={overview}
-              workbench={workbench}
-              onOpenSection={openDetailSection}
-            />
-          ) : null}
-
           <div className="border-b border-vx-border bg-vx-section-body px-6 py-4">
             <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50">
               Optional Details
@@ -435,7 +406,7 @@ export function InvestigationWorkstationReport({
 
           <CollapsibleSection
             sectionId="business-impact"
-            title="Business Impact"
+            title="Impact"
             defaultOpen={false}
             open={sectionOpen("business-impact")}
             onOpenChange={(open) => setSectionOpen("business-impact", open)}

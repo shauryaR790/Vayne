@@ -14,7 +14,7 @@ import { HoverCard } from "@/components/shared/hover-card";
 const QUICK_TOPICS: Array<{ label: string; presetId: string }> = [
   { label: "Attack Path", presetId: "attack_chain" },
   { label: "Remediation", presetId: "remediation" },
-  { label: "Business Risk", presetId: "business" },
+  { label: "Operational Risk", presetId: "business" },
   { label: "Technical Details", presetId: "technical" },
   { label: "Executive Summary", presetId: "executive" },
 ];
