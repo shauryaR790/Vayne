@@ -15,6 +15,7 @@ import {
   InvestigationStatsStrip,
 } from "@/components/workspace/analyst/investigation-stats-strip";
 import type { WorkbenchData } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function UserMessage({ content }: { content: string; turn?: number }) {
   return (

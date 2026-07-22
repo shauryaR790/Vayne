@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 
-import { listInvestigations } from "@/lib/api";
-import type { InvestigationListItem } from "@/lib/types";
 import { PageHeader } from "@/components/shared/workspace-card";
 import { Badge } from "@/components/ui/badge";
 import { MotionGroup } from "@/components/dashboard/motion";
+import {
+  HISTORY_MAX,
+  RECENT_INVESTIGATIONS_UPDATED,
+  loadInvestigationHistory,
+  syncRecentInvestigationsFromApi,
+  type RecentInvestigation,
+} from "@/lib/recent-investigations";
 
 function formatWhen(iso: string): string {
   try {
@@ -24,33 +29,46 @@ function formatWhen(iso: string): string {
 }
 
 export function InvestigationsList() {
-  const [items, setItems] = useState<InvestigationListItem[]>([]);
+  const [items, setItems] = useState<RecentInvestigation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const synced = await syncRecentInvestigationsFromApi(HISTORY_MAX);
+      setItems(synced);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    listInvestigations()
-      .then(setItems)
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false));
-  }, []);
+    setItems(loadInvestigationHistory(HISTORY_MAX));
+    void refresh();
+    const onUpdate = () => void refresh();
+    window.addEventListener(RECENT_INVESTIGATIONS_UPDATED, onUpdate);
+    return () => window.removeEventListener(RECENT_INVESTIGATIONS_UPDATED, onUpdate);
+  }, [refresh]);
 
   return (
     <div className="mx-auto w-full max-w-[920px] px-5 py-8 lg:px-8">
       <PageHeader
         title="History"
-        subtitle="Previous investigations — open a chat to resume where you left off"
+        subtitle="Your investigations in this browser — nothing from other users"
       />
 
-      {loading ? (
-        <p className="text-[13px] text-white/45">Loading history…</p>
+      {loading && items.length ? (
+        <p className="text-[13px] text-white/45">Refreshing…</p>
       ) : null}
-      {error ? <p className="text-[13px] text-white/60">{error}</p> : null}
 
       <MotionGroup className="mt-6 flex flex-col gap-2">
         {items.map((inv) => {
-          const target = inv.target.split(/[/\\]/).pop() || inv.target;
-          const risk = inv.attack_surface_classification;
+          const target =
+            inv.primaryHost ||
+            inv.sourceFile?.split(/[/\\]/).pop() ||
+            inv.title ||
+            "Security Investigation";
+          const risk = inv.surfaceClassification || inv.risk || "Unknown";
 
           return (
             <Link
@@ -66,17 +84,18 @@ export function InvestigationsList() {
                   <p className="truncate text-[15px] font-medium text-white">{target}</p>
                   <Badge
                     variant={
-                      risk.toLowerCase().includes("critical") || risk.toLowerCase().includes("high")
+                      String(risk).toLowerCase().includes("critical") ||
+                      String(risk).toLowerCase().includes("high")
                         ? "critical"
                         : "default"
                     }
                   >
-                    {risk}
+                    {String(risk)}
                   </Badge>
                 </div>
                 <p className="mt-1 text-[12px] text-white/40">
-                  {inv.findings_retained} findings · {inv.path_count} paths ·{" "}
-                  {formatWhen(inv.created_at)}
+                  {inv.findingsCount ?? 0} findings · {inv.pathCount ?? 0} paths ·{" "}
+                  {formatWhen(inv.updatedAt || inv.createdAt)}
                 </p>
               </div>
               <span className="shrink-0 text-[12px] font-medium text-white/35 group-hover:text-white/70">
@@ -87,7 +106,7 @@ export function InvestigationsList() {
         })}
       </MotionGroup>
 
-      {!loading && !items.length && !error ? (
+      {!loading && !items.length ? (
         <p className="py-16 text-center text-[14px] text-white/45">
           No investigations yet. Upload evidence from Home to start.
         </p>

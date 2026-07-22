@@ -591,7 +591,7 @@ export function InvestigationWorkstationReport({
               embedded
               layout="workstation"
               graph={presentation.graph}
-              workbench={workbench}
+              workbench={workbench ?? undefined}
               investigationId={bundle.detail.summary.id}
               context={{
                 hasPaths: presentation.hasPaths,

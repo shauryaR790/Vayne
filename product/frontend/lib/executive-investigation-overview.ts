@@ -18,11 +18,13 @@ export type PriorityTier = "Critical" | "High" | "Medium" | "Low";
 export interface PrioritizedInvestigation {
   id: string;
   tier: PriorityTier;
+  rank?: number;
   title: string;
   reason: string;
   riskScore: number;
   estimatedReviewMinutes: number;
   priorityReasons: string[];
+  rankingExplanation?: string;
   evidenceCount: number;
   confidence: number;
   claimStatus: string;
@@ -31,8 +33,11 @@ export interface PrioritizedInvestigation {
   immediateAction: string;
   evidenceSources: string[];
   affectedAssets: string[];
+  affectedIdentities: string[];
   evidenceItems: string[];
   missingEvidence: string[];
+  alternativeExplanations: string[];
+  analystTasks: Array<{ action: string; why: string; priority: string }>;
   detailSectionId: string;
 }
 
@@ -52,41 +57,53 @@ function statValue(workbench: WorkbenchData, label: string): string | number {
 }
 
 function mapPriorityItem(item: WorkbenchPriorityItem): PrioritizedInvestigation {
-  const reasons = (item.priority_reasons || []).filter((r) => !isInternalScoringText(r));
+  const rankedBullets = item.why_ranked_here?.bullets ?? [];
+  const reasons = rankedBullets.length
+    ? rankedBullets.filter((r) => !isInternalScoringText(r))
+    : (item.priority_reasons || []).filter((r) => !isInternalScoringText(r));
   const fallbackReasons = reasons.length ? reasons : ["Retained for analyst review."];
+  const riskScore = item.risk ?? item.risk_score;
   return {
     id: item.id,
     tier: item.tier,
+    rank: item.rank,
     title: sanitizeAnalystText(item.title, item.title),
     reason: investigationReason(item),
-    riskScore: item.risk_score,
+    riskScore,
     estimatedReviewMinutes: item.estimated_review_minutes,
     priorityReasons: fallbackReasons,
+    rankingExplanation: item.ranking_explanation || item.why_ranked_here?.headline,
     evidenceCount: item.evidence_count,
     confidence: item.confidence,
     claimStatus: item.claim_status,
     businessImpact: investigationBusinessImpact(item),
     confidenceExplanation: investigationConfidenceNote(item),
     immediateAction: sanitizeAnalystText(
-      item.immediate_action || item.next_best_actions?.[0] || "",
+      item.immediate_action || item.immediate_analyst_actions?.[0] || item.next_best_actions?.[0] || "",
       fallbackReasons[0],
     ),
     evidenceSources: item.evidence_sources ?? [],
     affectedAssets: item.affected_assets ?? [],
+    affectedIdentities: item.affected_identities ?? [],
     evidenceItems: item.evidence_items ?? [],
     missingEvidence: item.missing_evidence ?? [],
+    alternativeExplanations: item.alternative_explanations ?? [],
+    analystTasks: item.analyst_tasks ?? [],
     detailSectionId: item.detail_section_id,
   };
 }
 
 export function buildPrioritizedInvestigations(workbench: WorkbenchData): PrioritizedInvestigation[] {
+  const INTERNAL =
+    /false fingerprint|not applicable|not exploitable|missing preconditions|validate hypothesis in controlled/i;
   const queue = workbench.investigations?.length
     ? workbench.investigations
     : workbench.priority_queue;
-  if (queue?.length) {
-    return queue.map(mapPriorityItem);
-  }
-  return [];
+  if (!queue?.length) return [];
+  return queue
+    .filter((item) => item.cluster_type !== "hypothesis" && !String(item.id || "").startsWith("hyp:"))
+    .map(mapPriorityItem)
+    .filter((item) => !INTERNAL.test(item.title));
 }
 
 function buildExecutiveSummarySentences(
@@ -147,6 +164,25 @@ function buildExecutiveSummarySentences(
 }
 
 function buildStatistics(workbench: WorkbenchData, presentation: InvestigationPresentation) {
+  const panel = workbench.summary_panel;
+  if (panel) {
+    const hours =
+      panel.estimated_analyst_hours_saved > 0
+        ? `${panel.estimated_analyst_hours_saved}h`
+        : "—";
+    return [
+      { label: "Files uploaded", value: panel.files_uploaded },
+      { label: "Investigations generated", value: panel.investigations_generated },
+      { label: "Evidence signals", value: panel.evidence_signals },
+      { label: "Duplicate findings removed", value: panel.duplicate_findings_removed },
+      {
+        label: "Investigations requiring immediate review",
+        value: panel.investigations_requiring_immediate_review,
+      },
+      { label: "Estimated analyst hours saved", value: hours },
+    ];
+  }
+
   const metrics = workbench.executive_metrics;
   const files = metrics?.files ?? workbench.totals.files ?? statValue(workbench, "Files Parsed");
   const assets = metrics?.assets ?? statValue(workbench, "Assets");
@@ -228,8 +264,8 @@ function buildKeyObservations(
   const smbCount = workbench.confirmed_findings.filter((f) =>
     /smb|samba|cifs|445/i.test(`${f.title} ${f.host}`),
   ).length;
-  if (smbCount >= 2) {
-    observations.push(`SMB-related exposure appears across ${smbCount} retained finding${smbCount === 1 ? "" : "s"}.`);
+  if (smbCount >= 2 && prioritized.some((p) => /lateral|smb|movement/i.test(p.title))) {
+    observations.push(`SMB-related exposure appears in a prioritized lateral movement investigation.`);
   }
 
   if (workbench.totals.rejected_paths > 0) {
@@ -260,10 +296,15 @@ function buildRecommendedActions(
 
   const top = prioritized[0];
   if (top) {
-    const next =
-      top.missingEvidence[0] ||
-      (top.claimStatus === "needs_validation" ? `Validate: ${top.title}` : `Review: ${top.title}`);
-    actions.push(next.endsWith(".") ? next : `${next}.`);
+    const task = top.analystTasks[0];
+    if (task) {
+      actions.push(task.why ? `${task.action} — ${task.why}` : task.action);
+    } else {
+      const next =
+        top.missingEvidence[0] ||
+        (top.claimStatus === "needs_validation" ? `Validate: ${top.title}` : `Review: ${top.title}`);
+      actions.push(next.endsWith(".") ? next : `${next}.`);
+    }
   }
 
   for (const task of recommendationTasks(workbench).slice(0, 4)) {

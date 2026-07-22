@@ -29,6 +29,8 @@ from product.backend.services.investigation_prioritization import (
     build_investigation_audit,
     build_priority_queue,
 )
+from vayne.investigation.contract import finalize_investigation_list
+from vayne.investigation.summary import build_summary_panel
 
 # Human labels + display order for known scanner source tools.
 _TOOL_LABELS = {
@@ -401,19 +403,23 @@ def build_workbench(
     engine_investigations = (analyst_investigations or {}).get("investigations") or []
     engine_failed = bool((analyst_investigations or {}).get("error"))
     if engine_investigations and not engine_failed:
-        investigations = engine_investigations
+        investigations = finalize_investigation_list(engine_investigations[:12])
     else:
-        investigations = build_investigation_clusters(
+        investigations = finalize_investigation_list(
+            build_investigation_clusters(
+                confirmed_findings=confirmed_findings,
+                candidate_paths=candidate_paths,
+                hypotheses=hypotheses,
+            )[:12]
+        )
+    priority_queue = finalize_investigation_list(
+        build_priority_queue(
             confirmed_findings=confirmed_findings,
             candidate_paths=candidate_paths,
             hypotheses=hypotheses,
-        )
-    priority_queue = build_priority_queue(
-        confirmed_findings=confirmed_findings,
-        candidate_paths=candidate_paths,
-        hypotheses=hypotheses,
-        cross_source_matches=cross_source_matches,
-        investigations=investigations,
+            cross_source_matches=cross_source_matches,
+            investigations=investigations,
+        )[:8]
     )
     investigation_audit = build_investigation_audit(review, confirmed_findings)
     executive_metrics = build_executive_metrics(
@@ -528,6 +534,17 @@ def build_workbench(
         for step in investigation_timeline
     ]
 
+    noise_meta = (analyst_investigations or {}).get("noise_filter") or {}
+    noise_stats = noise_meta.get("statistics") or {}
+    summary_panel = build_summary_panel(
+        file_count=file_count,
+        investigations=investigations,
+        evidence_signals=findings_loaded,
+        duplicates_removed=duplicates_removed,
+        hours_saved=hours_saved,
+        noise_suppressed=int(noise_stats.get("suppressed") or noise_stats.get("filtered") or 0),
+    )
+
     return {
         "generated_at": _iso(datetime.now(timezone.utc)),
         "duration_seconds": duration,
@@ -550,7 +567,8 @@ def build_workbench(
         "investigation_timeline": investigation_timeline,
         "closing_line": "Everything above is traceable to raw scanner evidence.",
         "priority_queue": priority_queue,
-        "investigations": investigations[:12],
+        "investigations": investigations,
+        "summary_panel": summary_panel,
         "investigation_audit": investigation_audit,
         "executive_metrics": executive_metrics,
         "action_plan": action_plan,

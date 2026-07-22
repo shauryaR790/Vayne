@@ -32,6 +32,9 @@ type ExecutiveImpact = {
 };
 
 export function investigationReason(item: WorkbenchPriorityItem): string {
+  const fromContract = sanitizeAnalystText(item.reason_it_exists || "", "");
+  if (fromContract) return fromContract;
+
   const purpose = item.purpose as PurposeBlock | undefined;
   const fromPurpose = sanitizeAnalystText(purpose?.why_analyst_should_care || "", "");
   if (fromPurpose) return fromPurpose;

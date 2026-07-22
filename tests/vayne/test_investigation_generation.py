@@ -123,6 +123,9 @@ def test_build_analyst_investigations_produces_cluster_not_service():
     assert top.get("reasoning_chain", {}).get("most_likely_explanation")
     assert top.get("quality_score", {}).get("business_impact") >= 0
     assert top.get("next_best_actions")
+    assert top.get("rank") == 1
+    assert top.get("why_ranked_here", {}).get("bullets")
+    assert top.get("analyst_tasks")
 
 
 def test_noise_filter_retains_cve_on_different_hosts():

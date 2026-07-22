@@ -95,7 +95,7 @@ export function parseApiError(status: number, body: string): string {
   return trimmed.length > 240 ? `${trimmed.slice(0, 237)}…` : trimmed;
 }
 
-async function fetchJson<T>(path: string): Promise<T> {
+export async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(apiUrl(path), { cache: "no-store" });
   if (!res.ok) throw new Error(parseApiError(res.status, await res.text()));
   return res.json() as Promise<T>;

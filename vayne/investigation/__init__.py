@@ -9,7 +9,9 @@ it is, and what would change it, all without the LLM.
 """
 
 from vayne.investigation.engine import build_investigation
+from vayne.investigation.contract import finalize_investigation, finalize_investigation_list
 from vayne.investigation.generation import build_analyst_investigations, bridge_finding_validation
+from vayne.investigation.summary import build_summary_panel
 from vayne.investigation.rejected_paths import build_rejected_path_investigations
 
 __all__ = [
@@ -17,4 +19,7 @@ __all__ = [
     "build_analyst_investigations",
     "bridge_finding_validation",
     "build_rejected_path_investigations",
+    "finalize_investigation",
+    "finalize_investigation_list",
+    "build_summary_panel",
 ]

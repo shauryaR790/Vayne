@@ -59,7 +59,7 @@ def build_priority_queue(
     items.sort(
         key=lambda x: (
             tier_order.get(str(x.get("tier") or "Low"), 9),
-            -int(x.get("risk_score") or 0),
+            -int(x.get("priority_score") or x.get("risk_score") or 0),
             -int(x.get("evidence_count") or 0),
         )
     )

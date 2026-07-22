@@ -576,42 +576,6 @@ def build_investigation_clusters(
             }
         )
 
-    # Hypothesis-only investigations when no clusters formed
-    if not investigations and hypotheses:
-        for i, hyp in enumerate(hypotheses[:2]):
-            score = int(hyp.get("confidence") or 50)
-            tier = _tier_from_score(score, "medium", "needs_validation")
-            investigations.append(
-                {
-                    "id": f"hyp:{i}",
-                    "cluster_type": "hypothesis",
-                    "kind": "investigation",
-                    "tier": tier,
-                    "title": str(hyp.get("title") or "Open Security Hypothesis"),
-                    "reason": str(hyp.get("reason") or "Hypothesis requires validation."),
-                    "risk_score": score,
-                    "confidence": score,
-                    "claim_status": "needs_validation",
-                    "priority_reasons": [
-                        str(hyp.get("reason") or ""),
-                        str(hyp.get("required_validation") or ""),
-                    ],
-                    "business_impact": "Unknown until hypothesis is validated.",
-                    "confidence_explanation": "Hypothesis — no confirmed exploitation.",
-                    "estimated_review_minutes": _review_minutes(tier, 2),
-                    "immediate_action": str(
-                        hyp.get("required_validation") or "Validate hypothesis in controlled environment."
-                    ),
-                    "evidence_sources": [],
-                    "affected_assets": [],
-                    "evidence_count": 1,
-                    "finding_ids": [],
-                    "evidence_items": [str(hyp.get("current_evidence") or "")][:2],
-                    "missing_evidence": [str(hyp.get("required_validation") or "")][:1],
-                    "detail_section_id": "reasoning",
-                }
-            )
-
     tier_order = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}
     investigations.sort(
         key=lambda x: (

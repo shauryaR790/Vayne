@@ -45,6 +45,9 @@ export type InvestigationDateGroup = "today" | "yesterday" | "older";
 export type SidebarHistoryGroup = "today" | "yesterday" | "last_week" | "older";
 
 const STORAGE_KEY = "vayne-recent-investigations";
+/** Bump when history isolation rules change — clears shared-server pollution in localStorage. */
+const STORAGE_VERSION = 2;
+const STORAGE_VERSION_KEY = "vayne-recent-investigations-version";
 export const RECENT_INVESTIGATIONS_STORAGE_KEY = STORAGE_KEY;
 /** Max investigations kept in local cache — full history, not a “recent” cap. */
 export const HISTORY_MAX = 500;
@@ -318,8 +321,22 @@ export function prepareInvestigationList(
   ).slice(0, limit);
 }
 
+function ensureInvestigationHistoryStorage() {
+  if (typeof window === "undefined") return;
+  try {
+    const current = localStorage.getItem(STORAGE_VERSION_KEY);
+    if (current !== String(STORAGE_VERSION)) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
+    }
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 function loadRawRecentInvestigations(): RecentInvestigation[] {
   if (typeof window === "undefined") return [];
+  ensureInvestigationHistoryStorage();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
@@ -473,7 +490,7 @@ function listItemToRecent(
   });
 }
 
-/** Sync full investigation history from the backend (fast — no per-row enrich). */
+/** Sync metadata for investigations this browser already ran — never import shared server history. */
 let syncInFlight: Promise<RecentInvestigation[]> | null = null;
 
 export async function syncRecentInvestigationsFromApi(
@@ -481,14 +498,21 @@ export async function syncRecentInvestigationsFromApi(
 ): Promise<RecentInvestigation[]> {
   if (typeof window === "undefined") return [];
 
+  const local = loadRawRecentInvestigations();
+  if (!local.length) {
+    return [];
+  }
+
   const run = async (): Promise<RecentInvestigation[]> => {
     try {
       const rows = await listInvestigations();
-      if (!rows.length) return loadInvestigationHistory(limit);
-
-      const localById = new Map(loadRawRecentInvestigations().map((item) => [item.id, item]));
-      const merged = rows.map((row) => listItemToRecent(row, localById.get(row.id)));
-      const prepared = prepareInvestigationHistory(merged, HISTORY_MAX);
+      const localById = new Map(local.map((item) => [item.id, item]));
+      const merged = rows
+        .filter((row) => localById.has(row.id))
+        .map((row) => listItemToRecent(row, localById.get(row.id)));
+      const mergedIds = new Set(merged.map((item) => item.id));
+      const stillLocal = local.filter((item) => !mergedIds.has(item.id));
+      const prepared = prepareInvestigationHistory([...merged, ...stillLocal], HISTORY_MAX);
       persistInvestigationList(prepared);
       notifyRecentUpdated();
       return prepared.slice(0, limit);

@@ -39,7 +39,7 @@ function PriorityInvestigationRow({
             tierStyles(item.tier),
           )}
         >
-          {item.tier}
+          {item.rank ? `#${item.rank} · ${item.tier}` : item.tier}
         </span>
         <span className="font-mono text-[13px] font-bold text-white">Risk {item.riskScore}</span>
       </div>
@@ -54,6 +54,22 @@ function PriorityInvestigationRow({
         <span>Confidence: {item.confidence}%</span>
         {!compact ? <span>Review: ~{item.estimatedReviewMinutes} min</span> : null}
       </div>
+      {compact && item.immediateAction ? (
+        <p className="mt-2 text-[12px] text-white/65">
+          <span className="font-medium text-white/80">Next: </span>
+          {item.immediateAction}
+        </p>
+      ) : null}
+      {compact && item.priorityReasons.length ? (
+        <ul className="mt-2 space-y-1">
+          {item.priorityReasons.slice(0, 3).map((reason) => (
+            <li key={reason} className="flex gap-2 text-[11px] leading-relaxed text-white/55">
+              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-white/35" aria-hidden />
+              <span>{reason}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {item.affectedAssets.length ? (
         <p className="mt-2 text-[12px] text-white/60">
           <span className="font-medium text-white/75">Affected assets: </span>

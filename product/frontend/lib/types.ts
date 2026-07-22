@@ -520,6 +520,38 @@ export interface WorkbenchPriorityItem {
   };
   business_impact_executive?: Record<string, string>;
   next_best_actions?: string[];
+  rank?: number;
+  priority?: string;
+  risk?: number;
+  priority_score?: number;
+  reason_it_exists?: string;
+  affected_identities?: string[];
+  evidence_timeline?: Record<string, unknown>;
+  evidence?: Array<{
+    scanner: string;
+    filename: string;
+    finding_id: string;
+    timestamp?: string | null;
+    confidence_weight: number;
+    evidence_quality: string;
+    summary?: string;
+  }>;
+  alternative_explanations?: string[];
+  analyst_tasks?: Array<{ action: string; why: string; priority: string }>;
+  immediate_analyst_actions?: string[];
+  why_ranked_here?: { rank: number; headline: string; bullets: string[] };
+  ranking_explanation?: string;
+  confidence_factors?: string[];
+}
+
+export interface WorkbenchSummaryPanel {
+  files_uploaded: number;
+  investigations_generated: number;
+  evidence_signals: number;
+  duplicate_findings_removed: number;
+  investigations_requiring_immediate_review: number;
+  estimated_analyst_hours_saved: number;
+  noise_suppressed?: number;
 }
 
 export type WorkbenchInvestigation = WorkbenchPriorityItem;
@@ -614,6 +646,7 @@ export interface WorkbenchData {
   investigations?: WorkbenchInvestigation[];
   investigation_audit?: WorkbenchInvestigationAudit;
   executive_metrics?: WorkbenchExecutiveMetrics;
+  summary_panel?: WorkbenchSummaryPanel;
   action_plan?: WorkbenchActionPlan;
   evidence_ledger?: WorkbenchEvidenceLedger;
   totals: {

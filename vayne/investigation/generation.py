@@ -12,6 +12,7 @@ from typing import Any
 from vayne.attack_paths.proof import GraphProof
 from vayne.investigation.clustering import build_investigation_clusters
 from vayne.investigation.confidence_bridge import apply_confidence_bridge
+from vayne.investigation.contract import finalize_investigation
 from vayne.investigation.noise_filter import filter_investigated_findings
 from vayne.investigation.quality_score import composite_priority_score, compute_quality_score
 from vayne.investigation.reasoning_chain import build_reasoning_chain
@@ -49,7 +50,8 @@ def build_analyst_investigations(
     member_lookup = {item.correlated.id: item for item in filtered}
 
     candidate_paths = _candidate_paths(report.attack_paths, graph_proof)
-    hypotheses = _hypotheses_from_findings(filtered)
+    # Alternate hypotheses stay inside per-finding reasoning — never become queue items.
+    hypotheses: list[dict[str, Any]] = []
 
     clusters = build_investigation_clusters(
         confirmed_findings=finding_dicts,
@@ -84,8 +86,18 @@ def build_analyst_investigations(
         )
     )
 
+    finalized: list[dict[str, Any]] = []
+    for rank, inv in enumerate(investigations[:12], start=1):
+        members = [
+            member_lookup[fid]
+            for fid in inv.get("finding_ids") or []
+            if fid in member_lookup
+        ]
+        finalized.append(finalize_investigation(inv, rank=rank, members=members))
+    investigations = finalized
+
     payload: dict[str, Any] = {
-        "investigations": investigations[:12],
+        "investigations": investigations,
         "count": len(investigations[:12]),
         "noise_filter": noise_meta,
         "generated_at": datetime.now(timezone.utc).isoformat(),
