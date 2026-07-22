@@ -10,10 +10,6 @@ import { buildThinkMicroScript, createActivityLine, initActivityFeed } from "@/l
 import type { AnalystStreamSegment } from "@/lib/analyst-segments";
 import { buildSegmentRenderPlan } from "@/lib/analyst-stream";
 import type { EngineFileInsight } from "@/lib/engine-file-insights";
-import {
-  buildInvestigationStatsSnapshot,
-  InvestigationStatsStrip,
-} from "@/components/workspace/analyst/investigation-stats-strip";
 import type { WorkbenchData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -163,15 +159,9 @@ export function AnalystMessage({
   workbench?: WorkbenchData | null;
   uploadedFileCount?: number;
 }) {
-  const stats =
-    workbench && streamSegments?.length
-      ? buildInvestigationStatsSnapshot(workbench, uploadedFileCount)
-      : null;
-
   if (streamSegments?.length) {
     return (
       <div className="space-y-3">
-        {stats ? <InvestigationStatsStrip stats={stats} /> : null}
         <SegmentTimeline
           segments={streamSegments}
           fileInsights={fileInsights}

@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { CombinedEvidenceBanner } from "@/components/workspace/combined-evidence-banner";
+import { InvestigationStatisticsSection } from "@/components/workspace/analyst/investigation-stats-strip";
 import { ExecutiveInvestigationOverview as ExecutiveInvestigationOverviewPanel } from "@/components/workspace/executive-investigation-overview";
 import { GraphExplorer } from "@/components/graph/GraphExplorer";
 import type { ReasoningCheck } from "@/components/graph/GraphEmptyState";
@@ -347,6 +348,12 @@ export function InvestigationWorkstationReport({
     <article className={cn("flex w-full min-w-0 flex-col gap-1", className)}>
       {showCombinedAttribution ? (
         <CombinedEvidenceBanner filenames={uploadedFilenames} />
+      ) : null}
+      {workbench ? (
+        <InvestigationStatisticsSection
+          workbench={workbench}
+          uploadedFileCount={uploadedFilenames.length || undefined}
+        />
       ) : null}
       {workbench ? (
         <ExpertModeProvider expert={false}>

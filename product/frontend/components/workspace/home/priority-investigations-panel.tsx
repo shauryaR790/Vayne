@@ -85,7 +85,9 @@ export function PriorityInvestigationsPanel({
   return (
     <section className="mt-10 border-t border-vx-border pt-8">
       {summary && summary.investigations_generated > 0 ? (
-        <InvestigationSummaryPanel summary={summary} />
+        <div className="mb-6">
+          <InvestigationSummaryPanel summary={summary} />
+        </div>
       ) : null}
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <div>

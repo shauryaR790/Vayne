@@ -11,7 +11,13 @@ function SummaryCell({ label, value }: { label: string; value: string | number }
   );
 }
 
-export function InvestigationSummaryPanel({ summary }: { summary: WorkbenchSummaryPanel }) {
+export function InvestigationSummaryPanel({
+  summary,
+  className,
+}: {
+  summary: WorkbenchSummaryPanel;
+  className?: string;
+}) {
   const hours =
     summary.estimated_analyst_hours_saved > 0
       ? `${summary.estimated_analyst_hours_saved}h`
@@ -19,7 +25,7 @@ export function InvestigationSummaryPanel({ summary }: { summary: WorkbenchSumma
 
   return (
     <section
-      className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3"
+      className={`grid grid-cols-2 gap-2 sm:grid-cols-3${className ? ` ${className}` : ""}`}
       aria-label="Investigation summary"
     >
       <SummaryCell label="Files uploaded" value={summary.files_uploaded.toLocaleString()} />

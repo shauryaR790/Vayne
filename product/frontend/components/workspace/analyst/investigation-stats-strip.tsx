@@ -1,6 +1,7 @@
 "use client";
 
 import type { WorkbenchData } from "@/lib/types";
+import { InvestigationSummaryPanel } from "@/components/workspace/home/investigation-summary-panel";
 
 export interface InvestigationStatsSnapshot {
   files: number;
@@ -62,7 +63,7 @@ export function InvestigationStatsStrip({
 }) {
   return (
     <section
-      className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+      className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
       aria-label="Investigation statistics"
     >
       <StatCell label="Files ingested" value={stats.files.toLocaleString()} sub="Uploaded evidence" />
@@ -88,5 +89,32 @@ export function InvestigationStatsStrip({
       />
       <StatCell label="Analyst time saved" value={stats.hoursSaved} sub="Engine triage" />
     </section>
+  );
+}
+
+export function InvestigationStatisticsSection({
+  workbench,
+  uploadedFileCount,
+}: {
+  workbench: WorkbenchData;
+  uploadedFileCount?: number;
+}) {
+  const panel = workbench.summary_panel;
+
+  return (
+    <div className="border-b border-vx-border bg-vx-section-body px-6 py-5">
+      <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">
+        Investigation Statistics
+      </h2>
+      <div className="mt-4">
+        {panel ? (
+          <InvestigationSummaryPanel summary={panel} />
+        ) : (
+          <InvestigationStatsStrip
+            stats={buildInvestigationStatsSnapshot(workbench, uploadedFileCount)}
+          />
+        )}
+      </div>
+    </div>
   );
 }

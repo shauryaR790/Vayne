@@ -1,6 +1,5 @@
 "use client";
 
-import { MetricTile } from "@/components/shared/workspace-card";
 import type {
   ExecutiveInvestigationOverview,
   PrioritizedInvestigation,
@@ -176,17 +175,6 @@ export function ExecutiveInvestigationOverview({
               you need supporting evidence.
             </p>
           )}
-        </div>
-
-        <div className="border-b border-vx-border py-8">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">
-            Investigation Statistics
-          </h3>
-          <div className="mt-5 grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
-            {overview.statistics.map((row) => (
-              <MetricTile key={row.label} label={row.label} value={row.value} flat />
-            ))}
-          </div>
         </div>
 
         {overview.keyObservations.length ? (
