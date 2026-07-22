@@ -421,9 +421,12 @@ export function buildInvestigationPresentation(
   };
 }
 
-export function combinedAnalystIntro(fileCount: number): string {
+export function combinedAnalystIntro(fileCount: number, scannerTypes?: number): string {
   if (fileCount <= 1) return "Let me walk through what turned up in this scan.";
-  return `I pulled ${fileCount} evidence files together — here's how they connect.`;
+  if (scannerTypes && scannerTypes > 1) {
+    return `I ingested ${fileCount.toLocaleString()} evidence files across ${scannerTypes} scanner types — here's what matters.`;
+  }
+  return `I ingested ${fileCount.toLocaleString()} evidence files — here's how they connect.`;
 }
 
 export function separateAnalystIntro(count: number): string {

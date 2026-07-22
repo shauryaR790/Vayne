@@ -10,7 +10,11 @@ import { buildThinkMicroScript, createActivityLine, initActivityFeed } from "@/l
 import type { AnalystStreamSegment } from "@/lib/analyst-segments";
 import { buildSegmentRenderPlan } from "@/lib/analyst-stream";
 import type { EngineFileInsight } from "@/lib/engine-file-insights";
-import { cn } from "@/lib/utils";
+import {
+  buildInvestigationStatsSnapshot,
+  InvestigationStatsStrip,
+} from "@/components/workspace/analyst/investigation-stats-strip";
+import type { WorkbenchData } from "@/lib/types";
 
 export function UserMessage({ content }: { content: string; turn?: number }) {
   return (
@@ -143,6 +147,8 @@ export function AnalystMessage({
   revealedSegments,
   segmentTexts,
   activeThinking,
+  workbench,
+  uploadedFileCount,
 }: {
   content: string;
   streaming?: boolean;
@@ -153,17 +159,27 @@ export function AnalystMessage({
   revealedSegments?: number;
   segmentTexts?: string[];
   activeThinking?: { label: string; detail?: string; activity?: AgentActivityFeed } | null;
+  workbench?: WorkbenchData | null;
+  uploadedFileCount?: number;
 }) {
+  const stats =
+    workbench && streamSegments?.length
+      ? buildInvestigationStatsSnapshot(workbench, uploadedFileCount)
+      : null;
+
   if (streamSegments?.length) {
     return (
-      <SegmentTimeline
-        segments={streamSegments}
-        fileInsights={fileInsights}
-        revealedSegments={revealedSegments ?? (streaming ? 0 : streamSegments.length)}
-        segmentTexts={segmentTexts}
-        activeThinking={activeThinking}
-        streaming={streaming}
-      />
+      <div className="space-y-3">
+        {stats ? <InvestigationStatsStrip stats={stats} /> : null}
+        <SegmentTimeline
+          segments={streamSegments}
+          fileInsights={fileInsights}
+          revealedSegments={revealedSegments ?? (streaming ? 0 : streamSegments.length)}
+          segmentTexts={segmentTexts}
+          activeThinking={activeThinking}
+          streaming={streaming}
+        />
+      </div>
     );
   }
 

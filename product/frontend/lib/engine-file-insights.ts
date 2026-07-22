@@ -73,11 +73,40 @@ function findingsForSource(
 
 function guessToolFromFilename(name: string): string {
   const lower = name.toLowerCase();
-  if (lower.endsWith(".nessus") || lower.includes("nessus")) return "nessus";
-  if (lower.endsWith(".xml")) return "nmap";
-  if (lower.endsWith(".json")) return "nuclei";
-  if (lower.endsWith(".csv")) return "csv";
+  const hints: Array<[string, string]> = [
+    ["burp", "Burp Suite"],
+    ["nessus", "Nessus"],
+    ["nmap", "Nmap"],
+    ["nuclei", "Nuclei"],
+    ["openvas", "OpenVAS"],
+    ["httpx", "httpx"],
+    ["naabu", "Naabu"],
+    ["katana", "Katana"],
+    ["qualys", "Qualys"],
+    ["rapid7", "Rapid7"],
+    ["nexpose", "Rapid7"],
+    ["insightvm", "Rapid7"],
+    ["ldap", "Active Directory"],
+    ["cloud", "Cloud Inventory"],
+    ["metasploit", "Metasploit"],
+    ["aws", "Cloud Inventory"],
+  ];
+  for (const [token, label] of hints) {
+    if (lower.includes(token)) return label;
+  }
+  if (lower.endsWith(".nessus")) return "Nessus";
+  if (lower.endsWith(".xml")) return "Nmap";
+  if (lower.endsWith(".csv")) return "CSV Export";
+  if (lower.endsWith(".html") || lower.endsWith(".htm")) return "OpenVAS";
   return "";
+}
+
+function resolveToolLabel(filename: string, tool: string): string {
+  const fromName = guessToolFromFilename(filename);
+  if (fromName) return fromName;
+  const cleaned = (tool || "").trim();
+  if (cleaned && !/^generic$/i.test(cleaned)) return cleaned;
+  return "Scanner export";
 }
 
 function matchContributionForFilename(
@@ -122,8 +151,23 @@ function expandContributionsPerFile(
     return baseContributions;
   }
 
-  // Combined intake often produces one backend row — do not clone it per upload.
-  if (baseContributions.length === 1) {
+  // Many uploads collapse to one backend row per scanner — expand by evidence source.
+  if (baseContributions.length === 1 && declaredNames.length > 1) {
+    if (workbench.evidence_sources.length > 1) {
+      return workbench.evidence_sources.map((source, index) => {
+        const matched =
+          declaredNames.find((name) => {
+            const hint = guessToolFromFilename(name).toLowerCase().replace(/\s+/g, "");
+            return (
+              hint &&
+              (normalizeKey(source.tool).includes(hint) ||
+                normalizeKey(source.label).includes(hint) ||
+                hint.includes(normalizeKey(source.tool)))
+            );
+          }) || declaredNames[index] || declaredNames[0];
+        return contributionFromSource(source, matched);
+      });
+    }
     return [{ ...baseContributions[0], file: declaredNames[0] || baseContributions[0].file }];
   }
 
@@ -138,7 +182,7 @@ function expandContributionsPerFile(
       }) ??
       declaredNames.find((name) => {
         if (usedFiles.has(name)) return false;
-        const hint = guessToolFromFilename(name);
+        const hint = normalizeKey(guessToolFromFilename(name));
         return hint && normalizeKey(contrib.tool).includes(hint);
       });
 
@@ -180,18 +224,21 @@ function buildLines(
   retained: WorkbenchConfirmedFinding[],
   mergedSecondary = false,
   companionFiles: string[] = [],
+  batchFileCount = 1,
 ): EngineFileInsightLine[] {
   const lines: EngineFileInsightLine[] = [];
 
   lines.push({
     kind: "context",
-    content: `# ${source?.label ?? contribution.tool} parser · ${contribution.hosts} host(s) · ${contribution.signals} signal(s)`,
+    content: `# ${source?.label ?? contribution.tool} parser · ${batchFileCount} file(s) · ${contribution.hosts} host(s) · ${contribution.signals} signal(s)`,
   });
 
   if (companionFiles.length > 0) {
+    const preview = companionFiles.slice(0, 6).map((name) => shortFilename(name)).join(", ");
+    const extra = companionFiles.length > 6 ? ` … +${companionFiles.length - 6} more` : "";
     lines.push({
       kind: "context",
-      content: `  combined intake: ${companionFiles.map((name) => shortFilename(name)).join(", ")}`,
+      content: `  batch intake: ${companionFiles.length + 1} files (${preview}${extra})`,
     });
   }
 
@@ -374,6 +421,8 @@ export function buildEngineFileInsights(
     return [];
   }
 
+  const uploadedTotal = declaredNames?.length || workbench.totals.files || 0;
+
   return dedupeFileInsights(
     contributions.map((contribution, index) => {
       const filename =
@@ -396,11 +445,17 @@ export function buildEngineFileInsights(
         index === 0
           ? declaredNames.slice(1)
           : [];
+      const batchFileCount =
+        companionFiles.length > 0
+          ? companionFiles.length + 1
+          : contributions.length === 1 && uploadedTotal > 1
+            ? uploadedTotal
+            : 1;
 
       return {
         id: `${normalizeKey(contribution.tool)}-${normalizeKey(shortFilename(filename))}-${index}`,
         filename: shortFilename(filename),
-        tool: contribution.tool,
+        tool: resolveToolLabel(filename, contribution.tool),
         extension: fileExtension(filename),
         additions: contribution.retained,
         deletions: contribution.rejected,
@@ -411,6 +466,7 @@ export function buildEngineFileInsights(
           retained,
           mergedSecondary,
           companionFiles,
+          batchFileCount,
         ),
       };
     }),

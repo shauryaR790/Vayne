@@ -153,10 +153,12 @@ export function buildAnalystBriefingMessages(
         sourceLabel: label,
         sourceLabels: options?.sourceLabels,
       });
+      const uploadedFileCount = options?.sourceLabels?.length ?? wb.totals.files;
       const streamSegments = buildBriefingSegments(wb, fileInsights, {
         intro: options?.intro,
         prefix: prefix || undefined,
         narrative,
+        uploadedFileCount,
       });
       messages.push({
         id: `brief-analyst-${bundle.detail.summary.id}`,

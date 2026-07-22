@@ -774,7 +774,8 @@ export function VaneWorkspace({
         setInvestigationBundles([data]);
         saveRecentInvestigation(recentEntryFromBundle(data, label));
 
-        const intro = combinedAnalystIntro(fileNames.length);
+        const scannerTypes = data.workbench?.evidence_sources?.length ?? 0;
+        const intro = combinedAnalystIntro(fileNames.length, scannerTypes);
         setBriefingPrompt(null);
         void playAnalystBriefing(
           buildAnalystBriefingMessages([data], {

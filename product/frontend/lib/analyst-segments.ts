@@ -129,9 +129,17 @@ function nextStepSnippet(wb: WorkbenchData): string {
 export function buildBriefingSegments(
   wb: WorkbenchData,
   fileInsights: EngineFileInsight[],
-  options?: { intro?: string; prefix?: string; narrative?: string },
+  options?: {
+    intro?: string;
+    prefix?: string;
+    narrative?: string;
+    uploadedFileCount?: number;
+  },
 ): AnalystStreamSegment[] {
   const segments: AnalystStreamSegment[] = [];
+  const uploadedCount =
+    options?.uploadedFileCount ?? wb.totals.files ?? fileInsights.length;
+  const scannerCards = fileInsights.length;
 
   if (options?.intro?.trim()) {
     for (const chunk of chunkProse(options.intro.trim(), 180)) {
@@ -142,11 +150,15 @@ export function buildBriefingSegments(
     segments.push({ type: "text", content: options.prefix.trim() });
   }
 
-  if (fileInsights.length) {
+  if (uploadedCount > 0 || scannerCards > 0) {
+    const detail =
+      uploadedCount > scannerCards && scannerCards > 0
+        ? `${uploadedCount.toLocaleString()} files · ${scannerCards} scanner type${scannerCards === 1 ? "" : "s"}`
+        : `${uploadedCount.toLocaleString()} file${uploadedCount === 1 ? "" : "s"}`;
     segments.push({
       type: "think",
       label: "Inspecting evidence",
-      detail: `${fileInsights.length} file${fileInsights.length === 1 ? "" : "s"}`,
+      detail,
     });
   }
 

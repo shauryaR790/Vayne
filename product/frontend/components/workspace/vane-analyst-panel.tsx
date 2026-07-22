@@ -140,6 +140,10 @@ export function VaneAnalystPanel({
                   revealedSegments={msg.revealedSegments}
                   segmentTexts={msg.segmentTexts}
                   activeThinking={msg.activeThinking}
+                  workbench={
+                    msg.id.startsWith("brief-analyst-") ? bundle?.workbench ?? undefined : undefined
+                  }
+                  uploadedFileCount={sourceLabels?.length}
                 />
               )}
             </div>
