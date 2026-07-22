@@ -19,6 +19,7 @@ from product.backend.db.session import get_db
 from product.backend.models.auth import ApiKeyORM, TeamMemberORM, TeamORM, UserORM
 from product.backend.workspace import get_workspace_header, normalize_workspace_id
 
+JWT_ISSUER = "vayne-product"
 API_KEY_PREFIX = "vayne_live_"
 
 
@@ -68,6 +69,7 @@ def create_access_token(*, user_id: str, team_id: str, workspace_id: str, email:
         "team_id": team_id,
         "workspace_id": workspace_id,
         "email": email,
+        "iss": JWT_ISSUER,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(hours=settings["ttl_hours"])).timestamp()),
     }
@@ -77,7 +79,13 @@ def create_access_token(*, user_id: str, team_id: str, workspace_id: str, email:
 def decode_access_token(token: str) -> AuthContext:
     settings = jwt_settings()
     try:
-        payload = jwt.decode(token, settings["secret"], algorithms=["HS256"])
+        payload = jwt.decode(
+            token,
+            settings["secret"],
+            algorithms=["HS256"],
+            issuer=JWT_ISSUER,
+            options={"require": ["exp", "iat", "sub", "iss"]},
+        )
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
     return AuthContext(

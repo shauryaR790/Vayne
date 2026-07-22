@@ -11,14 +11,22 @@ export type AuthProfile = {
   workspace_id: string;
 };
 
-export function getAuthToken(): string | null {
+function tokenStorage(): Storage | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+  return window.sessionStorage;
+}
+
+function profileStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage;
+}
+
+export function getAuthToken(): string | null {
+  return tokenStorage()?.getItem(AUTH_TOKEN_KEY) ?? null;
 }
 
 export function getAuthProfile(): AuthProfile | null {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(AUTH_PROFILE_KEY);
+  const raw = profileStorage()?.getItem(AUTH_PROFILE_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as AuthProfile;
@@ -28,13 +36,13 @@ export function getAuthProfile(): AuthProfile | null {
 }
 
 export function setAuthSession(token: string, profile: AuthProfile) {
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-  localStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(profile));
+  tokenStorage()?.setItem(AUTH_TOKEN_KEY, token);
+  profileStorage()?.setItem(AUTH_PROFILE_KEY, JSON.stringify(profile));
 }
 
 export function clearAuthSession() {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-  localStorage.removeItem(AUTH_PROFILE_KEY);
+  tokenStorage()?.removeItem(AUTH_TOKEN_KEY);
+  profileStorage()?.removeItem(AUTH_PROFILE_KEY);
 }
 
 export function isAuthenticated(): boolean {

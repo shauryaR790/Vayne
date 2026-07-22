@@ -21,6 +21,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from product.backend.config import expose_error_details
 from product.backend.logging_config import get_logger
 from vayne.parsers.loader import parse_file as engine_parse_file
 
@@ -65,14 +66,16 @@ class FileParseOutcome:
     status_code: int | None = None
 
     def as_error_payload(self) -> dict:
-        return {
+        payload = {
             "success": False,
             "stage": self.stage,
             "file": self.filename,
             "error": self.error,
             "error_kind": self.error_kind,
-            "details": self.details,
         }
+        if expose_error_details() and self.details:
+            payload["details"] = self.details
+        return payload
 
 
 @dataclass
@@ -194,6 +197,7 @@ def parse_single_file(path: Path, original_name: str) -> FileParseOutcome:
 
         kind, message = _classify(exc, path)
         tb = traceback.format_exc()
+        safe_error = f"{message}." if not expose_error_details() else f"{message}: {exc}"
         outcome = FileParseOutcome(
             filename=original_name,
             parser=parser,
@@ -202,8 +206,8 @@ def parse_single_file(path: Path, original_name: str) -> FileParseOutcome:
             peak_kb=peak_kb,
             stage=stage,
             error_kind=kind,
-            error=f"{message}: {exc}",
-            details=tb,
+            error=safe_error,
+            details=tb if expose_error_details() else None,
             status_code=_STATUS_BY_KIND.get(kind, 500),
         )
         logger.error(

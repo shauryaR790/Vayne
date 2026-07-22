@@ -65,3 +65,37 @@ def async_analyze_enabled() -> bool:
 
 def redis_url() -> str:
     return os.getenv("REDIS_URL", "redis://localhost:6379/0").strip()
+
+
+def allow_registration() -> bool:
+    flag = os.getenv("VAYNE_ALLOW_REGISTRATION", "").strip().lower()
+    if flag in {"1", "true", "yes"}:
+        return True
+    if flag in {"0", "false", "no"}:
+        return False
+    return not is_production()
+
+
+def rate_limit_settings() -> dict:
+    return {
+        "enabled": os.getenv("VAYNE_RATE_LIMIT", "true").lower() not in ("0", "false", "no"),
+    }
+
+
+def cors_allow_origin_regex() -> str | None:
+    if is_production():
+        return None
+    return (
+        r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$"
+        r"|https://([a-z0-9-]+\.)*vercel\.app$"
+    )
+
+
+def public_error_message() -> str:
+    return "An internal error occurred. Contact support if this persists."
+
+
+def sanitize_client_error(message: str | None) -> str:
+    if expose_error_details():
+        return message or public_error_message()
+    return public_error_message()

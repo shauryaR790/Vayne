@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
+from product.backend.config import allow_registration
 from product.backend.auth import (
     AuthContext,
     authenticate_user,
@@ -22,14 +23,14 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8)
-    name: str = ""
-    team_name: str = ""
+    password: str = Field(min_length=8, max_length=128)
+    name: str = Field(default="", max_length=128)
+    team_name: str = Field(default="", max_length=128)
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=128)
 
 
 class AuthResponse(BaseModel):
@@ -63,6 +64,8 @@ class ApiKeyCreateResponse(BaseModel):
 
 @router.post("/register", response_model=AuthResponse)
 def register(body: RegisterRequest, db: Session = Depends(get_db)) -> AuthResponse:
+    if not allow_registration():
+        raise HTTPException(status_code=403, detail="Registration is disabled")
     user, team = register_user(
         db,
         email=body.email,

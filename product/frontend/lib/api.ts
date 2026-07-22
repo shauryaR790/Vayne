@@ -308,7 +308,6 @@ export async function analyzeFiles(
       status: res.status,
       stage: body.stage,
       file: body.file,
-      details: body.details,
     });
   }
 

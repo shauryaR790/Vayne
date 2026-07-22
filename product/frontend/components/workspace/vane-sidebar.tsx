@@ -18,6 +18,7 @@ import {
 } from "@/lib/recent-investigations";
 import { InvestigationHistoryList } from "@/components/workspace/investigation-history-rows";
 import { getAuthProfile } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 const TUTORIAL_PROMO_DISMISSED_KEY = "vane-sidebar-tutorial-promo-dismissed";
 
@@ -77,9 +78,7 @@ export function VaneSidebar() {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(TUTORIAL_PROMO_DISMISSED_KEY) === "1";
   });
-  const [authProfile, setAuthProfile] = useState(() =>
-    typeof window === "undefined" ? null : getAuthProfile(),
-  );
+  const authProfile = typeof window === "undefined" ? null : getAuthProfile();
 
   const dismissTutorialPromo = useCallback(() => {
     window.localStorage.setItem(TUTORIAL_PROMO_DISMISSED_KEY, "1");

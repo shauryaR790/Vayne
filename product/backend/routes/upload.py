@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from product.backend.config import async_analyze_enabled, expose_error_details, upload_limits
+from product.backend.config import async_analyze_enabled, expose_error_details, public_error_message, upload_limits
 from product.backend.db.session import get_db
 from product.backend.deps import get_investigation_service
 from product.backend.auth import resolve_workspace_id
@@ -245,7 +245,7 @@ async def analyze_upload(
                 "success": False,
                 "stage": "engine",
                 "file": ", ".join(o.filename for o in preflight.succeeded),
-                "error": f"Investigation engine failed: {exc}",
+                "error": public_error_message() if not expose_error_details() else f"Investigation engine failed: {exc}",
                 "error_kind": "internal_error",
                 "files_processed": len(preflight.succeeded),
                 "files_skipped": len(preflight.failed),
