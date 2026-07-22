@@ -39,10 +39,12 @@ export function VaneMark({
 export function VaneLogo({
   size = "md",
   showWordmark = true,
+  showMark = true,
   className,
 }: {
   size?: "sm" | "sidebar" | "md" | "lg" | "hero";
   showWordmark?: boolean;
+  showMark?: boolean;
   className?: string;
 }) {
   const sizes = {
@@ -55,7 +57,7 @@ export function VaneLogo({
 
   return (
     <div className={cn("flex items-center", sizes.gap, className)}>
-      <VaneMark size={sizes.mark} className="text-white" />
+      {showMark ? <VaneMark size={sizes.mark} className="text-white" /> : null}
       {showWordmark ? (
         <span
           className={cn(
@@ -72,7 +74,7 @@ export function VaneLogo({
 }
 
 export function VaneSidebarBrand({ className }: { className?: string }) {
-  return <VaneLogo size="sidebar" className={cn("px-1", className)} />;
+  return <VaneLogo size="sidebar" showMark={false} className={cn("px-1", className)} />;
 }
 
 /** @deprecated Use VaneMark */

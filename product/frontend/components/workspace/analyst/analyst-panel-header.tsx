@@ -13,7 +13,7 @@ export function AnalystPanelHeader({
   return (
     <header className="shrink-0 border-b border-vx-border px-4 py-3">
       <div className="flex items-center justify-between gap-2">
-        <VaneLogo size="sm" />
+        <VaneLogo size="sm" showMark={false} />
         {onDismiss ? (
           <button
             type="button"
