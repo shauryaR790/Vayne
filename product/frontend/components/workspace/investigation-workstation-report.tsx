@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { CombinedEvidenceBanner } from "@/components/workspace/combined-evidence-banner";
 import { InvestigationBriefing } from "@/components/workspace/investigation-briefing";
@@ -311,16 +311,26 @@ export function InvestigationWorkstationReport({
     (investigationMode === "combined" || uploadedFilenames.length > 1) &&
     uploadedFilenames.length > 1;
 
-  const nextDelay = createReveal();
+  const nextDelay = useMemo(() => createReveal(), []);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   const sectionOpen = useCallback(
-    (id: string) => openSections[id] ?? false,
+    (id: string) => openSections[id] === true,
     [openSections],
   );
 
   const setSectionOpen = useCallback((id: string, open: boolean) => {
-    setOpenSections((prev) => ({ ...prev, [id]: open }));
+    setOpenSections((prev) => {
+      if (prev[id] === open) return prev;
+      return { ...prev, [id]: open };
+    });
+    if (open && typeof document !== "undefined") {
+      window.requestAnimationFrame(() => {
+        document
+          .getElementById(`investigation-detail-${id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   }, []);
 
   return (

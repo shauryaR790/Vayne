@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 
 import { workbenchSurfaceClasses } from "@/components/shared/workspace-card";
@@ -101,72 +101,67 @@ export function CollapsibleSection({
   reveal?: number;
   bodyClassName?: string;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const isControlled = controlledOpen !== undefined;
-  const isOpen = forceOpen ?? (isControlled ? controlledOpen : open);
+  const isOpen = forceOpen === true ? true : isControlled ? Boolean(controlledOpen) : uncontrolledOpen;
 
   useEffect(() => {
-    if (forceOpen !== undefined) setOpen(forceOpen);
+    if (forceOpen !== undefined) setUncontrolledOpen(forceOpen);
   }, [forceOpen]);
 
-  const toggle = () => {
-    const next = !isOpen;
-    if (!isControlled) setOpen(next);
+  const setOpenState = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
 
   return (
-    <motion.section
+    <section
       id={sectionId ? `investigation-detail-${sectionId}` : undefined}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: reveal, ease: "easeOut" }}
       className="border-b border-vx-border"
+      style={reveal > 0 ? { animationDelay: `${reveal}s` } : undefined}
     >
       {forceOpen ? (
         <div className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4">
           <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
             {title}
           </span>
-          {aside ? <span className="flex items-center gap-2">{aside}</span> : null}
+          {aside ? <span className="flex shrink-0 items-center gap-2">{aside}</span> : null}
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={isOpen}
-          className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4 text-left transition-colors hover:bg-white/[0.02]"
-        >
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
-            {title}
-          </span>
-          <span className="flex items-center gap-2">
-            {aside}
+        <div className="flex w-full items-center gap-2 border-b border-vx-border bg-vx-section-body px-6 py-4">
+          <button
+            type="button"
+            onClick={() => setOpenState(!isOpen)}
+            aria-expanded={isOpen}
+            className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left transition-colors hover:text-white"
+          >
+            <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
+              {title}
+            </span>
             <ChevronDown
               className={cn(
-                "size-4 text-white transition-transform duration-200",
+                "size-4 shrink-0 text-white transition-transform duration-200",
                 isOpen && "rotate-180",
               )}
             />
-          </span>
-        </button>
+          </button>
+          {aside ? (
+            <span
+              className="flex shrink-0 items-center gap-2"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              {aside}
+            </span>
+          ) : null}
+        </div>
       )}
-      <AnimatePresence initial={false}>
-        {isOpen ? (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
-            className="overflow-hidden"
-          >
-            <div className={cn("bg-vx-section-body text-white", bodyClassName ?? "px-0 py-0")}>
-              {children}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </motion.section>
+      {isOpen ? (
+        <div className={cn("bg-vx-section-body text-white", bodyClassName ?? "px-0 py-0")}>
+          {children}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
