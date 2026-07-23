@@ -36,6 +36,7 @@ export function VaneAnalystPanel({
   initialScrollTop = 0,
   inputRef,
   onClearChat,
+  onClose,
   briefingPrompt,
   onGetSummary,
   onSkipSummary,
@@ -57,6 +58,7 @@ export function VaneAnalystPanel({
   initialScrollTop?: number;
   inputRef?: RefObject<HTMLTextAreaElement>;
   onClearChat?: () => void;
+  onClose?: () => void;
   briefingPrompt?: { fileCount: number } | null;
   onGetSummary?: () => void;
   onSkipSummary?: () => void;
@@ -88,9 +90,15 @@ export function VaneAnalystPanel({
   const activeBundles = bundles?.length ? bundles : bundle ? [bundle] : [];
 
   return (
-    <aside className="flex h-full w-full min-w-[300px] flex-col border-l border-vx-border bg-vx-analyst">
+    <aside
+      className={cn(
+        "flex h-full w-full flex-col border-l border-vx-border bg-vx-analyst",
+        !onClose && "min-w-[300px]",
+      )}
+    >
       <AnalystPanelHeader
         onDismiss={messages.length && onClearChat ? onClearChat : undefined}
+        onClose={onClose}
       />
       <div
         ref={scrollRef}

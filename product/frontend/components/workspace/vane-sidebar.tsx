@@ -51,11 +51,20 @@ function SidebarDivider() {
   return <div className="mx-4 border-t border-vx-border" aria-hidden />;
 }
 
-function NavLink({ item, active }: { item: AnalystNavItem; active: boolean }) {
+function NavLink({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: AnalystNavItem;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2.5 text-[16px] transition-colors",
         active
@@ -69,7 +78,15 @@ function NavLink({ item, active }: { item: AnalystNavItem; active: boolean }) {
   );
 }
 
-export function VaneSidebar() {
+function SidebarPanel({
+  onNavigate,
+  showClose,
+  onClose,
+}: {
+  onNavigate?: () => void;
+  showClose?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -116,19 +133,33 @@ export function VaneSidebar() {
 
   const startNew = () => {
     resetConversationToHome();
+    onNavigate?.();
     router.replace("/");
   };
 
   const openInvestigation = (id: string) => {
+    onNavigate?.();
     router.push(`/?id=${id}`);
   };
 
   return (
-    <aside className="flex h-screen w-[20%] min-w-[272px] max-w-[320px] shrink-0 flex-col border-r border-vx-border bg-vx-sidebar">
+    <>
       <div className="shrink-0 px-3 pb-3 pt-4">
-        <Link href="/" className="block px-2">
-          <VaneSidebarBrand />
-        </Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link href="/" onClick={onNavigate} className="block px-2">
+            <VaneSidebarBrand />
+          </Link>
+          {showClose && onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md text-white transition-colors hover:bg-white/10"
+              aria-label="Close navigation"
+            >
+              <X className="size-5" strokeWidth={1.75} aria-hidden />
+            </button>
+          ) : null}
+        </div>
 
         <button
           type="button"
@@ -149,6 +180,7 @@ export function VaneSidebar() {
               key={item.id}
               item={item}
               active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+              onNavigate={onNavigate}
             />
           ))}
         </div>
@@ -185,7 +217,11 @@ export function VaneSidebar() {
             ) : (
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <Link href="/login" className="text-[15px] text-white hover:underline">
+                  <Link
+                    href="/login"
+                    onClick={onNavigate}
+                    className="text-[15px] text-white hover:underline"
+                  >
                     Sign in
                   </Link>
                   <span className="text-white/30" aria-hidden>
@@ -193,6 +229,7 @@ export function VaneSidebar() {
                   </span>
                   <Link
                     href="/login?mode=register"
+                    onClick={onNavigate}
                     className="text-[15px] text-white hover:underline"
                   >
                     Create account
@@ -205,6 +242,67 @@ export function VaneSidebar() {
           <DeveloperMenu placement="above" />
         </div>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export function VaneSidebar({
+  mobileOpen = false,
+  onMobileClose,
+}: {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+} = {}) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    onMobileClose?.();
+    // Close drawer when the route changes (e.g. browser back).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: pathname only
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onMobileClose?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen, onMobileClose]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOpen]);
+
+  return (
+    <>
+      <aside className="hidden h-dvh w-[20%] min-w-[272px] max-w-[320px] shrink-0 flex-col border-r border-vx-border bg-vx-sidebar lg:flex">
+        <SidebarPanel />
+      </aside>
+
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="absolute inset-0 bg-black/70"
+            onClick={onMobileClose}
+          />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+            className="absolute left-0 top-0 flex h-full w-[min(320px,88vw)] flex-col border-r border-vx-border bg-vx-sidebar"
+          >
+            <SidebarPanel showClose onClose={onMobileClose} onNavigate={onMobileClose} />
+          </aside>
+        </div>
+      ) : null}
+    </>
   );
 }

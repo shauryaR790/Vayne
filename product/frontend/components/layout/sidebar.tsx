@@ -14,6 +14,7 @@ import {
   Search,
   Workflow,
   Telescope,
+  X,
 } from "lucide-react";
 
 import { resetConversationToHome } from "@/lib/conversation-session";
@@ -189,7 +190,15 @@ function SidebarRecents({
   );
 }
 
-export function Sidebar({ activeNav }: { activeNav?: string }) {
+export function Sidebar({
+  activeNav,
+  mobileOpen = false,
+  onMobileClose,
+}: {
+  activeNav?: string;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -205,6 +214,29 @@ export function Sidebar({ activeNav }: { activeNav?: string }) {
     return null;
   }, [pathname, searchParams]);
 
+  useEffect(() => {
+    onMobileClose?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- close on route change only
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onMobileClose?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen, onMobileClose]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOpen]);
+
   const isActive = (id: string, href: string) => {
     if (activeNav) return activeNav === id;
     if (href === "/") return pathname === "/" || pathname === "/analyze";
@@ -216,24 +248,39 @@ export function Sidebar({ activeNav }: { activeNav?: string }) {
 
   const startNewChat = () => {
     resetConversationToHome();
+    onMobileClose?.();
     if (pathname !== "/" && pathname !== "/analyze") {
       router.replace("/");
     }
   };
 
   const openConversation = (id: string) => {
+    onMobileClose?.();
     router.push(`/?id=${id}`);
   };
 
-  return (
-    <aside className="sticky top-0 z-30 hidden h-screen w-[310px] shrink-0 flex-col border-r border-white/[0.08] bg-black lg:flex">
+  const renderPanel = (mobile = false) => (
+    <>
       <div className="shrink-0 px-3 pb-2 pt-4">
-        <Link
-          href="/"
-          className="inline-block text-[15px] font-semibold tracking-[0.16em] text-white transition-colors hover:text-white"
-        >
-          VAYNE
-        </Link>
+        <div className="flex items-center justify-between gap-2">
+          <Link
+            href="/"
+            onClick={onMobileClose}
+            className="inline-block text-[15px] font-semibold tracking-[0.16em] text-white transition-colors hover:text-white"
+          >
+            VAYNE
+          </Link>
+          {mobile && onMobileClose ? (
+            <button
+              type="button"
+              onClick={onMobileClose}
+              className="flex size-9 shrink-0 items-center justify-center rounded-md text-white transition-colors hover:bg-white/10"
+              aria-label="Close navigation"
+            >
+              <X className="size-5" strokeWidth={1.75} aria-hidden />
+            </button>
+          ) : null}
+        </div>
 
         <button
           type="button"
@@ -245,7 +292,7 @@ export function Sidebar({ activeNav }: { activeNav?: string }) {
         </button>
 
         <div className="relative mt-2">
-          <label className="sr-only" htmlFor="sidebar-search">
+          <label className="sr-only" htmlFor={mobile ? "sidebar-search-mobile" : "sidebar-search"}>
             Search investigations
           </label>
           <Search
@@ -254,7 +301,7 @@ export function Sidebar({ activeNav }: { activeNav?: string }) {
             aria-hidden
           />
           <input
-            id="sidebar-search"
+            id={mobile ? "sidebar-search-mobile" : "sidebar-search"}
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -308,6 +355,33 @@ export function Sidebar({ activeNav }: { activeNav?: string }) {
           <DeveloperMenu />
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <aside className="sticky top-0 z-30 hidden h-dvh w-[310px] shrink-0 flex-col border-r border-white/[0.08] bg-black lg:flex">
+        {renderPanel(false)}
+      </aside>
+
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="absolute inset-0 bg-black/70"
+            onClick={onMobileClose}
+          />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+            className="absolute left-0 top-0 flex h-full w-[min(320px,88vw)] flex-col border-r border-white/[0.08] bg-black"
+          >
+            {renderPanel(true)}
+          </aside>
+        </div>
+      ) : null}
+    </>
   );
 }

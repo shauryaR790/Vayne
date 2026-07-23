@@ -62,6 +62,7 @@ import { analysisPromptForFiles } from "@/lib/staged-files-summary";
 import { VaneSidebar } from "@/components/workspace/vane-sidebar";
 import { VaneEnginePanel } from "@/components/workspace/vane-engine-panel";
 import { VaneAnalystPanel } from "@/components/workspace/vane-analyst-panel";
+import { MobileWorkspaceHeader } from "@/components/workspace/mobile-workspace-chrome";
 import {
   InvestigationReportAskProvider,
   buildSectionAskPrompt,
@@ -71,6 +72,7 @@ import { useCommandPaletteItems } from "@/components/workspace/home/use-command-
 import { WorkspaceShortcutsOverlay } from "@/components/workspace/workspace-shortcuts-overlay";
 import { useWorkspaceKeyboard } from "@/components/workspace/use-workspace-keyboard";
 import { ANALYST_NAME, LOG_PREFIX } from "@/lib/brand";
+import { useIsLgUp } from "@/lib/use-media-query";
 import { ResetWorkspaceBootstrap } from "@/components/dev/reset-workspace-bootstrap";
 
 import { describeAnalyzeError, sanitizeUserMessage, USER_MESSAGES } from "@/lib/user-messages";
@@ -89,6 +91,7 @@ export function VaneWorkspace({
   resumeId?: string | null;
 }) {
   const router = useRouter();
+  const isLgUp = useIsLgUp();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [analystMessages, setAnalystMessages] = useState<AnalystMessage[]>([]);
   const [analystInput, setAnalystInput] = useState("");
@@ -110,6 +113,8 @@ export function VaneWorkspace({
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [investigationSessionActive, setInvestigationSessionActive] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [mobileAnalystOpen, setMobileAnalystOpen] = useState(false);
   const [briefingPrompt, setBriefingPrompt] = useState<{
     messages: StoredChatMessage[];
     fileCount: number;
@@ -832,16 +837,26 @@ export function VaneWorkspace({
 
   const dismissBriefingPrompt = useCallback(() => setBriefingPrompt(null), []);
 
+  useEffect(() => {
+    if (briefingPrompt) setMobileAnalystOpen(true);
+  }, [briefingPrompt]);
+
   const hasInvestigationData =
     !!bundle || enginePhase !== "idle" || messages.length > 0 || busy;
 
   const focusAnalyst = useCallback(() => {
-    analystInputRef.current?.focus();
+    window.setTimeout(() => analystInputRef.current?.focus(), 100);
   }, []);
+
+  const openMobileAnalyst = useCallback(() => {
+    setMobileAnalystOpen(true);
+    focusAnalyst();
+  }, [focusAnalyst]);
 
   const askAboutSection = useCallback(
     (sectionTitle: string, engineContext: string) => {
       setInvestigationSessionActive(true);
+      setMobileAnalystOpen(true);
       window.setTimeout(() => focusAnalyst(), 200);
       void streamReply(buildSectionAskPrompt(sectionTitle, engineContext));
     },
@@ -917,7 +932,7 @@ export function VaneWorkspace({
   const commandPaletteItems = useCommandPaletteItems({
     onNewInvestigation: () => window.dispatchEvent(new Event("vayne:new-chat")),
     onOpenInvestigation: handleOpenInvestigation,
-    onFocusAnalyst: focusAnalyst,
+    onFocusAnalyst: openMobileAnalyst,
     onAnalyze: () => void handleAnalyze(),
     onShowShortcuts: () => setShortcutsOpen(true),
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
@@ -931,13 +946,13 @@ export function VaneWorkspace({
     canAnalyze: files.length > 0 && !busy,
     onNewInvestigation: () => window.dispatchEvent(new Event("vayne:new-chat")),
     onAnalyze: () => void handleAnalyze(),
-    onFocusAnalyst: focusAnalyst,
+    onFocusAnalyst: openMobileAnalyst,
     onCommandPalette: () => setCommandPaletteOpen(true),
     onShowShortcuts: () => setShortcutsOpen(true),
   });
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-vx-app text-white">
+    <div className="flex h-dvh w-full overflow-hidden bg-vx-app text-white">
       <ResetWorkspaceBootstrap />
       <WorkspaceShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <CommandPalette
@@ -946,18 +961,27 @@ export function VaneWorkspace({
         onClose={() => setCommandPaletteOpen(false)}
       />
 
+      <MobileWorkspaceHeader
+        onOpenNav={() => setMobileNavOpen(true)}
+        showAnalyst={investigationSessionActive}
+        onOpenAnalyst={openMobileAnalyst}
+      />
+
       <Suspense
         fallback={
-          <aside className="h-screen w-[20%] min-w-[260px] shrink-0 bg-vx-app" />
+          <aside className="hidden h-dvh w-[20%] min-w-[260px] shrink-0 bg-vx-app lg:block" />
         }
       >
-        <VaneSidebar />
+        <VaneSidebar
+          mobileOpen={mobileNavOpen}
+          onMobileClose={() => setMobileNavOpen(false)}
+        />
       </Suspense>
 
       <motion.div
-        className="flex h-screen min-w-0 flex-col border-r border-vx-border bg-vx-app"
+        className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-vx-border bg-vx-app pt-12 lg:h-dvh lg:pt-0"
         animate={{
-          flex: investigationSessionActive ? "1 1 55%" : "1 1 100%",
+          flex: investigationSessionActive && isLgUp ? "1 1 55%" : "1 1 100%",
         }}
         transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
       >
@@ -1003,21 +1027,21 @@ export function VaneWorkspace({
             onInvestigationModeChange={handleInvestigationModeChange}
             onBeginSession={handleHomeBegin}
             onOpenInvestigation={handleOpenInvestigation}
-            onFocusAnalyst={focusAnalyst}
+            onFocusAnalyst={openMobileAnalyst}
             onNewInvestigation={() => window.dispatchEvent(new Event("vayne:new-chat"))}
           />
         </InvestigationReportAskProvider>
       </motion.div>
 
       <AnimatePresence initial={false}>
-        {investigationSessionActive ? (
+        {investigationSessionActive && isLgUp ? (
           <motion.div
             key="analyst-panel"
             initial={{ width: 0, opacity: 0, x: 16 }}
             animate={{ width: "25%", opacity: 1, x: 0 }}
             exit={{ width: 0, opacity: 0, x: 16 }}
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="h-screen min-w-[300px] shrink-0 overflow-hidden"
+            className="h-dvh min-w-[300px] shrink-0 overflow-hidden"
           >
             <VaneAnalystPanel
               bundle={bundle}
@@ -1047,6 +1071,37 @@ export function VaneWorkspace({
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      {investigationSessionActive && !isLgUp && mobileAnalystOpen ? (
+        <div className="fixed inset-0 z-40 bg-vx-analyst">
+          <VaneAnalystPanel
+            bundle={bundle}
+            bundles={analystBundles}
+            contextLabel={analystContextLabel}
+            messages={analystMessages}
+            input={analystInput}
+            busy={busy}
+            thinking={thinking}
+            activityFeed={activityFeed}
+            analystOnline={analystOnline}
+            initialScrollTop={analystScrollTopRef.current}
+            onInputChange={setAnalystInput}
+            onAsk={(q) => void streamReply(q)}
+            onScroll={(top) => {
+              analystScrollTopRef.current = top;
+              persist({ analystScrollTop: top });
+            }}
+            inputRef={analystInputRef}
+            onClearChat={() => setAnalystMessages([])}
+            onClose={() => setMobileAnalystOpen(false)}
+            briefingPrompt={briefingPrompt ? { fileCount: briefingPrompt.fileCount } : null}
+            onGetSummary={runBriefingPrompt}
+            onSkipSummary={dismissBriefingPrompt}
+            sourceLabel={engineSourceLabels[0]}
+            sourceLabels={engineSourceLabels}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

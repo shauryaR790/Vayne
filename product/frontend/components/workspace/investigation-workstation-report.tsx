@@ -361,7 +361,7 @@ export function InvestigationWorkstationReport({
       ) : null}
       {workbench ? (
         <ExpertModeProvider expert={false}>
-          <div className="border-b border-vx-border bg-vx-section-body px-6 py-4">
+          <div className="border-b border-vx-border bg-vx-section-body px-4 py-4 sm:px-6">
             <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50">
               Optional Details
             </h2>

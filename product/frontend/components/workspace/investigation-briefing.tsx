@@ -20,7 +20,7 @@ function BriefingSection({
   className?: string;
 }) {
   return (
-    <section className={cn("border-b border-vx-border px-6 py-8", className)}>
+    <section className={cn("border-b border-vx-border px-4 py-6 sm:px-6 sm:py-8", className)}>
       <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">{title}</h2>
       {children}
     </section>
@@ -100,7 +100,7 @@ export function InvestigationBriefing({
 
   return (
     <div className="border-b border-vx-border bg-vx-section-body">
-      <div className="border-b border-vx-border px-6 py-5">
+      <div className="border-b border-vx-border px-4 py-5 sm:px-6">
         <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-white/50">
           Investigation Brief
         </p>
@@ -113,7 +113,7 @@ export function InvestigationBriefing({
       </div>
 
       {metrics ? (
-        <div className="border-b border-vx-border px-6 py-7">
+        <div className="border-b border-vx-border px-4 py-6 sm:px-6 sm:py-7">
           <div className="grid grid-cols-2 items-stretch gap-x-8 gap-y-6 sm:grid-cols-3 lg:grid-cols-5">
             {metrics.map((row) => (
               <MetricTile
