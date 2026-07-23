@@ -31,18 +31,45 @@ export function MetricTile({
   large?: boolean;
   flat?: boolean;
 }) {
+  const display =
+    typeof value === "string" ? value.toUpperCase() : value.toLocaleString();
+
   return (
-    <div className={cn(!flat && workbenchSurfaceClasses, flat ? "py-2" : "p-4")}>
-      <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-white">{label}</p>
+    <div
+      className={cn(
+        "flex h-full min-w-0 flex-col",
+        !flat && workbenchSurfaceClasses,
+        flat ? "py-1" : "p-4",
+      )}
+    >
       <p
         className={cn(
-          "mt-2 font-black uppercase leading-none text-white",
-          large ? "text-4xl" : "text-2xl",
+          "min-h-[2.75rem] font-bold uppercase leading-snug tracking-[0.12em] text-white/55",
+          large ? "text-[12px]" : "text-[11px]",
         )}
       >
-        {typeof value === "string" ? value.toUpperCase() : value}
+        {label}
       </p>
-      {sub ? <p className="mt-1.5 text-[12px] normal-case leading-snug text-white/55">{sub}</p> : null}
+      <p
+        className={cn(
+          "mt-2 font-black tabular-nums uppercase leading-none tracking-tight text-white",
+          large ? "text-[2.125rem]" : "text-2xl",
+        )}
+      >
+        {display}
+      </p>
+      {sub ? (
+        <p
+          className={cn(
+            "mt-2.5 min-h-[1.25rem] normal-case leading-snug text-white/50",
+            large ? "text-[13px]" : "text-[12px]",
+          )}
+        >
+          {sub}
+        </p>
+      ) : (
+        <div className="mt-2.5 min-h-[1.25rem]" aria-hidden />
+      )}
     </div>
   );
 }

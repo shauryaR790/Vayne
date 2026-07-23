@@ -113,10 +113,17 @@ export function InvestigationBriefing({
       </div>
 
       {metrics ? (
-        <div className="border-b border-vx-border px-6 py-6">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="border-b border-vx-border px-6 py-7">
+          <div className="grid grid-cols-2 items-stretch gap-x-8 gap-y-6 sm:grid-cols-3 lg:grid-cols-5">
             {metrics.map((row) => (
-              <MetricTile key={row.label} flat label={row.label} value={row.value} sub={row.sub} />
+              <MetricTile
+                key={row.label}
+                flat
+                large
+                label={row.label}
+                value={row.value}
+                sub={row.sub}
+              />
             ))}
           </div>
         </div>
