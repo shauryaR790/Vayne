@@ -85,37 +85,6 @@ function IgnoredRow({ label, value }: { label: string; value: number }) {
   );
 }
 
-function FileContributionFlags({
-  row,
-}: {
-  row: {
-    increasedConfidence: boolean;
-    newEvidence: boolean;
-    confirmedPrior: boolean;
-  };
-}) {
-  const flags = [
-    row.increasedConfidence ? "Increased confidence" : null,
-    row.newEvidence ? "New evidence" : null,
-    row.confirmedPrior ? "Confirmed prior signal" : null,
-  ].filter(Boolean);
-
-  if (!flags.length) return null;
-
-  return (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {flags.map((flag) => (
-        <span
-          key={flag}
-          className="border border-white/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/55"
-        >
-          {flag}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 export function InvestigationBriefing({
   workbench,
   uploadedFileCount,
@@ -230,34 +199,6 @@ export function InvestigationBriefing({
           </div>
         )}
       </BriefingSection>
-
-      {briefing.priorityFileGroups.length ? (
-        <BriefingSection title="Why These Files Matter">
-          <div className="mt-4 space-y-8">
-            {briefing.priorityFileGroups.map((group) => (
-              <div key={group.investigationId}>
-                <p className="text-[13px] font-medium text-white">
-                  #{group.rank} · {group.investigationTitle}
-                </p>
-                <div className="mt-3 divide-y divide-vx-border border border-vx-border">
-                  {group.files.map((file) => (
-                    <div key={`${group.investigationId}-${file.filename}-${file.scanner}`} className="px-4 py-3">
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <p className="font-mono text-[13px] text-white">{file.filename}</p>
-                        <span className="text-[11px] uppercase tracking-wide text-white/45">
-                          {file.scanner}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[13px] leading-relaxed text-white/70">{file.contributed}</p>
-                      <FileContributionFlags row={file} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </BriefingSection>
-      ) : null}
 
       <BriefingSection title="Why We Ignored the Rest">
         <div className="mt-4 border border-vx-border px-4">
