@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 
 import { CombinedEvidenceBanner } from "@/components/workspace/combined-evidence-banner";
-import { InvestigationStatisticsSection } from "@/components/workspace/analyst/investigation-stats-strip";
+import { InvestigationBriefing } from "@/components/workspace/investigation-briefing";
 import { GraphExplorer } from "@/components/graph/GraphExplorer";
 import type { ReasoningCheck } from "@/components/graph/GraphEmptyState";
 import {
@@ -329,9 +329,10 @@ export function InvestigationWorkstationReport({
         <CombinedEvidenceBanner filenames={uploadedFilenames} />
       ) : null}
       {workbench ? (
-        <InvestigationStatisticsSection
+        <InvestigationBriefing
           workbench={workbench}
           uploadedFileCount={uploadedFilenames.length || undefined}
+          onOpenSection={(sectionId) => setSectionOpen(sectionId, true)}
         />
       ) : null}
       {workbench ? (

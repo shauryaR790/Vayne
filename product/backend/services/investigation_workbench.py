@@ -29,6 +29,7 @@ from product.backend.services.investigation_prioritization import (
     build_investigation_audit,
     build_priority_queue,
 )
+from vayne.investigation.briefing import build_ignored_breakdown
 from vayne.investigation.contract import finalize_investigation_list, build_investigation_queue_status
 from vayne.investigation.clustering import build_findings_fallback_investigations
 from vayne.investigation.summary import build_summary_panel
@@ -563,6 +564,17 @@ def build_workbench(
         hours_saved=hours_saved,
         noise_suppressed=int(noise_stats.get("suppressed") or noise_stats.get("filtered") or 0),
     )
+    ignored_breakdown = build_ignored_breakdown(
+        findings_loaded=findings_loaded,
+        findings_retained=findings_retained,
+        duplicates_removed=duplicates_removed,
+        false_positives_removed=fp_removed,
+        noise_suppressed=int(noise_stats.get("suppressed") or noise_stats.get("filtered") or 0),
+        conflicts=evidence["conflicts"],
+        hypotheses=hypotheses,
+        priority_queue=priority_queue,
+        investigation_audit=investigation_audit,
+    )
 
     return {
         "generated_at": _iso(datetime.now(timezone.utc)),
@@ -588,6 +600,7 @@ def build_workbench(
         "priority_queue": priority_queue,
         "investigations": investigations,
         "summary_panel": summary_panel,
+        "ignored_breakdown": ignored_breakdown,
         "investigation_queue_status": investigation_queue_status,
         "investigation_audit": investigation_audit,
         "executive_metrics": executive_metrics,

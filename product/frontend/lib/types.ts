@@ -551,7 +551,20 @@ export interface WorkbenchSummaryPanel {
   duplicate_findings_removed: number;
   investigations_requiring_immediate_review: number;
   estimated_analyst_hours_saved: number;
+  estimated_analyst_review_minutes?: number;
   noise_suppressed?: number;
+}
+
+export interface WorkbenchIgnoredBreakdown {
+  duplicate_evidence_removed: number;
+  informational_findings: number;
+  already_mitigated: number;
+  contradicted_findings: number;
+  low_business_impact: number;
+  false_positives_removed?: number;
+  noise_suppressed?: number;
+  assurance: string;
+  exceptions: string[];
 }
 
 export interface WorkbenchInvestigationQueueStatus {
@@ -657,6 +670,7 @@ export interface WorkbenchData {
   investigation_audit?: WorkbenchInvestigationAudit;
   executive_metrics?: WorkbenchExecutiveMetrics;
   summary_panel?: WorkbenchSummaryPanel;
+  ignored_breakdown?: WorkbenchIgnoredBreakdown;
   investigation_queue_status?: WorkbenchInvestigationQueueStatus;
   action_plan?: WorkbenchActionPlan;
   evidence_ledger?: WorkbenchEvidenceLedger;

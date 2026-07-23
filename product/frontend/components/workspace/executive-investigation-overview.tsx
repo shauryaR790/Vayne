@@ -25,10 +25,12 @@ function PriorityInvestigationRow({
   item,
   onOpen,
   compact,
+  hideConfidence,
 }: {
   item: PrioritizedInvestigation;
   onOpen?: (sectionId: string) => void;
   compact?: boolean;
+  hideConfidence?: boolean;
 }) {
   return (
     <article className="border-b border-vx-border py-5 last:border-b-0">
@@ -51,7 +53,7 @@ function PriorityInvestigationRow({
         ) : (
           <span>Evidence signals: {item.evidenceCount}</span>
         )}
-        <span>Confidence: {item.confidence}%</span>
+        {!hideConfidence ? <span>Confidence: {item.confidence}%</span> : null}
         {!compact ? <span>Review: ~{item.estimatedReviewMinutes} min</span> : null}
       </div>
       {compact && item.immediateAction ? (
@@ -83,7 +85,7 @@ function PriorityInvestigationRow({
           {item.businessImpact}
         </p>
       ) : null}
-      {!compact ? (
+      {!compact && !hideConfidence ? (
         <p className="mt-3 text-[12px] leading-relaxed text-white/60">
           <span className="font-medium text-white/75">Confidence: </span>
           {item.confidenceExplanation}
