@@ -125,12 +125,6 @@ export function InvestigationBriefing({
       <BriefingSection title="Start Here">
         {briefing.startHere ? (
           <div className="mt-2">
-            {briefing.startHere.rankingExplanation || briefing.startHere.reason ? (
-              <p className="mb-4 max-w-[72ch] text-[14px] leading-relaxed text-white/75">
-                <span className="font-medium text-white">Why ranked first: </span>
-                {briefing.startHere.rankingExplanation || briefing.startHere.reason}
-              </p>
-            ) : null}
             <PriorityInvestigationRow
               item={briefing.startHere}
               hideConfidence

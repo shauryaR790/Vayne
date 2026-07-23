@@ -90,6 +90,7 @@ export function VaneAnalystPanel({
   return (
     <aside className="flex h-full w-full min-w-[300px] flex-col border-l border-vx-border bg-vx-analyst">
       <AnalystPanelHeader
+        tabLabel={contextLabel}
         onDismiss={messages.length && onClearChat ? onClearChat : undefined}
       />
       <div
