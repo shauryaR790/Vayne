@@ -26,7 +26,7 @@ def expose_error_details() -> bool:
 
 def upload_limits() -> dict[str, int]:
     return {
-        "max_files": int(os.getenv("VAYNE_MAX_UPLOAD_FILES", "100")),
+        "max_files": int(os.getenv("VAYNE_MAX_UPLOAD_FILES", "500")),
         "max_file_bytes": int(os.getenv("VAYNE_MAX_UPLOAD_BYTES", str(50 * 1024 * 1024))),
         "max_total_bytes": int(
             os.getenv("VAYNE_MAX_TOTAL_UPLOAD_BYTES", str(200 * 1024 * 1024))
