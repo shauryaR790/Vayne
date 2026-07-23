@@ -162,7 +162,7 @@ export function VaneAnalystPanel({
               {briefingPrompt.fileCount === 1
                 ? "1 file ingested and analyzed by the investigation engines."
                 : `${briefingPrompt.fileCount} files ingested and analyzed by the investigation engines.`}{" "}
-              Want VANE to explain what the engines concluded?
+              Want VAYNE to explain what the engines concluded?
             </p>
             <div className="mt-4 flex items-center gap-2">
               <button

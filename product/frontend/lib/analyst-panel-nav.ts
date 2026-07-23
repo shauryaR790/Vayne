@@ -35,7 +35,7 @@ export const ANALYST_RESOURCE_NAV: AnalystNavItem[] = [
   { id: "methodology", label: "Methodology", href: "/methodology", icon: GitBranch },
   { id: "research", label: "Research", href: "/research", icon: Telescope },
   { id: "roadmap", label: "Roadmap", href: "/roadmap", icon: Map },
-  { id: "about", label: "About VANE", href: "/about", icon: Info },
+  { id: "about", label: "About VAYNE", href: "/about", icon: Info },
 ];
 
 export function isAnalystNavActive(pathname: string, href: string): boolean {

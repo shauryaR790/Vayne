@@ -168,7 +168,7 @@ export function buildBriefingSegments(
 
   const plainTerms = sections.find((s) => s.startsWith("**In plain terms")) ?? "";
   const whatHappened = sections.find((s) => s.startsWith("**What happened")) ?? sections[0] ?? "";
-  const whySection = sections.find((s) => s.startsWith("**Why VANE")) ?? "";
+  const whySection = sections.find((s) => s.startsWith("**Why VAYNE")) ?? "";
   const missingSection =
     sections.find((s) => s.startsWith("**Missing evidence")) ??
     `**Missing evidence**\n${buildMissingSection(wb)}`;
@@ -202,8 +202,8 @@ export function buildBriefingSegments(
     });
   }
 
-  const whyBody = whySection || `**Why VANE believes it**\n${buildWhySection(wb)}`;
-  appendSectionChunks(segments, whyBody, "Why VANE believes it", 260);
+  const whyBody = whySection || `**Why VAYNE believes it**\n${buildWhySection(wb)}`;
+  appendSectionChunks(segments, whyBody, "Why VAYNE believes it", 260);
 
   segments.push({ type: "think", label: "Weighing confidence" });
   appendSectionChunks(segments, certaintySnippet(wb), "How certain", 220);

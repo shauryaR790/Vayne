@@ -94,7 +94,7 @@ async function ensureBackend() {
   if (process.env.VAYNE_SKIP_BACKEND === "1") return;
   if (await checkBackend()) return;
 
-  console.log(`Starting VANE backend on http://127.0.0.1:${BACKEND_PORT} …`);
+  console.log(`Starting VAYNE backend on http://127.0.0.1:${BACKEND_PORT} …`);
   const py = process.platform === "win32" ? "python" : "python3";
   const child = spawn(
     py,
@@ -111,7 +111,7 @@ async function ensureBackend() {
   for (let attempt = 0; attempt < 40; attempt += 1) {
     await new Promise((r) => setTimeout(r, 500));
     if (await checkBackend()) {
-      console.log("VANE backend ready.");
+      console.log("VAYNE backend ready.");
       return;
     }
   }

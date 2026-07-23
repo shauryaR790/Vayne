@@ -157,7 +157,7 @@ export function InvestigationComposer({
           value={value}
           disabled={disabled}
           rows={1}
-          placeholder="Ask VANE to investigate, analyze scans, or find attack paths"
+          placeholder="Ask VAYNE to investigate, analyze scans, or find attack paths"
           className={cn(
             "max-h-[200px] min-h-[52px] w-full resize-none bg-transparent px-4 pb-1 pt-4",
             "text-[15px] leading-relaxed text-white outline-none",
@@ -197,7 +197,7 @@ export function InvestigationComposer({
               )}
               aria-label="Model"
             >
-              <span className="truncate">VANE Analyst</span>
+              <span className="truncate">VAYNE Analyst</span>
               <ChevronDown className="size-3 shrink-0 opacity-50" strokeWidth={2} aria-hidden />
             </button>
           </div>

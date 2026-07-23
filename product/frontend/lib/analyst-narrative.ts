@@ -195,7 +195,7 @@ export function buildAnalystNarrative(wb: WorkbenchData): string {
     "**What happened**",
     buildWhatHappenedSection(wb),
     "",
-    "**Why VANE believes it**",
+    "**Why VAYNE believes it**",
     buildWhySection(wb),
     "",
     "**How certain**",

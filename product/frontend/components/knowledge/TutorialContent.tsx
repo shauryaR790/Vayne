@@ -25,7 +25,7 @@ const TOC = [
   { id: "missing", label: "Missing Evidence" },
   { id: "recommendations", label: "Recommendations" },
   { id: "attack-graph", label: "Attack Graph" },
-  { id: "ask-vane", label: "Ask VANE AI" },
+  { id: "ask-vane", label: "Ask VAYNE AI" },
   { id: "analyst", label: "Analyst Panel" },
   { id: "advanced", label: "Advanced Sections" },
 ];
@@ -34,7 +34,7 @@ export function TutorialContent() {
   return (
     <KnowledgeShell
       title="Investigation Tutorial"
-      subtitle="How to read the VANE investigation report — what each section means, how scores differ, and how to work the workspace on launch day."
+      subtitle="How to read the VAYNE investigation report — what each section means, how scores differ, and how to work the workspace on launch day."
       classification="GUIDE // ANALYST ONBOARDING"
       sections={TOC}
     >
@@ -42,8 +42,8 @@ export function TutorialContent() {
         <KnowledgeSection id="getting-started" title="Getting Started">
           <KnowledgeLead>
             Upload scan evidence from the home screen or open a recent investigation from the sidebar.
-            VANE runs the reasoning engine, then renders a structured report you can read top to bottom
-            or jump into with Ask VANE AI.
+            VAYNE runs the reasoning engine, then renders a structured report you can read top to bottom
+            or jump into with Ask VAYNE AI.
           </KnowledgeLead>
           <FlowDiagram
             lines={[
@@ -53,14 +53,14 @@ export function TutorialContent() {
               "↓",
               "Investigation report opens in the main panel",
               "↓",
-              "Ask VANE AI for depth on any section",
+              "Ask VAYNE AI for depth on any section",
             ]}
           />
           <BulletGrid
             items={[
               "New Investigation — start fresh from the sidebar",
               "Investigation History — reopen prior runs",
-              "Analyst panel — chat opens when you Ask VANE AI",
+              "Analyst panel — chat opens when you Ask VAYNE AI",
             ]}
           />
         </KnowledgeSection>
@@ -70,7 +70,7 @@ export function TutorialContent() {
         <KnowledgeSection id="workspace-layout" title="Workspace Layout">
           <KnowledgeLead>
             The screen splits into three zones: navigation on the left, the investigation report in
-            the center, and the VANE analyst chat on the right (after you start a session or ask a
+            the center, and the VAYNE analyst chat on the right (after you start a session or ask a
             question).
           </KnowledgeLead>
           <CompareBlock
@@ -96,7 +96,7 @@ export function TutorialContent() {
             items={[
               "Risk — overall exposure severity weighted by reachable impact",
               "Exploit — likelihood the top finding can actually be exploited with current evidence",
-              "Findings — count retained after VANE rejected weak or contradictory items",
+              "Findings — count retained after VAYNE rejected weak or contradictory items",
               "Paths — attack chains validated vs blocked by the graph engine",
             ]}
           />
@@ -111,13 +111,13 @@ export function TutorialContent() {
       <KnowledgeSectionWrap id="executive">
         <KnowledgeSection id="executive-summary" title="Executive Summary">
           <KnowledgeLead>
-            Verdict-first summary for leadership and for you: what VANE concluded, what is still
+            Verdict-first summary for leadership and for you: what VAYNE concluded, what is still
             open, why it matters, and the single best next action.
           </KnowledgeLead>
           <BulletGrid
             items={[
               "Status pill — confirmed exposure, action required, or clear",
-              "What VANE knows — evidence-backed facts",
+              "What VAYNE knows — evidence-backed facts",
               "What remains open — validation gaps",
               "Recommended next step — highest-value action",
               "Confidence breakdown (optional) — technical scores for analysts",
@@ -130,7 +130,7 @@ export function TutorialContent() {
         <KnowledgeSection id="investigation-story" title="Investigation Story">
           <KnowledgeLead>
             Chronological narrative from raw scanner input through correlation, graph generation,
-            validation, and report synthesis. Use this when you need to explain how VANE reached
+            validation, and report synthesis. Use this when you need to explain how VAYNE reached
             its conclusion.
           </KnowledgeLead>
         </KnowledgeSection>
@@ -171,7 +171,7 @@ export function TutorialContent() {
       <KnowledgeSectionWrap id="missing">
         <KnowledgeSection id="missing-evidence" title="Missing Evidence">
           <KnowledgeLead>
-            Gaps VANE could not close. Each item explains why the gap matters and how filling it
+            Gaps VAYNE could not close. Each item explains why the gap matters and how filling it
             would change confidence — use this as your collection checklist for the next scan or
             manual test.
           </KnowledgeLead>
@@ -223,9 +223,9 @@ export function TutorialContent() {
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="ask-vane">
-        <KnowledgeSection id="ask-vane-ai" title="Ask VANE AI">
+        <KnowledgeSection id="ask-vane-ai" title="Ask VAYNE AI">
           <KnowledgeLead>
-            Each report section has one Ask VANE AI control in the section header. Click it to open
+            Each report section has one Ask VAYNE AI control in the section header. Click it to open
             the analyst panel and receive a deep explanation of that section — summary, operational
             detail, and prioritized recommendations — grounded only in engine facts.
           </KnowledgeLead>
@@ -248,7 +248,7 @@ export function TutorialContent() {
           </KnowledgeLead>
           <BulletGrid
             items={[
-              "Opens automatically when you Ask VANE AI on a section",
+              "Opens automatically when you Ask VAYNE AI on a section",
               "Keyboard: Ctrl/Cmd+K focuses the analyst input",
               "Clear chat resets the conversation for the same investigation",
             ]}

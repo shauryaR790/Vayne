@@ -118,7 +118,7 @@ export function interpretAnalystQuestion(
       "**In plain terms**",
       topInvestigationReason(wb) || "Evidence from multiple scanners supports the top retained finding.",
       "",
-      "**Why VANE believes it**",
+      "**Why VAYNE believes it**",
       buildWhySection(wb),
     ].join("\n\n");
   }

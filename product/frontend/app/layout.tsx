@@ -3,9 +3,9 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata = {
-  title: "VANE — Investigation Operating System",
+  title: "VAYNE — Investigation Operating System",
   description:
-    "Upload scanner evidence. VANE correlates, deduplicates, prioritizes, and generates investigations — then explains what the engines concluded.",
+    "Upload scanner evidence. VAYNE correlates, deduplicates, prioritizes, and generates investigations — then explains what the engines concluded.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

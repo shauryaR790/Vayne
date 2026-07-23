@@ -25,7 +25,7 @@ export function sectionContextExecutiveSummary(
     `Headline: ${v.headline}`,
     `Summary: ${v.summary}`,
     v.panel.highestPriorityFinding ? `Top finding: ${v.panel.highestPriorityFinding} (${v.panel.highestPriorityHost})` : null,
-    `What VANE knows: ${v.whatWeKnow}`,
+    `What VAYNE knows: ${v.whatWeKnow}`,
     v.stillOpen ? `Still open: ${v.stillOpen}` : null,
     `Why respond: ${v.whyRespond}`,
     `Next action: ${v.nextAction}`,

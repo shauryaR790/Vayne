@@ -44,7 +44,7 @@ export function useCommandPaletteItems({
         if (row.action === "New Investigation") onNewInvestigation();
         else if (row.action === "Open Evidence") dispatchWorkspaceEvent(OPEN_EVIDENCE_EVENT);
         else if (row.action === "Analyze Selected Evidence" && canAnalyze) onAnalyze();
-        else if (row.action === "Ask VANE Analyst") onFocusAnalyst();
+        else if (row.action === "Ask VAYNE Analyst") onFocusAnalyst();
         else if (row.action === "Command Palette") onOpenCommandPalette();
         else if (row.action === "Keyboard Shortcuts") onShowShortcuts();
       },

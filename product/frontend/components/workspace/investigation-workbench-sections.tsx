@@ -289,7 +289,7 @@ export function ExecutiveSummarySection({
 
         <div className="grid gap-4 border-t border-vx-border pt-5 md:grid-cols-3">
           <div>
-            <SectionLabel>What VANE knows</SectionLabel>
+            <SectionLabel>What VAYNE knows</SectionLabel>
             <p className="mt-2 text-[13px] leading-relaxed text-white">{verdict.whatWeKnow}</p>
           </div>
           <div>
@@ -320,7 +320,7 @@ export function InvestigationVerdictSection({
   return (
     <WorkstationSection title="Investigation Verdict" reveal={reveal} large>
       <WorkspaceCard className="p-6">
-        <SectionLabel>What VANE discovered</SectionLabel>
+        <SectionLabel>What VAYNE discovered</SectionLabel>
         <p className="mt-3 max-w-[80ch] text-[16px] font-medium leading-[1.7] text-vx-text">
           {verdict.headline}
         </p>
@@ -376,7 +376,7 @@ export function InvestigationFlowSection({
       }
     >
       <p className="mb-4 max-w-[72ch] text-[13px] leading-relaxed text-white">
-        How VANE reached its conclusions — from raw scanner output through correlation, validation,
+        How VAYNE reached its conclusions — from raw scanner output through correlation, validation,
         and final retention.
       </p>
       <ol className="list-none divide-y divide-vx-border border-y border-vx-border pl-0">
@@ -428,7 +428,7 @@ export function EngineFileDetailsSection({
   return (
     <WorkstationSection title="Evidence Files" reveal={reveal} large embedded={embedded}>
       <p className="mb-4 max-w-[72ch] text-[13px] leading-relaxed text-vx-secondary">
-        Per-file engine output — what VANE extracted, retained, and rejected from each evidence
+        Per-file engine output — what VAYNE extracted, retained, and rejected from each evidence
         source.
       </p>
       <AnalystEngineFileBoxes
@@ -649,7 +649,7 @@ function AnalystFindingCard({
             </div>
           ) : null}
 
-          <ExplainabilityBlock title="Why VANE retained this finding">
+          <ExplainabilityBlock title="Why VAYNE retained this finding">
             <BulletList items={explain.whyBelieve} />
           </ExplainabilityBlock>
 

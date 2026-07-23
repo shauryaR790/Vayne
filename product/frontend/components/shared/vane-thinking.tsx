@@ -3,7 +3,7 @@
 import { CursorLoadingStatus } from "@/components/shared/cursor-loading-status";
 
 export function VaneThinking({
-  label = "VANE is investigating",
+  label = "VAYNE is investigating",
   detail,
 }: {
   label?: string;

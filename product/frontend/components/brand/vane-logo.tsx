@@ -1,7 +1,9 @@
 import { PRODUCT_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
-/** Minimal geometric mark — two strokes forming a V. */
+const LOGO_SRC = "/vayne-logo.png";
+
+/** Product mark — uploaded VAYNE wordmark. */
 export function VaneMark({
   size = 24,
   className,
@@ -10,29 +12,16 @@ export function VaneMark({
   className?: string;
 }) {
   return (
-    <svg
-      width={size}
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={LOGO_SRC}
+      alt=""
+      width={Math.round(size * 3.2)}
       height={size}
-      viewBox="0 0 24 24"
-      fill="none"
       aria-hidden
-      className={cn("shrink-0", className)}
-    >
-      <path
-        d="M5.5 5.5L12 18.5L18.5 5.5"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.5 5.5H15.5"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        opacity="0.35"
-      />
-    </svg>
+      className={cn("shrink-0 object-contain object-left", className)}
+      style={{ height: size, width: "auto" }}
+    />
   );
 }
 
@@ -47,34 +36,32 @@ export function VaneLogo({
   showMark?: boolean;
   className?: string;
 }) {
-  const sizes = {
-    sm: { mark: 20, text: "text-[13px]", gap: "gap-2.5", tracking: "tracking-[0.16em]" },
-    sidebar: { mark: 28, text: "text-[17px]", gap: "gap-2.5", tracking: "tracking-[0.14em]" },
-    md: { mark: 26, text: "text-[15px]", gap: "gap-2.5", tracking: "tracking-[0.16em]" },
-    lg: { mark: 36, text: "text-[22px]", gap: "gap-3", tracking: "tracking-[0.14em]" },
-    hero: { mark: 44, text: "text-[28px]", gap: "gap-3", tracking: "tracking-[0.12em]" },
-  }[size];
+  const heights = {
+    sm: 20,
+    sidebar: 28,
+    md: 26,
+    lg: 36,
+    hero: 44,
+  } as const;
+  const height = heights[size];
+
+  // Uploaded asset is the full VAYNE wordmark — use it as the brand lockup.
+  if (!showMark && !showWordmark) return null;
 
   return (
-    <div className={cn("flex items-center", sizes.gap, className)}>
-      {showMark ? <VaneMark size={sizes.mark} className="text-white" /> : null}
-      {showWordmark ? (
-        <span
-          className={cn(
-            "font-semibold leading-none text-white",
-            sizes.text,
-            sizes.tracking,
-          )}
-        >
-          {PRODUCT_NAME}
-        </span>
-      ) : null}
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={LOGO_SRC}
+      alt={PRODUCT_NAME}
+      height={height}
+      className={cn("shrink-0 object-contain object-left", className)}
+      style={{ height, width: "auto" }}
+    />
   );
 }
 
 export function VaneSidebarBrand({ className }: { className?: string }) {
-  return <VaneLogo size="sidebar" showMark={false} className={cn("px-1", className)} />;
+  return <VaneLogo size="sidebar" className={cn("px-1", className)} />;
 }
 
 /** @deprecated Use VaneMark */
@@ -85,5 +72,5 @@ export function VaneLogoMark({
   size?: number;
   className?: string;
 }) {
-  return <VaneMark size={size} className={cn("text-white", className)} />;
+  return <VaneMark size={size} className={className} />;
 }

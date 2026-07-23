@@ -33,9 +33,9 @@ function SidebarTutorialPromo({ onDismiss }: { onDismiss: () => void }) {
       >
         <X className="size-3.5" strokeWidth={2} aria-hidden />
       </button>
-      <p className="pr-6 text-[13px] font-semibold leading-snug text-white">Learn how VANE works</p>
+      <p className="pr-6 text-[13px] font-semibold leading-snug text-white">Learn how VAYNE works</p>
       <p className="mt-2 text-[12px] leading-relaxed text-white">
-        Full walkthrough of the investigation report, scores, attack graph, and Ask VANE AI.
+        Full walkthrough of the investigation report, scores, attack graph, and Ask VAYNE AI.
       </p>
       <Link
         href="/tutorial"

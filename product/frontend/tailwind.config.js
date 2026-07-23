@@ -7,7 +7,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        /* VANE theme — values live in styles/theme.css */
+        /* VAYNE theme — values live in styles/theme.css */
         vx: {
           app: "var(--vx-app)",
           sidebar: "var(--vx-sidebar)",

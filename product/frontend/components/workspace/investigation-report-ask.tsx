@@ -54,7 +54,7 @@ export function SectionAskVayneButton({
       )}
     >
       <Sparkles className="size-3 shrink-0" />
-      Ask VANE about this section
+      Ask VAYNE about this section
     </button>
   );
 }

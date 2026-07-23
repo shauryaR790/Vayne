@@ -59,7 +59,7 @@ export function LoginForm() {
     <main className="min-h-screen flex items-center justify-center bg-[#0a0a0b] px-4">
       <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#111113] p-8 shadow-2xl">
         <h1 className="text-2xl font-semibold text-white mb-1">
-          {mode === "login" ? "Sign in to VANE" : "Create your account"}
+          {mode === "login" ? "Sign in to VAYNE" : "Create your account"}
         </h1>
         <p className="text-sm text-white/60 mb-6">
           {mode === "login"
@@ -143,7 +143,7 @@ export function LoginForm() {
               Create account
             </button>
             <p className="text-center text-sm text-white/60">
-              New to VANE?{" "}
+              New to VAYNE?{" "}
               <button
                 type="button"
                 className="font-medium text-white underline underline-offset-2 hover:text-white/90"

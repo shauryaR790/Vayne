@@ -2,10 +2,10 @@
 
 export const USER_MESSAGES = {
   serviceUnavailable:
-    "VANE is temporarily unavailable. Please try again in a few minutes.",
+    "VAYNE is temporarily unavailable. Please try again in a few minutes.",
   serviceOffline:
-    "Unable to reach VANE. Check your connection and try again.",
-  serviceOfflineShort: "VANE is currently unavailable.",
+    "Unable to reach VAYNE. Check your connection and try again.",
+  serviceOfflineShort: "VAYNE is currently unavailable.",
   analysisTimeout:
     "This analysis took longer than expected. Try again with fewer files, or contact your administrator.",
   analysisFailed:
@@ -24,7 +24,7 @@ export const USER_MESSAGES = {
     "The investigation report is unavailable. Run the analysis again to regenerate it.",
   uploadRequired: "Upload evidence files, then start the analysis.",
   analystUnavailable:
-    "The VANE analyst is temporarily unavailable. Investigation results in your workspace remain available.",
+    "The VAYNE analyst is temporarily unavailable. Investigation results in your workspace remain available.",
 } as const;
 
 const TECHNICAL_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [

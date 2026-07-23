@@ -397,7 +397,7 @@ export function buildEngineFileInsights(
         {
           id: "engine-run",
           filename: shortFilename(uploaded || "investigation"),
-          tool: "VANE",
+          tool: "VAYNE",
           extension: fileExtension(uploaded || ""),
           additions: workbench.totals.confirmed_findings ?? workbench.confirmed_findings.length,
           deletions: workbench.candidate_paths.filter((p) => p.status === "REJECTED").length,

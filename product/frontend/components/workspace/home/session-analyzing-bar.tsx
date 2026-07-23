@@ -18,7 +18,7 @@ export function SessionAnalyzingBar({
       <CursorLoadingStatus
         lines={[
           { label, detail },
-          { label: "Waiting for VANE engine", dim: true },
+          { label: "Waiting for VAYNE engine", dim: true },
         ]}
       />
     </div>

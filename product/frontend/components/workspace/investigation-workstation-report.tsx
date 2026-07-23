@@ -213,7 +213,7 @@ function FindingWorkstationCard({ finding }: { finding: FindingCardData }) {
       <div className="space-y-4 px-4 py-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-vx-muted">
-            Why VANE retained it
+            Why VAYNE retained it
           </p>
           <p className="mt-2 text-[13px] leading-relaxed text-vx-body">{finding.analystNote}</p>
         </div>
@@ -247,7 +247,7 @@ function EvidenceWorkstationCard({
         </div>
         <div className="grid grid-cols-[100px_1fr] gap-2">
           <dt className="text-vx-muted">Source</dt>
-          <dd className="text-white">VANE Engine</dd>
+          <dd className="text-white">VAYNE Engine</dd>
         </div>
         <div className="grid grid-cols-[100px_1fr] gap-2">
           <dt className="text-vx-muted">Host</dt>

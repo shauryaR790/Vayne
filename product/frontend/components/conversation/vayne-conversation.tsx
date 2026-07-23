@@ -719,7 +719,7 @@ export function VaneWorkspace({
         const overlap = detectOverlappingAssets(bundles);
         let intro = separateAnalystIntro(bundles.length);
         if (overlap) {
-          intro += " VANE correlated overlapping assets across uploaded evidence.";
+          intro += " VAYNE correlated overlapping assets across uploaded evidence.";
         }
         setBriefingPrompt(null);
         void playAnalystBriefing(

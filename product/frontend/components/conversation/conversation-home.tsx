@@ -72,7 +72,7 @@ export function ConversationHome({
 
           <h1 className="text-balance text-[clamp(1.625rem,3.5vw,2.125rem)] font-medium leading-tight tracking-[-0.025em] text-white">
 
-            Upload evidence. VANE runs the investigation.
+            Upload evidence. VAYNE runs the investigation.
 
           </h1>
 

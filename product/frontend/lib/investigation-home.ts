@@ -36,7 +36,7 @@ export const QUICK_INVESTIGATION_CHIPS: QuickChip[] = [
     id: "compare_reports",
     label: "Cross-Tool Evidence",
     prompt:
-      "Compare scanner outputs and explain how VANE correlated them into investigations — not separate per-scanner summaries.",
+      "Compare scanner outputs and explain how VAYNE correlated them into investigations — not separate per-scanner summaries.",
     needsEvidence: true,
   },
   {

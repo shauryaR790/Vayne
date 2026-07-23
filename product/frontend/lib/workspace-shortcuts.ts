@@ -2,7 +2,7 @@ export const WORKSPACE_SHORTCUTS = [
   { shortcut: "Ctrl/Cmd + N", action: "New Investigation" },
   { shortcut: "Ctrl/Cmd + O", action: "Open Evidence" },
   { shortcut: "Enter", action: "Analyze Selected Evidence" },
-  { shortcut: "Ctrl/Cmd + K", action: "Ask VANE Analyst" },
+  { shortcut: "Ctrl/Cmd + K", action: "Ask VAYNE Analyst" },
   { shortcut: "Ctrl/Cmd + Shift + P", action: "Command Palette" },
   { shortcut: "?", action: "Keyboard Shortcuts" },
 ] as const;

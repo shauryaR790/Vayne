@@ -29,8 +29,8 @@ export function normalizeAnalystMarkdown(raw: string): string {
   // Inline section labels (single paragraph) → proper markdown sections
   const promotions: [RegExp, string][] = [
     [/\sWhat happened:\s+/gi, "\n\n**What happened**\n"],
-    [/\sWhy I believe it:\s+/gi, "\n\n**Why VANE believes it**\n"],
-    [/\sWhy VANE believes it:\s+/gi, "\n\n**Why VANE believes it**\n"],
+    [/\sWhy I believe it:\s+/gi, "\n\n**Why VAYNE believes it**\n"],
+    [/\sWhy VAYNE believes it:\s+/gi, "\n\n**Why VAYNE believes it**\n"],
     [/\sCertainty:\s+/gi, "\n\n**How certain**\n"],
     [/\sHow certain:\s+/gi, "\n\n**How certain**\n"],
     [/\sNext steps:\s+/gi, "\n\n**Next steps**\n"],

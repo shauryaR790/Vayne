@@ -21,7 +21,7 @@ const SHORTCUT_ICONS: Record<string, LucideIcon> = {
   "New Investigation": Plus,
   "Open Evidence": FolderOpen,
   "Analyze Selected Evidence": CornerDownLeft,
-  "Ask VANE Analyst": Sparkles,
+  "Ask VAYNE Analyst": Sparkles,
   "Command Palette": Command,
   "Keyboard Shortcuts": Keyboard,
 };

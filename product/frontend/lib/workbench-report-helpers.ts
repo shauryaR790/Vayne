@@ -99,15 +99,15 @@ export function confidenceMeaning(key: WorkbenchConfidenceMetricKey, score: numb
 /** One-line definition shown above the score — what this number actually measures. */
 export const CONFIDENCE_METRIC_DEFINITION: Record<WorkbenchConfidenceMetricKey, string> = {
   observation:
-    "How sure VANE is the top finding exists on the target — from banners, fingerprints, and scanner evidence.",
+    "How sure VAYNE is the top finding exists on the target — from banners, fingerprints, and scanner evidence.",
   correlation:
     "How strongly independent scanners agree on the top finding — not whether it exists once, but whether sources match.",
   exploit:
-    "How sure VANE is the top finding can be exploited in practice — observation alone is not enough for this score.",
+    "How sure VAYNE is the top finding can be exploited in practice — observation alone is not enough for this score.",
 };
 
 export const ATTACK_SURFACE_DEFINITION =
-  "How exposed the environment looks from attack paths VANE explored — path count, blast radius, and path risk. This is potential impact topology, not proof that exploitation succeeded.";
+  "How exposed the environment looks from attack paths VAYNE explored — path count, blast radius, and path risk. This is potential impact topology, not proof that exploitation succeeded.";
 
 export interface ConfidenceBand {
   word: string;
@@ -721,7 +721,7 @@ export function buildReadableVerdict(
       tone: "clear",
       headline: "Nothing met the retention threshold",
       summary: panel.analystSummary,
-      whatWeKnow: "VANE finished review but no finding had enough evidence to keep.",
+      whatWeKnow: "VAYNE finished review but no finding had enough evidence to keep.",
       stillOpen: null,
       whyRespond: "No immediate action on retained findings.",
       nextAction: panel.recommendedNextAction,
@@ -742,7 +742,7 @@ export function buildReadableVerdict(
   if (status === "Validated" || (metric === "exploit" && score != null && score >= 75)) {
     statusLabel = "Confirmed";
     tone = "confirmed";
-    headline = "VANE confirmed this exposure";
+    headline = "VAYNE confirmed this exposure";
   } else if (metric === "exploit" && score != null && score < 55) {
     statusLabel = "Needs validation";
     tone = "action";
@@ -752,7 +752,7 @@ export function buildReadableVerdict(
   } else if (status === "Observed") {
     statusLabel = "Observed";
     tone = "action";
-    headline = "Scanner saw it — VANE has not fully validated it";
+    headline = "Scanner saw it — VAYNE has not fully validated it";
   } else if (status === "Correlated") {
     statusLabel = "Correlated";
     tone = "action";
@@ -951,7 +951,7 @@ export interface InvestigationVerdict {
   topHost: string | null;
 }
 
-/** "What did VANE discover?" — the one-glance verdict (Principles 2, 3, 12). */
+/** "What did VAYNE discover?" — the one-glance verdict (Principles 2, 3, 12). */
 export function investigationVerdict(workbench: WorkbenchData): InvestigationVerdict {
   const findings = workbench.confirmed_findings || [];
   const top = findings[0] || null;
@@ -967,8 +967,8 @@ export function investigationVerdict(workbench: WorkbenchData): InvestigationVer
     headline:
       workbench.executive_summary ||
       (findings.length
-        ? `VANE retained ${findings.length} finding${findings.length === 1 ? "" : "s"} after discarding what the evidence could not support.`
-        : "VANE completed the investigation and no findings met the evidence threshold."),
+        ? `VAYNE retained ${findings.length} finding${findings.length === 1 ? "" : "s"} after discarding what the evidence could not support.`
+        : "VAYNE completed the investigation and no findings met the evidence threshold."),
     counts,
     topFinding: top?.title ?? null,
     topHost: top?.host ?? null,
