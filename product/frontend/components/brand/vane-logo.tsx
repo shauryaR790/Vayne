@@ -60,8 +60,21 @@ export function VaneLogo({
   );
 }
 
+/**
+ * Sidebar lockup — the asset is a square with heavy vertical padding, so we
+ * crop/zoom into the wordmark to match the old text brand weight.
+ */
 export function VaneSidebarBrand({ className }: { className?: string }) {
-  return <VaneLogo size="sidebar" className={cn("px-1", className)} />;
+  return (
+    <div className={cn("relative h-10 w-[210px] overflow-hidden", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={LOGO_SRC}
+        alt={PRODUCT_NAME}
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[13.5rem] w-[13.5rem] max-w-none -translate-x-1/2 -translate-y-1/2 select-none"
+      />
+    </div>
+  );
 }
 
 /** @deprecated Use VaneMark */
