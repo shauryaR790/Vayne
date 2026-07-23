@@ -4,11 +4,8 @@ import { useCallback, useState } from "react";
 
 import { CombinedEvidenceBanner } from "@/components/workspace/combined-evidence-banner";
 import { InvestigationBriefing } from "@/components/workspace/investigation-briefing";
-import {
-  InvestigationDetailTabsPanel,
-  isInvestigationDetailTabId,
-  type InvestigationDetailTabId,
-} from "@/components/workspace/investigation-detail-tabs-panel";
+import { GraphExplorer } from "@/components/graph/GraphExplorer";
+import type { ReasoningCheck } from "@/components/graph/GraphEmptyState";
 import {
   buildInvestigationPresentation,
   type FindingCardData,
@@ -26,11 +23,27 @@ import { parseUploadedFilenames } from "@/lib/source-attribution";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 import {
   createReveal,
+  CollapsibleSection,
   HeaderMetric,
   WorkstationSection,
 } from "@/components/workspace/workstation-primitives";
-import { GraphExplorer } from "@/components/graph/GraphExplorer";
-import type { ReasoningCheck } from "@/components/graph/GraphEmptyState";
+import {
+  BusinessImpactSection,
+  ConfirmedFindingsSection,
+  DeveloperDetailsSection,
+  EngineFileDetailsSection,
+  EvidenceSection,
+  EvidenceTimelineSection,
+  ExecutiveSummarySection,
+  ExpertModeProvider,
+  InvestigationFlowSection,
+  InvestigationTimelineSection,
+  MissingEvidenceSection,
+  RecommendationsSection,
+  RiskOverviewSection,
+} from "@/components/workspace/investigation-workbench-sections";
+import { SectionAskAside } from "@/components/workspace/investigation-report-ask";
+import { sectionContextAttackGraph } from "@/lib/section-ask-context";
 
 function InvestigationHeader({
   presentation,
@@ -299,12 +312,15 @@ export function InvestigationWorkstationReport({
     uploadedFilenames.length > 1;
 
   const nextDelay = createReveal();
-  const [activeDetailTab, setActiveDetailTab] = useState<InvestigationDetailTabId>("attack-graph");
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
+  const sectionOpen = useCallback(
+    (id: string) => openSections[id] ?? false,
+    [openSections],
+  );
 
   const setSectionOpen = useCallback((id: string, open: boolean) => {
-    if (open && isInvestigationDetailTabId(id)) {
-      setActiveDetailTab(id);
-    }
+    setOpenSections((prev) => ({ ...prev, [id]: open }));
   }, []);
 
   return (
@@ -320,16 +336,225 @@ export function InvestigationWorkstationReport({
         />
       ) : null}
       {workbench ? (
-        <InvestigationDetailTabsPanel
-          workbench={workbench}
-          bundle={bundle}
-          presentation={presentation}
-          uploadedFilenames={uploadedFilenames}
-          sourceLabel={sourceLabel}
-          emptyGraphChecks={EMPTY_GRAPH_CHECKS.filter((c) => c.ok || !presentation.hasPaths)}
-          activeTab={activeDetailTab}
-          onTabChange={setActiveDetailTab}
-        />
+        <ExpertModeProvider expert={false}>
+          <div className="border-b border-vx-border bg-vx-section-body px-6 py-4">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50">
+              Optional Details
+            </h2>
+            <p className="mt-2 max-w-[72ch] text-[12px] leading-relaxed text-white/45">
+              Full engine output — expand any section for attack graphs, findings, evidence, and
+              reasoning.
+            </p>
+          </div>
+
+          <CollapsibleSection
+            sectionId="attack-graph"
+            title="Attack Graph"
+            defaultOpen={false}
+            open={sectionOpen("attack-graph")}
+            onOpenChange={(open) => setSectionOpen("attack-graph", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <WorkstationSection
+              title="Attack Graph"
+              bodyClassName="p-0 min-h-[400px]"
+              reveal={0}
+              embedded
+              large
+              aside={
+                <SectionAskAside
+                  sectionTitle="Attack Graph"
+                  engineContext={sectionContextAttackGraph(workbench)}
+                />
+              }
+            >
+              <GraphExplorer
+                key={`${bundle.detail.summary.id}-${presentation.graph.nodes.length}-${presentation.graph.edges.length}`}
+                embedded
+                layout="workstation"
+                graph={presentation.graph}
+                workbench={workbench}
+                investigationId={bundle.detail.summary.id}
+                context={{
+                  hasPaths: presentation.hasPaths,
+                  attackPaths: executive.attackPaths,
+                  rejectedPaths: presentation.rejectedPathCount,
+                  confidence: presentation.graphConfidence,
+                  summary: "",
+                  emptyChecks: EMPTY_GRAPH_CHECKS.filter((c) => c.ok || !presentation.hasPaths),
+                }}
+              />
+            </WorkstationSection>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="findings"
+            title="Findings"
+            defaultOpen={false}
+            open={sectionOpen("findings")}
+            onOpenChange={(open) => setSectionOpen("findings", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <ConfirmedFindingsSection
+              workbench={workbench}
+              sourceFilenames={uploadedFilenames}
+              reveal={0}
+              embedded
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="business-impact"
+            title="Impact"
+            defaultOpen={false}
+            open={sectionOpen("business-impact")}
+            onOpenChange={(open) => setSectionOpen("business-impact", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <BusinessImpactSection workbench={workbench} reveal={0} embedded />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="confidence"
+            title="Confidence"
+            defaultOpen={false}
+            open={sectionOpen("confidence")}
+            onOpenChange={(open) => setSectionOpen("confidence", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <RiskOverviewSection
+              workbench={workbench}
+              risk={executive.risk}
+              confidence={presentation.graphConfidence}
+              reveal={0}
+              embedded
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="evidence"
+            title="Evidence"
+            defaultOpen={false}
+            open={sectionOpen("evidence")}
+            onOpenChange={(open) => setSectionOpen("evidence", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <EvidenceSection workbench={workbench} reveal={0} embedded />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="recommendations"
+            title="Recommendations"
+            defaultOpen={false}
+            open={sectionOpen("recommendations")}
+            onOpenChange={(open) => setSectionOpen("recommendations", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <RecommendationsSection workbench={workbench} reveal={0} embedded />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="timeline"
+            title="Timeline"
+            defaultOpen={false}
+            open={sectionOpen("timeline")}
+            onOpenChange={(open) => setSectionOpen("timeline", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <InvestigationTimelineSection workbench={workbench} reveal={0} embedded />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="reasoning"
+            title="Reasoning"
+            defaultOpen={false}
+            open={sectionOpen("reasoning")}
+            onOpenChange={(open) => setSectionOpen("reasoning", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <InvestigationFlowSection workbench={workbench} reveal={0} embedded />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="executive-detail"
+            title="Engine Conclusions"
+            defaultOpen={false}
+            open={sectionOpen("executive-detail")}
+            onOpenChange={(open) => setSectionOpen("executive-detail", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <ExecutiveSummarySection
+              workbench={workbench}
+              risk={executive.risk}
+              confidence={presentation.graphConfidence}
+              reveal={0}
+              embedded
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="missing-evidence"
+            title="Missing Evidence"
+            defaultOpen={false}
+            open={sectionOpen("missing-evidence")}
+            onOpenChange={(open) => setSectionOpen("missing-evidence", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <MissingEvidenceSection workbench={workbench} reveal={0} embedded />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="evidence-timeline"
+            title="Evidence Timeline"
+            defaultOpen={false}
+            open={sectionOpen("evidence-timeline")}
+            onOpenChange={(open) => setSectionOpen("evidence-timeline", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <EvidenceTimelineSection workbench={workbench} reveal={0} embedded />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="evidence-files"
+            title="Evidence Files"
+            defaultOpen={false}
+            open={sectionOpen("evidence-files")}
+            onOpenChange={(open) => setSectionOpen("evidence-files", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <EngineFileDetailsSection
+              workbench={workbench}
+              bundle={bundle}
+              sourceLabel={sourceLabel}
+              reveal={0}
+              embedded
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            sectionId="investigation-notes"
+            title="Investigation Notes"
+            defaultOpen={false}
+            open={sectionOpen("investigation-notes")}
+            onOpenChange={(open) => setSectionOpen("investigation-notes", open)}
+            bodyClassName="p-0"
+            reveal={nextDelay()}
+          >
+            <DeveloperDetailsSection workbench={workbench} reveal={0} embedded />
+          </CollapsibleSection>
+        </ExpertModeProvider>
       ) : (
         <>
           <InvestigationHeader
