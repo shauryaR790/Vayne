@@ -38,7 +38,7 @@ export function VaneLogo({
 }) {
   const heights = {
     sm: 20,
-    sidebar: 28,
+    sidebar: 52,
     md: 26,
     lg: 36,
     hero: 44,
