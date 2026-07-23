@@ -71,7 +71,7 @@ export function VaneSidebarBrand({ className }: { className?: string }) {
       <img
         src={LOGO_SRC}
         alt={PRODUCT_NAME}
-        className="pointer-events-none absolute -left-5 top-1/2 h-[7.25rem] w-[7.25rem] max-w-none -translate-y-1/2 select-none"
+        className="pointer-events-none absolute -left-1 top-1/2 h-[7.25rem] w-[7.25rem] max-w-none -translate-y-1/2 select-none"
       />
     </div>
   );

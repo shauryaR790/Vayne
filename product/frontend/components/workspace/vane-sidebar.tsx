@@ -126,7 +126,7 @@ export function VaneSidebar() {
   return (
     <aside className="flex h-screen w-[20%] min-w-[272px] max-w-[320px] shrink-0 flex-col border-r border-vx-border bg-vx-sidebar">
       <div className="shrink-0 px-3 pb-3 pt-4">
-        <Link href="/" className="block">
+        <Link href="/" className="block px-2">
           <VaneSidebarBrand />
         </Link>
 
