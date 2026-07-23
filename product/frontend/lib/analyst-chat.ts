@@ -72,20 +72,23 @@ export const ANALYST_PRESETS: Array<{
   },
   {
     id: "technical",
-    label: "Technical Summary",
-    prompt: "Give me a technical summary for SOC and pentest teams.",
+    label: "Explain Evidence",
+    prompt:
+      "Explain the top investigation using engine facts: what happened, evidence, contradictions, and unknowns.",
     reportMode: "technical",
   },
   {
     id: "executive",
-    label: "Executive Summary",
-    prompt: "Give me an executive summary for leadership.",
+    label: "Impact Brief",
+    prompt:
+      "Explain business impact and priority ranking for leadership — from engine conclusions, not scanner summaries.",
     reportMode: "executive",
   },
   {
     id: "remediation",
-    label: "Remediation Plan",
-    prompt: "What should we patch and fix first? Give a prioritized remediation plan.",
+    label: "Analyst Workflows",
+    prompt:
+      "What analyst workflows should I run next? Validation steps, log review, and evidence collection — not generic patch advice.",
     reportMode: "remediation",
   },
   {
@@ -96,12 +99,24 @@ export const ANALYST_PRESETS: Array<{
   {
     id: "next",
     label: "What Next?",
-    prompt: "What should I do next based on this investigation?",
+    prompt:
+      "What should I do next? Use investigation tasks and missing-evidence actions from the engines.",
   },
   {
     id: "time_saved",
     label: "Time Saved",
-    prompt: "How much analyst time did this automated investigation likely save?",
+    prompt:
+      "How much analyst investigation time did correlation, deduplication, and prioritization likely save?",
+  },
+  {
+    id: "contradictions",
+    label: "Contradictions",
+    prompt: "What evidence contradicts the top investigation and how did that affect confidence?",
+  },
+  {
+    id: "priority",
+    label: "Priority Score",
+    prompt: "Why is the top investigation ranked here? Explain every priority factor the engine used.",
   },
 ];
 

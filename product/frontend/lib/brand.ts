@@ -1,6 +1,9 @@
 /** VANE product identity */
 
 export const PRODUCT_NAME = "VANE";
+export const PRODUCT_TAGLINE = "Investigation Operating System";
+export const PRODUCT_VALUE =
+  "Deterministic correlation, prioritization, and investigation generation — AI explains engine conclusions only.";
 export const ANALYST_NAME = "VANE Analyst";
 export const ENGINE_NAME = "VANE Engine";
 export const LOG_PREFIX = "[VANE]";

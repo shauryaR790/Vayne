@@ -33,22 +33,24 @@ from vayne.llm.providers.openai_provider import OpenAIProvider, TokenUsage
 logger = logging.getLogger(__name__)
 
 REPORT_MODE_HINTS: dict[str, str] = {
-    "executive": "Format for CEOs and management. Plain English only — no jargon without translation. Business impact and recommended actions. Use Cursor-style markdown sections.",
-    "technical": "Format for SOC analysts and pentesters. Start with **In plain terms** (2–3 sentences), then technical proof (CVEs, hosts, paths, evidence). Balance clarity with depth — explain what each finding means, not just what was detected.",
-    "remediation": "Format for engineers. Start with **In plain terms** (what to fix and why), then prioritized actionable steps. Use Cursor-style markdown sections.",
-    "audit": "Format for compliance auditors. Plain summary first, then evidence citations and control gaps. Use Cursor-style markdown sections.",
+    "executive": "Format for leadership. Explain engine priority and business impact — not a report summary. Plain English first. Use Cursor-style markdown sections.",
+    "technical": "Format for SOC analysts. Explain engine investigations: evidence, contradictions, missing evidence, graph facts. Start with **In plain terms**. Never summarize uploads section by section.",
+    "remediation": "Format as analyst workflows (validate exploitability, review logs, collect evidence). Start with **In plain terms**. Do not output generic patch lists unless the engine tasks say so.",
+    "audit": "Format for compliance auditors. Missing evidence, contradictions, and traceable engine conclusions. Use Cursor-style markdown sections.",
 }
 
 PRESET_HINTS: dict[str, str] = {
-    "finding": "Explain the most significant validated finding. Start with **In plain terms** (what it means in everyday language), then cite evidence.",
-    "attack_chain": "Explain the validated attack chain. Start with **In plain terms** (the story of how an attacker could move), then step-by-step technical detail.",
-    "rejected_chain": "Explain why attack paths were rejected. Start with **In plain terms**, then what evidence was missing.",
-    "graph": "Explain the attack graph. Start with **In plain terms** (how pieces connect), then key nodes and relationships.",
-    "root_cause": "Root cause analysis for the primary finding. Plain English first, then technical root cause.",
-    "evidence": "What evidence supports the top finding and path. Plain summary first, then per-scanner proof.",
-    "business": "Business impact if the attack path is exploited. Plain English for leadership, then specifics.",
-    "next": "Recommend next actions. Plain English priorities first, then concrete steps.",
-    "time_saved": "Estimate analyst time saved. Explain in human terms what manual work was skipped.",
+    "finding": "Explain the top engine investigation. Cover what happened, why it matters, evidence, contradictions, unknowns.",
+    "attack_chain": "Explain validated attack paths from graph traversal. Plain terms first, then step-by-step evidence.",
+    "rejected_chain": "Explain rejected paths and missing evidence that blocked validation.",
+    "graph": "Explain the evidence graph — nodes, edges, and how traversal produced investigations.",
+    "root_cause": "Root cause from correlated evidence — not a single scanner narrative.",
+    "evidence": "Cross-scanner evidence supporting the top investigation; cite which tools confirmed what.",
+    "business": "Business impact and priority ranking factors from the engines.",
+    "next": "Analyst workflows and investigation tasks from the engine — validation before remediation.",
+    "time_saved": "Estimate investigation time saved by dedup, correlation, and prioritization engines.",
+    "contradictions": "Conflicting evidence and how confidence was reduced.",
+    "priority": "Explain priority score components: criticality, exposure, blast radius, evidence strength, etc.",
 }
 
 OFFLINE_MESSAGE = (
@@ -76,24 +78,26 @@ async def _llm_reachable() -> bool:
     _ping_cache = (ok, now)
     return ok
 
-BRIEF_INSTRUCTION = """Interpret this investigation for a peer analyst. Use ONLY facts from the context.
+BRIEF_INSTRUCTION = """Explain what the deterministic investigation engines concluded. Use ONLY facts from the context.
+Do NOT summarize uploaded reports. Do NOT invent evidence. The engines already correlated scanners into investigations.
 
-Write for humans first, specialists second.
+Write for analysts first.
 
-Use Cursor-style markdown (required — not plain paragraphs):
+Use Cursor-style markdown (required):
 
-1. **In plain terms** — 2–4 sentences in everyday language: what the scan actually found, whether it is confirmed or still needs checking, and why a human should care. No jargon without a quick translation.
+1. **In plain terms** — What the engines concluded (merged investigations, not per-scanner lists), confidence level in words, and why a human should care.
 
-2. **What happened** — numbered list (2–4 items). Each item: plain-English clause first, then `backticks` for hosts/CVEs/services.
+2. **What happened** — numbered list from the top investigation(s).
 
-3. **Why VANE believes it** — bullets; explain what the evidence means, not just scanner names.
+3. **Why it is ranked here** — priority factors from the engine (exposure, blast radius, evidence strength, etc.).
 
-4. **How certain** — one short paragraph in words (e.g. "moderately confident because…"), then optional scores. Never lead with percentages alone.
+4. **Evidence & contradictions** — bullets: which scanners corroborate; note conflicts that lowered confidence.
 
-5. **Next steps** — bullets; concrete actions anyone can follow.
+5. **What remains unknown** — missing evidence and what would raise/lower confidence.
 
-Section titles on their own line — use each title once. Do not repeat titles or embed "What happened:" inside body text.
-Use **bold** for key ideas. Use `backticks` for technical identifiers.
+6. **Analyst workflows** — next validation tasks from engine task lists (not generic "patch X").
+
+Section titles on their own line — use each title once. Use **bold** and `backticks` for identifiers.
 Never invent facts. No ALL CAPS headers or divider lines.
 """
 

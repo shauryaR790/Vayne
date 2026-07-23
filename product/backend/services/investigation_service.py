@@ -580,6 +580,7 @@ class InvestigationService:
         review = self.load_artifact(inv_id, "review.json")
         evidence_ledger = self.load_artifact(inv_id, "evidence_ledger.json")
         analyst_investigations = self.load_artifact(inv_id, "analyst_investigations.json")
+        evidence_graph = self.load_artifact(inv_id, "evidence_graph.json")
         return build_workbench(
             report,
             graph,
@@ -590,6 +591,7 @@ class InvestigationService:
             review=review,
             evidence_ledger=evidence_ledger,
             analyst_investigations=analyst_investigations,
+            evidence_graph=evidence_graph,
         )
 
     def _save_workbench_cache(self, inv_id: str, payload: dict) -> None:

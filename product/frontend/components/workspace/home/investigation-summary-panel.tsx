@@ -18,7 +18,7 @@ export function InvestigationSummaryPanel({
   return (
     <section
       className={`grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3${className ? ` ${className}` : ""}`}
-      aria-label="Investigation summary"
+      aria-label="Investigation operating metrics"
     >
       <MetricTile flat label="Files uploaded" value={summary.files_uploaded.toLocaleString()} />
       <MetricTile

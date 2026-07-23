@@ -269,13 +269,13 @@ export function ExecutiveSummarySection({
 
   return (
     <WorkstationSection
-      title="Executive Summary"
+      title="Impact Brief"
       reveal={reveal}
       large
       embedded={embedded}
       aside={
         <SectionAskAside
-          sectionTitle="Executive Summary"
+          sectionTitle="Impact Brief"
           engineContext={sectionContextExecutiveSummary(workbench, risk, confidence)}
         />
       }

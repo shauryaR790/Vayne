@@ -113,8 +113,8 @@ export function AnalysisCompleteDialog({
                       Review Complete
                     </h2>
                     <p className="mt-2 text-[12px] leading-relaxed text-white/55">
-                      Investigation finished. Your briefing is ready — scroll down to Ask VAYNE for
-                      analyst guidance.
+                      Engines finished correlation, prioritization, and investigation generation —
+                      ask VANE to explain what they concluded.
                     </p>
                   </div>
                 </div>

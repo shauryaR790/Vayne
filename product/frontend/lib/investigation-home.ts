@@ -1,10 +1,10 @@
 /** Copy and workflow definitions for the investigation workspace homepage. */
 
 export const COMPOSER_EXAMPLES = [
-  "Analyze these Nmap scans",
-  "Explain why this finding was retained",
-  "Compare these Nessus reports",
-  "Build an attack path",
+  "Correlate Nessus and Nuclei on the same host",
+  "Why is this investigation ranked #1?",
+  "What evidence contradicts this finding?",
+  "What should I validate next?",
 ] as const;
 
 export type QuickChipId =
@@ -12,10 +12,10 @@ export type QuickChipId =
   | "compare_reports"
   | "attack_graph"
   | "explain_findings"
-  | "executive_report"
+  | "priority_ranking"
   | "false_positives"
   | "correlate_scanners"
-  | "threat_hunt";
+  | "missing_evidence";
 
 export interface QuickChip {
   id: QuickChipId;
@@ -26,47 +26,55 @@ export interface QuickChip {
 
 export const QUICK_INVESTIGATION_CHIPS: QuickChip[] = [
   {
-    id: "analyze_nmap",
-    label: "Analyze Nmap",
-    prompt: "Analyze the uploaded Nmap scan evidence and summarize exposed services and risk.",
+    id: "correlate_scanners",
+    label: "Correlate Scanners",
+    prompt:
+      "Which investigations merged evidence from multiple scanners? Show agreement, conflicts, and what each tool contributed.",
     needsEvidence: true,
   },
   {
     id: "compare_reports",
-    label: "Compare Reports",
-    prompt: "Compare the uploaded scanner reports and highlight agreement, conflicts, and gaps.",
+    label: "Cross-Tool Evidence",
+    prompt:
+      "Compare scanner outputs and explain how VANE correlated them into investigations — not separate per-scanner summaries.",
     needsEvidence: true,
   },
   {
-    id: "attack_graph",
-    label: "Build Attack Graph",
-    prompt: "Walk me through the validated attack paths and what evidence supports each step.",
+    id: "priority_ranking",
+    label: "Why This Rank?",
+    prompt:
+      "Explain why the top investigation is ranked here — priority factors, business impact, exposure, and evidence strength.",
   },
   {
     id: "explain_findings",
-    label: "Explain Findings",
-    prompt: "Explain the most significant retained finding and cite the evidence behind it.",
+    label: "Explain Investigation",
+    prompt:
+      "Explain the top investigation: what happened, why it matters, supporting evidence, contradictions, and unknowns.",
   },
   {
-    id: "executive_report",
-    label: "Executive Report",
-    prompt: "Give me an executive summary of this investigation for leadership.",
+    id: "missing_evidence",
+    label: "Missing Evidence",
+    prompt:
+      "What evidence is missing for the top investigation? What would increase or decrease confidence, and what should I collect?",
   },
   {
     id: "false_positives",
-    label: "Review False Positives",
-    prompt: "Which findings look like false positives and what evidence would confirm or reject them?",
+    label: "Contradictions",
+    prompt:
+      "What evidence contradicts the top investigation? How did the contradiction engine adjust confidence?",
   },
   {
-    id: "correlate_scanners",
-    label: "Correlate Scanners",
-    prompt: "Correlate findings across scanners and show where versions or severities disagree.",
+    id: "attack_graph",
+    label: "Evidence Graph",
+    prompt:
+      "Walk through the evidence graph — assets, findings, CVEs, and how graph traversal produced this investigation.",
+  },
+  {
+    id: "analyze_nmap",
+    label: "Validate Exposure",
+    prompt:
+      "From the evidence graph, what confirms or denies internet exposure and reachable services?",
     needsEvidence: true,
-  },
-  {
-    id: "threat_hunt",
-    label: "Threat Hunt",
-    prompt: "Based on the evidence, what attacker behaviors should I hunt for next?",
   },
 ];
 
@@ -89,44 +97,44 @@ export const INVESTIGATION_TEMPLATES: InvestigationTemplate[] = [
   {
     id: "external_attack_surface",
     title: "External Attack Surface",
-    description: "Internet-facing hosts, open ports, and exposure paths.",
+    description: "Internet exposure, correlated findings, and priority queue.",
     prompt:
-      "Investigate external attack surface exposure: internet-reachable services, critical findings, and likely entry points.",
+      "Investigate external exposure from the evidence graph: reachable services, merged scanner findings, and top-priority investigations.",
   },
   {
     id: "active_directory",
     title: "Active Directory Review",
-    description: "Kerberos, LDAP, SMB, and identity attack paths.",
+    description: "Identity paths, Kerberos/LDAP evidence, and blast radius.",
     prompt:
-      "Review Active Directory exposure from this evidence: Kerberos, LDAP, SMB signing, and lateral movement risk.",
+      "Review Active Directory investigations from correlated evidence: identity impact, lateral movement, and missing evidence.",
   },
   {
     id: "cloud_exposure",
     title: "Cloud Exposure",
-    description: "Misconfigurations and public cloud assets.",
+    description: "Cloud resources, misconfigs, and cross-source correlation.",
     prompt:
-      "Assess cloud exposure and misconfiguration risk from the uploaded evidence.",
+      "Assess cloud exposure investigations: correlated misconfigs, public assets, and priority ranking rationale.",
   },
   {
     id: "web_app",
     title: "Web Application Assessment",
-    description: "HTTP services, CVEs, and exploitable web paths.",
+    description: "HTTP services, CVE correlation, and exploitability evidence.",
     prompt:
-      "Focus on web application findings: version exposure, CVE mapping, and realistic exploit paths.",
+      "Focus on web application investigations: version/CVE correlation across scanners and analyst validation workflows.",
   },
   {
     id: "internal_network",
     title: "Internal Network Audit",
-    description: "East-west movement and internal service risk.",
+    description: "East-west reachability, dependencies, and graph paths.",
     prompt:
-      "Audit internal network exposure: lateral movement paths, weak services, and pivot opportunities.",
+      "Audit internal network investigations: can-reach edges, blast radius, and what evidence would confirm pivot paths.",
   },
   {
     id: "compliance",
     title: "Compliance Review",
-    description: "Control gaps, evidence quality, and audit posture.",
+    description: "Evidence gaps, contradictions, and audit-ready workflows.",
     prompt:
-      "Review this investigation for compliance gaps, missing evidence, and audit-ready remediation priorities.",
+      "Review investigations for compliance: missing evidence checklist, contradictions, and analyst workflows — not generic patch lists.",
   },
 ];
 

@@ -72,9 +72,17 @@ export function ConversationHome({
 
           <h1 className="text-balance text-[clamp(1.625rem,3.5vw,2.125rem)] font-medium leading-tight tracking-[-0.025em] text-white">
 
-            What should we investigate?
+            Upload evidence. VANE runs the investigation.
 
           </h1>
+
+          <p className="mt-3 max-w-[42ch] text-pretty text-[14px] leading-relaxed text-white/45">
+
+            Correlation, deduplication, prioritization, and analyst workflows — before AI explains
+
+            anything.
+
+          </p>
 
 
 

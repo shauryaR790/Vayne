@@ -173,6 +173,14 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
     graph_stats = graph.get("statistics") or {}
 
     export_dir = svc.export_dir(inv_id)
+    evidence_graph: dict[str, Any] = {}
+    eg_path = export_dir / "evidence_graph.json"
+    if eg_path.exists():
+        try:
+            evidence_graph = json.loads(eg_path.read_text(encoding="utf-8", errors="replace"))
+        except (ValueError, OSError):
+            evidence_graph = {}
+
     proof_path = export_dir / "proof.txt"
     proof_excerpt = ""
     if proof_path.exists():
@@ -281,11 +289,18 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
             )
         workbench_slice = {
             "executive_summary": wb.get("executive_summary"),
+            "investigation_source": wb.get("investigation_source"),
             "confirmed_findings": top_findings,
+            "investigations": (wb.get("investigations") or wb.get("priority_queue") or [])[:8],
+            "investigation_queue_status": wb.get("investigation_queue_status") or {},
             "missing_evidence": (wb.get("missing_evidence") or wb.get("unknowns") or [])[:8],
+            "contradictions": (wb.get("conflicts") or [])[:8],
             "candidate_paths": (wb.get("candidate_paths") or [])[:8],
             "investigation_timeline": wb.get("investigation_timeline") or [],
+            "analyst_workflows": (wb.get("next_actions") or wb.get("action_plan") or [])[:12],
             "next_actions": (wb.get("next_actions") or [])[:6],
+            "summary_panel": wb.get("summary_panel") or {},
+            "evidence_graph": wb.get("evidence_graph") or {},
         }
     except Exception:
         workbench_slice = {}
@@ -305,8 +320,9 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
             "rejected_attack_paths": int(stats.get("paths_rejected") or len(rejected_paths)),
             "paths_explored": stats.get("paths_explored") or stats.get("attack_paths"),
             "engine_note": (
-                "The deterministic VAYNE engine performed this investigation. "
-                "You explain its outputs only — never invent evidence."
+                "Deterministic engines produced this investigation (correlate, dedupe, evidence graph, "
+                "priority, contradiction, missing evidence, workflows). You explain engine outputs only — "
+                "never summarize raw reports or invent evidence."
             ),
         },
         "investigation": {
@@ -326,8 +342,9 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
             "risk_classification": report.get("attack_surface_classification"),
             "average_path_confidence": avg_conf,
             "engine_note": (
-                "The deterministic VAYNE engine performed this investigation. "
-                "You explain its outputs only — never invent evidence."
+                "Deterministic engines produced this investigation (correlate, dedupe, evidence graph, "
+                "priority, contradiction, missing evidence, workflows). You explain engine outputs only — "
+                "never summarize raw reports or invent evidence."
             ),
         },
         "validated_findings": validated,
@@ -371,6 +388,21 @@ def build_analyst_context(svc: InvestigationService, inv_id: str) -> dict[str, A
         ],
         "remediation": recommendations,
         "recommendations": recommendations,
+        "analyst_workflows": recommendations,
+        "evidence_graph": {
+            "node_count": len(evidence_graph.get("nodes") or []),
+            "edge_count": len(evidence_graph.get("edges") or []),
+            "chains": len(evidence_graph.get("chains") or []),
+            "sample_nodes": [
+                {
+                    "id": n.get("id"),
+                    "type": n.get("type") or n.get("kind"),
+                    "label": _clip(str(n.get("label") or n.get("name") or ""), 80),
+                }
+                for n in (evidence_graph.get("nodes") or [])[:12]
+                if isinstance(n, dict)
+            ],
+        },
         "proof_timeline": _proof_timeline(report, graph),
         "proof_excerpt": proof_excerpt,
         "graph_summary": {
@@ -451,6 +483,11 @@ def pack_prompt_context(context: dict[str, Any]) -> dict[str, Any]:
         "risk_scores": context.get("risk_scores") or {},
         "business_impact": context.get("business_impact") or [],
         "remediation": context.get("remediation") or context.get("recommendations") or [],
+        "analyst_workflows": context.get("analyst_workflows")
+        or context.get("remediation")
+        or context.get("recommendations")
+        or [],
+        "evidence_graph": context.get("evidence_graph") or {},
         "proof_timeline": context.get("proof_timeline") or [],
         "graph_summary": context.get("graph_summary") or context.get("graph_statistics") or {},
         "workbench": context.get("workbench") or {},

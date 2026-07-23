@@ -92,6 +92,7 @@ def build_workbench(
     review: dict | None = None,
     evidence_ledger: dict | None = None,
     analyst_investigations: dict | None = None,
+    evidence_graph: dict | None = None,
 ) -> dict:
     report = report or {}
     graph = graph or {}
@@ -403,6 +404,7 @@ def build_workbench(
 
     engine_investigations = (analyst_investigations or {}).get("investigations") or []
     engine_failed = bool((analyst_investigations or {}).get("error"))
+    engine_ran = analyst_investigations is not None and not engine_failed
     noise_meta = (analyst_investigations or {}).get("noise_filter") or {}
 
     clustered = build_investigation_clusters(
@@ -410,17 +412,20 @@ def build_workbench(
         candidate_paths=candidate_paths,
         hypotheses=hypotheses,
     )
-    engine_final = (
-        finalize_investigation_list(engine_investigations[:12])
-        if engine_investigations and not engine_failed
-        else []
-    )
-    product_final = finalize_investigation_list(clustered[:12])
-    investigations = engine_final or product_final
-    if not investigations and confirmed_findings:
-        investigations = finalize_investigation_list(
-            build_findings_fallback_investigations(confirmed_findings)[:12]
-        )
+    if engine_ran:
+        investigations = finalize_investigation_list(engine_investigations[:12])
+        if not investigations and confirmed_findings:
+            investigations = finalize_investigation_list(
+                build_findings_fallback_investigations(confirmed_findings)[:12]
+            )
+        investigation_source = "engine"
+    else:
+        investigations = finalize_investigation_list(clustered[:12])
+        if not investigations and confirmed_findings:
+            investigations = finalize_investigation_list(
+                build_findings_fallback_investigations(confirmed_findings)[:12]
+            )
+        investigation_source = "workbench_fallback"
 
     priority_queue = finalize_investigation_list(
         build_priority_queue(
@@ -588,6 +593,14 @@ def build_workbench(
         "executive_metrics": executive_metrics,
         "action_plan": action_plan,
         "evidence_ledger": evidence_ledger or {},
+        "investigation_source": investigation_source,
+        "evidence_graph": {
+            "node_count": len((evidence_graph or {}).get("nodes") or []),
+            "edge_count": len((evidence_graph or {}).get("edges") or []),
+            "chains": len((evidence_graph or {}).get("chains") or []),
+        }
+        if evidence_graph
+        else None,
         "totals": {
             "files": file_count,
             "sources": len(evidence_sources),

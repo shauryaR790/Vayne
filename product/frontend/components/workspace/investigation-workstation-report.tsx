@@ -484,7 +484,7 @@ export function InvestigationWorkstationReport({
 
           <CollapsibleSection
             sectionId="executive-detail"
-            title="Investigation Summary"
+            title="Engine Conclusions"
             defaultOpen={false}
             open={sectionOpen("executive-detail")}
             onOpenChange={(open) => setSectionOpen("executive-detail", open)}
@@ -583,7 +583,7 @@ export function InvestigationWorkstationReport({
             />
           </WorkstationSection>
 
-          <WorkstationSection title="Executive Summary" reveal={nextDelay()}>
+          <WorkstationSection title="Impact Brief" reveal={nextDelay()}>
             <p className="mb-4 max-w-[90ch] text-[14px] leading-relaxed text-vx-body">
               {executive.validatedFindings > 0
                 ? `${executive.validatedFindings} validated finding${executive.validatedFindings === 1 ? "" : "s"} across ${executive.assets} asset${executive.assets === 1 ? "" : "s"}. Risk classified ${executive.risk}.`
@@ -658,7 +658,7 @@ export function InvestigationWorkstationReport({
             </WorkstationSection>
           ) : null}
 
-          <WorkstationSection title="Remediation Priority" reveal={nextDelay()}>
+          <WorkstationSection title="Analyst Workflows" reveal={nextDelay()}>
             <div className="space-y-3">
               {findings.slice(0, 5).map((f) => (
                 <div

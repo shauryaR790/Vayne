@@ -119,7 +119,7 @@ export function buildThinkMicroScript(
     return [
       { verb: "Reading", detail: "confidence factors" },
       { verb: "Computing", detail: "proof scores" },
-      { verb: "Summarizing", detail: "certainty band" },
+      { verb: "Explaining", detail: "engine conclusions" },
     ];
   }
 

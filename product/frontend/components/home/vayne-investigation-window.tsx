@@ -13,19 +13,19 @@ import { HoverCard } from "@/components/shared/hover-card";
 
 const QUICK_TOPICS: Array<{ label: string; presetId: string }> = [
   { label: "Attack Path", presetId: "attack_chain" },
-  { label: "Remediation", presetId: "remediation" },
+  { label: "Analyst Workflows", presetId: "remediation" },
   { label: "Operational Risk", presetId: "business" },
   { label: "Technical Details", presetId: "technical" },
-  { label: "Executive Summary", presetId: "executive" },
+  { label: "Impact Brief", presetId: "executive" },
 ];
 
 const SUGGESTED_QUESTIONS = [
-  "How serious is this?",
-  "How do I fix it?",
-  "Explain attack chain",
-  "Explain rejected paths",
-  "Generate executive summary",
-  "Generate technical summary",
+  "Why is this ranked #1?",
+  "What evidence contradicts this?",
+  "What should I validate next?",
+  "Explain the evidence graph",
+  "What remains unknown?",
+  "How much analyst time was saved?",
 ];
 
 export function VayneInvestigationWindow({

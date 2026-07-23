@@ -107,10 +107,10 @@ export function VaneAnalystPanel({
           <div className="flex h-full min-h-[200px] items-center justify-center px-2 text-center">
             <p className="max-w-[240px] text-[14px] leading-relaxed text-vx-muted">
               {!bundle && !activeBundles.length
-                ? "Ask VAYNE anything about cybersecurity — or upload evidence to start an investigation."
+                ? "Ask about cybersecurity — or upload scanner evidence to run correlation, prioritization, and investigation generation."
                 : activeBundles.length > 1
-                  ? "Ask across all uploaded analyses — compare findings, paths, and evidence from every scan."
-                  : "Ask why a finding was retained, how a path was validated, or what to fix first."}
+                  ? "Ask across all analyses — compare investigations, contradictions, and cross-scanner evidence."
+                  : "Ask why an investigation is ranked here, what evidence supports it, what contradicts it, or what to validate next."}
             </p>
           </div>
         ) : null}
@@ -160,9 +160,9 @@ export function VaneAnalystPanel({
             </p>
             <p className="mt-2 text-[14px] leading-relaxed text-white">
               {briefingPrompt.fileCount === 1
-                ? "1 file analyzed."
-                : `${briefingPrompt.fileCount} files analyzed.`}{" "}
-              Want VAYNE to walk you through what it found?
+                ? "1 file ingested and analyzed by the investigation engines."
+                : `${briefingPrompt.fileCount} files ingested and analyzed by the investigation engines.`}{" "}
+              Want VANE to explain what the engines concluded?
             </p>
             <div className="mt-4 flex items-center gap-2">
               <button
@@ -174,7 +174,7 @@ export function VaneAnalystPanel({
                   "hover:border-white hover:text-white",
                 )}
               >
-                Get summary
+                Explain investigation
               </button>
               <button
                 type="button"
