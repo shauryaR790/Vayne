@@ -27,7 +27,7 @@ export type AnalystStatus = {
 export type ReportMode = "executive" | "technical" | "remediation" | "audit";
 
 export const ANALYST_OFFLINE_MESSAGE =
-  "**Analyst offline**\n\n- VAYNE LLM is unavailable right now.\n- Deterministic investigation results in the workbench remain available.";
+  "**Analyst unavailable**\n\nThe VANE analyst is temporarily offline. Deterministic investigation results in your workspace remain available.";
 
 export const ANALYST_PRESETS: Array<{
   id: string;

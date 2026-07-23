@@ -8,6 +8,7 @@ import { VaneInvestigationWorkspace } from "@/components/workspace/vane-investig
 import type { StoredChatMessage } from "@/lib/conversation-session";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 import { OPEN_EVIDENCE_EVENT, dispatchWorkspaceEvent } from "@/lib/workspace-shortcuts";
+import { USER_MESSAGES } from "@/lib/user-messages";
 
 export function VaneEnginePanel({
   scrollRef,
@@ -56,7 +57,7 @@ export function VaneEnginePanel({
   onFocusAnalyst: () => void;
   onNewInvestigation: () => void;
 }) {
-  const offlineError = !backendOnline ? "Backend offline — start API on port 8000" : undefined;
+  const offlineError = !backendOnline ? USER_MESSAGES.serviceOfflineShort : undefined;
 
   if (!sessionActive) {
     return (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginUser, registerUser } from "@/lib/api";
 import { setAuthSession } from "@/lib/auth";
+import { formatAuthError } from "@/lib/user-messages";
 
 type AuthMode = "login" | "register";
 
@@ -48,7 +49,7 @@ export function LoginForm() {
       });
       router.replace("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+      setError(formatAuthError(err, mode));
     } finally {
       setBusy(false);
     }
@@ -62,8 +63,8 @@ export function LoginForm() {
         </h1>
         <p className="text-sm text-white/60 mb-6">
           {mode === "login"
-            ? "Team accounts isolate investigations, API keys, and shared workspace data."
-            : "Register a team workspace — your investigations stay private to your organization."}
+            ? "Secure access to your team's investigation workspace."
+            : "Create a private workspace for your security team. Investigations and API keys stay within your organization."}
         </p>
 
         <form className="space-y-4" onSubmit={onSubmit}>
@@ -116,14 +117,18 @@ export function LoginForm() {
             />
           </label>
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? (
+            <p className="rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm leading-relaxed text-red-300">
+              {error}
+            </p>
+          ) : null}
 
           <button
             type="submit"
             disabled={busy}
             className="w-full rounded-md bg-white text-black py-2.5 font-medium disabled:opacity-60"
           >
-            {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
+            {busy ? (mode === "login" ? "Signing in…" : "Creating account…") : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
 
@@ -138,7 +143,7 @@ export function LoginForm() {
               Create account
             </button>
             <p className="text-center text-sm text-white/60">
-              Need a team workspace?{" "}
+              New to VANE?{" "}
               <button
                 type="button"
                 className="font-medium text-white underline underline-offset-2 hover:text-white/90"
@@ -163,7 +168,7 @@ export function LoginForm() {
 
         <p className="mt-6 text-center text-xs text-white/40">
           <Link href="/" className="hover:text-white/60">
-            Continue without signing in
+            Continue as guest
           </Link>
         </p>
       </div>

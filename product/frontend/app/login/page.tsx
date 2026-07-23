@@ -8,7 +8,7 @@ export default function LoginPage() {
       fallback={
         <main className="flex min-h-screen items-center justify-center bg-[#0a0a0b] px-4">
           <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#111113] p-8 shadow-2xl">
-            <p className="text-sm text-white/60">Loading…</p>
+            <p className="text-sm text-white/60">Loading sign in…</p>
           </div>
         </main>
       }

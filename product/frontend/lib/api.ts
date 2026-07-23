@@ -1,4 +1,4 @@
-/** Centralized API client — all backend calls go through here. */
+import { parseUserFacingApiError, USER_MESSAGES } from "./user-messages";
 
 import type {
   FindingsData,
@@ -70,39 +70,7 @@ export function requestHeaders(extra?: Record<string, string>): Record<string, s
 
 /** Turn FastAPI / fetch error bodies into short user-facing text. */
 export function parseApiError(status: number, body: string): string {
-  const trimmed = body.trim();
-  if (!trimmed) return `Request failed (${status})`;
-
-  try {
-    const parsed = JSON.parse(trimmed) as {
-      detail?: string | Array<{ msg?: string }>;
-      error?: string;
-      message?: string;
-    };
-
-    const detail = parsed.detail;
-    if (typeof detail === "string") {
-      if (detail === "Investigation not found") {
-        return "This investigation no longer exists on the server.";
-      }
-      if (detail === "Report not found") {
-        return "This investigation's report is unavailable. Re-run the analysis to regenerate it.";
-      }
-      return detail;
-    }
-
-    if (Array.isArray(detail) && detail.length > 0) {
-      const first = detail.find((item) => item?.msg)?.msg;
-      if (first) return first;
-    }
-
-    if (parsed.error?.trim()) return parsed.error.trim();
-    if (parsed.message?.trim()) return parsed.message.trim();
-  } catch {
-    // fall through
-  }
-
-  return trimmed.length > 240 ? `${trimmed.slice(0, 237)}…` : trimmed;
+  return parseUserFacingApiError(status, body);
 }
 
 export async function fetchJson<T>(path: string): Promise<T> {
@@ -231,7 +199,7 @@ async function waitForAnalyzeJob(jobId: string): Promise<AnalyzeSuccess> {
     }
     await new Promise((resolve) => window.setTimeout(resolve, JOB_POLL_MS));
   }
-  throw new AnalyzeError("timeout", "Analysis exceeded timeout.");
+  throw new AnalyzeError("timeout", USER_MESSAGES.analysisTimeout);
 }
 
 function kindFromStatus(status: number, backendKind?: string): AnalyzeErrorKind {
@@ -282,12 +250,9 @@ export async function analyzeFiles(
     // AbortError => our own timeout. Anything else here is a real network
     // failure (backend truly unreachable) — the ONLY case that may say so.
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new AnalyzeError("timeout", "Analysis exceeded timeout.");
+      throw new AnalyzeError("timeout", USER_MESSAGES.analysisTimeout);
     }
-    throw new AnalyzeError(
-      "offline",
-      `Cannot reach VANE API at ${getApiBase()}. Start the backend: python -m uvicorn product.backend.main:app --reload --port 8000`,
-    );
+    throw new AnalyzeError("offline", USER_MESSAGES.serviceOffline);
   } finally {
     clearTimeout(timer);
   }

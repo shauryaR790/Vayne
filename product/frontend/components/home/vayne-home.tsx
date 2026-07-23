@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { Plus, Upload } from "lucide-react";
 
 import { HoverCard } from "@/components/shared/hover-card";
+import { USER_MESSAGES } from "@/lib/user-messages";
 import { VayneThinking } from "@/components/shared/vayne-thinking";
 
 const EXAMPLES = [
@@ -151,7 +152,7 @@ export function VayneHome({
 
         {!backendOnline && !analyzing ? (
           <p className="mt-2 text-center text-[11px] text-white/35">
-            Backend offline — start the VAYNE API on port 8000
+            {USER_MESSAGES.serviceOfflineShort}
           </p>
         ) : null}
       </div>

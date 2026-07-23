@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "rea
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 
-import { analyzeFiles, AnalyzeError, getApiBase, checkHealth } from "@/lib/api";
+import { analyzeFiles, checkHealth } from "@/lib/api";
 import {
   ANALYST_OFFLINE_MESSAGE,
   fetchAnalystStatus,
@@ -73,34 +73,7 @@ import { useWorkspaceKeyboard } from "@/components/workspace/use-workspace-keybo
 import { ANALYST_NAME, LOG_PREFIX } from "@/lib/brand";
 import { ResetWorkspaceBootstrap } from "@/components/dev/reset-workspace-bootstrap";
 
-/** Map a caught analyze failure to a precise, user-facing message. */
-function describeAnalyzeError(e: unknown): string {
-  if (e instanceof AnalyzeError) {
-    switch (e.kind) {
-      case "offline":
-        return `Cannot reach VANE API at ${getApiBase()}. Start the backend (uvicorn) and ensure NEXT_PUBLIC_API_URL matches.`;
-      case "timeout":
-        return "Analysis exceeded timeout.";
-      case "unsupported_file":
-      case "invalid_xml":
-      case "invalid_json":
-        return `Unsupported file format.\n\n${e.file ? `File: ${e.file}\n` : ""}${e.message}`;
-      case "parser_error":
-      case "internal_error":
-        return `Investigation failed\n\nReason:\n${
-          e.stage ? `${e.stage} — ` : ""
-        }${e.message}`;
-      default:
-        return e.message;
-    }
-  }
-  const message = e instanceof Error ? e.message : String(e);
-  // Genuine browser-level network failure is the only "cannot reach" case.
-  if (message.toLowerCase().includes("failed to fetch")) {
-    return `Cannot reach VANE API at ${getApiBase()}. Start the backend (uvicorn) and ensure NEXT_PUBLIC_API_URL matches.`;
-  }
-  return message;
-}
+import { describeAnalyzeError, sanitizeUserMessage, USER_MESSAGES } from "@/lib/user-messages";
 
 interface ChatMessage extends StoredChatMessage {
   streaming?: boolean;
@@ -394,7 +367,7 @@ export function VaneWorkspace({
         setMessages([]);
         setAnalystMessages([]);
         setBundle(null);
-        setError(e instanceof Error ? e.message : String(e));
+        setError(sanitizeUserMessage(e instanceof Error ? e.message : String(e)));
         setBusy(false);
       } finally {
         switchingRef.current = null;
@@ -635,20 +608,20 @@ export function VaneWorkspace({
 
     const batch = queuedFiles?.length ? [...queuedFiles] : [...filesRef.current];
     if (!batch.length) {
-      setError("Upload evidence files, then click Analyze.");
+      setError(USER_MESSAGES.uploadRequired);
       return;
     }
 
     const validation = validateUploadFiles(batch);
     if (!validation.ok) {
-      setError(validation.message);
+      setError(sanitizeUserMessage(validation.message));
       return;
     }
 
     const online = backendOnline || (await checkHealth());
     if (!online) {
       setBackendOnline(false);
-      setError(`Backend offline (${getApiBase()})`);
+      setError(USER_MESSAGES.serviceOfflineShort);
       return;
     }
     setBackendOnline(true);

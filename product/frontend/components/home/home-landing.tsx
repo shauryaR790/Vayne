@@ -10,6 +10,7 @@ import { Plus, Loader2 } from "lucide-react";
 
 import { HoverCard } from "@/components/shared/hover-card";
 import { MarqueeStrip } from "@/components/shared/marquee-strip";
+import { USER_MESSAGES } from "@/lib/user-messages";
 
 import {
 
@@ -240,7 +241,7 @@ export function HomeLanding({
 
               <p className="vx-enter mt-2 shrink-0 text-[11px] font-bold uppercase tracking-wider text-white/40">
 
-                Backend offline — start the VAYNE API server
+                {USER_MESSAGES.serviceOfflineShort}
 
               </p>
 
