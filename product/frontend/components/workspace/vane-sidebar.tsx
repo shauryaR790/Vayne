@@ -183,12 +183,23 @@ export function VaneSidebar() {
                 <p className="truncate text-[13px] text-white/60">{authProfile.team_name}</p>
               </>
             ) : (
-              <>
-                <Link href="/login" className="truncate text-[15px] text-white hover:underline">
-                  Sign in
-                </Link>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <Link href="/login" className="text-[15px] text-white hover:underline">
+                    Sign in
+                  </Link>
+                  <span className="text-white/30" aria-hidden>
+                    ·
+                  </span>
+                  <Link
+                    href="/login?mode=register"
+                    className="text-[15px] text-white hover:underline"
+                  >
+                    Create account
+                  </Link>
+                </div>
                 <p className="truncate text-[13px] text-white/60">Team workspace</p>
-              </>
+              </div>
             )}
           </div>
           <DeveloperMenu placement="above" />
