@@ -43,7 +43,21 @@ import {
   RiskOverviewSection,
 } from "@/components/workspace/investigation-workbench-sections";
 import { SectionAskAside } from "@/components/workspace/investigation-report-ask";
-import { sectionContextAttackGraph } from "@/lib/section-ask-context";
+import {
+  sectionContextAttackGraph,
+  sectionContextBusinessImpact,
+  sectionContextConfidence,
+  sectionContextEvidence,
+  sectionContextEvidenceFiles,
+  sectionContextEvidenceTimeline,
+  sectionContextExecutiveSummary,
+  sectionContextFindings,
+  sectionContextInvestigationNotes,
+  sectionContextInvestigationStory,
+  sectionContextMissingEvidence,
+  sectionContextRecommendations,
+  sectionContextTimeline,
+} from "@/lib/section-ask-context";
 
 function InvestigationHeader({
   presentation,
@@ -365,6 +379,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("attack-graph", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Attack Graph"
+                engineContext={sectionContextAttackGraph(workbench)}
+              />
+            }
           >
             <WorkstationSection
               title="Attack Graph"
@@ -372,12 +392,6 @@ export function InvestigationWorkstationReport({
               reveal={0}
               embedded
               large
-              aside={
-                <SectionAskAside
-                  sectionTitle="Attack Graph"
-                  engineContext={sectionContextAttackGraph(workbench)}
-                />
-              }
             >
               <GraphExplorer
                 key={`${bundle.detail.summary.id}-${presentation.graph.nodes.length}-${presentation.graph.edges.length}`}
@@ -406,6 +420,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("findings", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Findings"
+                engineContext={sectionContextFindings(workbench)}
+              />
+            }
           >
             <ConfirmedFindingsSection
               workbench={workbench}
@@ -423,6 +443,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("business-impact", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Impact"
+                engineContext={sectionContextBusinessImpact(workbench)}
+              />
+            }
           >
             <BusinessImpactSection workbench={workbench} reveal={0} embedded />
           </CollapsibleSection>
@@ -435,6 +461,16 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("confidence", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Confidence"
+                engineContext={sectionContextConfidence(
+                  workbench,
+                  executive.risk,
+                  presentation.graphConfidence,
+                )}
+              />
+            }
           >
             <RiskOverviewSection
               workbench={workbench}
@@ -453,6 +489,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("evidence", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Evidence"
+                engineContext={sectionContextEvidence(workbench)}
+              />
+            }
           >
             <EvidenceSection workbench={workbench} reveal={0} embedded />
           </CollapsibleSection>
@@ -465,6 +507,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("recommendations", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Recommendations"
+                engineContext={sectionContextRecommendations(workbench)}
+              />
+            }
           >
             <RecommendationsSection workbench={workbench} reveal={0} embedded />
           </CollapsibleSection>
@@ -477,6 +525,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("timeline", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Timeline"
+                engineContext={sectionContextTimeline(workbench)}
+              />
+            }
           >
             <InvestigationTimelineSection workbench={workbench} reveal={0} embedded />
           </CollapsibleSection>
@@ -489,6 +543,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("reasoning", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Reasoning"
+                engineContext={sectionContextInvestigationStory(workbench)}
+              />
+            }
           >
             <InvestigationFlowSection workbench={workbench} reveal={0} embedded />
           </CollapsibleSection>
@@ -501,6 +561,16 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("executive-detail", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Engine Conclusions"
+                engineContext={sectionContextExecutiveSummary(
+                  workbench,
+                  executive.risk,
+                  presentation.graphConfidence,
+                )}
+              />
+            }
           >
             <ExecutiveSummarySection
               workbench={workbench}
@@ -519,6 +589,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("missing-evidence", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Missing Evidence"
+                engineContext={sectionContextMissingEvidence(workbench)}
+              />
+            }
           >
             <MissingEvidenceSection workbench={workbench} reveal={0} embedded />
           </CollapsibleSection>
@@ -531,6 +607,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("evidence-timeline", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Evidence Timeline"
+                engineContext={sectionContextEvidenceTimeline(workbench)}
+              />
+            }
           >
             <EvidenceTimelineSection workbench={workbench} reveal={0} embedded />
           </CollapsibleSection>
@@ -543,6 +625,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("evidence-files", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Evidence Files"
+                engineContext={sectionContextEvidenceFiles(workbench)}
+              />
+            }
           >
             <EngineFileDetailsSection
               workbench={workbench}
@@ -561,6 +649,12 @@ export function InvestigationWorkstationReport({
             onOpenChange={(open) => setSectionOpen("investigation-notes", open)}
             bodyClassName="p-0"
             reveal={nextDelay()}
+            aside={
+              <SectionAskAside
+                sectionTitle="Investigation Notes"
+                engineContext={sectionContextInvestigationNotes(workbench)}
+              />
+            }
           >
             <DeveloperDetailsSection workbench={workbench} reveal={0} embedded />
           </CollapsibleSection>

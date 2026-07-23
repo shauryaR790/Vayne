@@ -127,3 +127,76 @@ export function sectionContextAttackGraph(workbench: WorkbenchData): string {
     )
     .join("\n");
 }
+
+export function sectionContextBusinessImpact(workbench: WorkbenchData): string {
+  const top = workbench.confirmed_findings[0];
+  const impact = top?.business_impact_detail || top?.business_impact;
+  if (!impact) {
+    return lines(
+      `Confirmed findings: ${workbench.confirmed_findings.length}`,
+      workbench.executive_summary ? `Summary: ${workbench.executive_summary}` : null,
+    );
+  }
+  if (typeof impact === "string") return impact;
+  return lines(
+    impact.summary ? `Summary: ${impact.summary}` : null,
+    impact.attacker_gains ? `Attacker gains: ${impact.attacker_gains}` : null,
+    impact.systems_exposed ? `Systems exposed: ${impact.systems_exposed}` : null,
+    impact.process_affected ? `Process affected: ${impact.process_affected}` : null,
+    impact.importance ? `Importance: ${impact.importance}` : null,
+  );
+}
+
+export function sectionContextConfidence(
+  workbench: WorkbenchData,
+  risk: string,
+  confidence: number | null,
+): string {
+  return lines(
+    sectionContextAtGlance(workbench, risk, confidence),
+    "",
+    sectionContextFindings(workbench),
+  );
+}
+
+export function sectionContextEvidence(workbench: WorkbenchData): string {
+  return lines(
+    `Provenance rows: ${workbench.provenance.length}`,
+    ...workbench.provenance.slice(0, 8).map((row) => {
+      const supports = (row.supports || [])
+        .map((s) => `${s.source}: ${s.evidence}`)
+        .join("; ");
+      return `- ${row.claim}${supports ? ` — ${supports}` : ""}`;
+    }),
+  );
+}
+
+export function sectionContextTimeline(workbench: WorkbenchData): string {
+  const steps = workbench.investigation_timeline || workbench.evidence_trail || [];
+  if (!steps.length) return sectionContextEvidenceTimeline(workbench);
+  return steps
+    .slice(0, 12)
+    .map((step) => `- ${step.event}${step.detail ? `: ${step.detail}` : ""}`)
+    .join("\n");
+}
+
+export function sectionContextEvidenceFiles(workbench: WorkbenchData): string {
+  return (workbench.file_contributions || [])
+    .map(
+      (row) =>
+        `- ${row.file} (${row.tool}): ${row.findings} findings, ${row.retained} retained, ${row.rejected} rejected`,
+    )
+    .join("\n");
+}
+
+export function sectionContextInvestigationNotes(workbench: WorkbenchData): string {
+  const notes = workbench.notes;
+  return lines(
+    notes?.evidence ? `Evidence: ${notes.evidence}` : null,
+    notes?.correlation ? `Correlation: ${notes.correlation}` : null,
+    notes?.paths ? `Paths: ${notes.paths}` : null,
+    notes?.summary ? `Summary: ${notes.summary}` : null,
+    `Pipeline stages: ${workbench.pipeline.length}`,
+    `Sources: ${workbench.evidence_sources.map((s) => s.label).join(", ")}`,
+  );
+}

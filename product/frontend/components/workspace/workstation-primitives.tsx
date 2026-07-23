@@ -128,22 +128,16 @@ export function CollapsibleSection({
           {aside ? <span className="flex shrink-0 items-center gap-2">{aside}</span> : null}
         </div>
       ) : (
-        <div className="flex w-full items-center gap-2 border-b border-vx-border bg-vx-section-body px-6 py-4">
+        <div className="flex w-full items-center gap-3 border-b border-vx-border bg-vx-section-body px-6 py-4">
           <button
             type="button"
             onClick={() => setOpenState(!isOpen)}
             aria-expanded={isOpen}
-            className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left transition-colors hover:text-white"
+            className="flex min-w-0 flex-1 items-center text-left transition-colors hover:text-white"
           >
             <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
               {title}
             </span>
-            <ChevronDown
-              className={cn(
-                "size-4 shrink-0 text-white transition-transform duration-200",
-                isOpen && "rotate-180",
-              )}
-            />
           </button>
           {aside ? (
             <span
@@ -154,6 +148,20 @@ export function CollapsibleSection({
               {aside}
             </span>
           ) : null}
+          <button
+            type="button"
+            onClick={() => setOpenState(!isOpen)}
+            aria-expanded={isOpen}
+            aria-label={isOpen ? `Collapse ${title}` : `Expand ${title}`}
+            className="flex shrink-0 items-center justify-center text-white transition-colors hover:text-white/80"
+          >
+            <ChevronDown
+              className={cn(
+                "size-4 transition-transform duration-200",
+                isOpen && "rotate-180",
+              )}
+            />
+          </button>
         </div>
       )}
       {isOpen ? (
