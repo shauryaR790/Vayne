@@ -74,7 +74,7 @@ async def _brief_stream(inv_id: str, svc: InvestigationService):
 
 
 async def _general_stream(body: AnalystChatRequest):
-    """Chat with no investigation loaded — general cybersecurity Q&A."""
+    """Chat with no investigation loaded — cybersecurity Q&A only."""
     history = [{"role": t.role, "content": t.content} for t in body.history]
     async for event in stream_analyst_reply(
         {},

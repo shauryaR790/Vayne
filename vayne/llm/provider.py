@@ -12,7 +12,11 @@ _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "analyst.txt"
 def load_analyst_system_prompt() -> str:
     if _PROMPT_PATH.exists():
         return _PROMPT_PATH.read_text(encoding="utf-8").strip()
-    return "You are VAYNE, a senior security analyst who explains investigation results only."
+    return (
+        "You are VAYNE, a senior security analyst. "
+        "Answer ONLY cybersecurity and investigation questions. "
+        "Refuse everything else with a short out-of-scope message."
+    )
 
 
 class LLMProvider(ABC):
