@@ -24,7 +24,23 @@ def validate_security_config() -> None:
     secret = settings["secret"]
     pepper = settings["api_key_pepper"]
 
+    # Never allow LLM secrets to be mirrored into frontend-public env names.
+    for leaked in (
+        "NEXT_PUBLIC_VAYNE_LLM_API_KEY",
+        "NEXT_PUBLIC_OPENAI_API_KEY",
+        "NEXT_PUBLIC_API_KEY",
+    ):
+        if os.getenv(leaked, "").strip():
+            raise RuntimeError(
+                f"{leaked} must never be set — LLM API keys stay server-side only "
+                "(use VAYNE_LLM_API_KEY on the backend)."
+            )
+
     if is_production():
+        llm_key = os.getenv("VAYNE_LLM_API_KEY", "").strip()
+        if llm_key and len(llm_key) < 20:
+            raise RuntimeError("VAYNE_LLM_API_KEY looks invalid in production.")
+
         if secret.lower() in _WEAK_SECRETS or len(secret) < 32:
             raise RuntimeError(
                 "VAYNE_JWT_SECRET must be set to a random string of at least 32 characters in production."

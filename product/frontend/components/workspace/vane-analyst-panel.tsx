@@ -42,6 +42,7 @@ export function VaneAnalystPanel({
   onSkipSummary,
   sourceLabel,
   sourceLabels,
+  chatQuotaRemaining,
 }: {
   bundle: InvestigationBundle | null;
   bundles?: InvestigationBundle[];
@@ -64,6 +65,7 @@ export function VaneAnalystPanel({
   onSkipSummary?: () => void;
   sourceLabel?: string;
   sourceLabels?: string[];
+  chatQuotaRemaining?: number | null;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const restoredScroll = useRef(false);
@@ -85,9 +87,10 @@ export function VaneAnalystPanel({
     el.scrollTo({ top: el.scrollHeight, behavior: thinking ? "auto" : "smooth" });
   }, [messages, thinking, activityFeed, briefingPrompt]);
 
-  const disabled = busy;
+  const disabled = busy || (chatQuotaRemaining !== null && chatQuotaRemaining !== undefined && chatQuotaRemaining <= 0);
   const empty = !messages.length && !thinking && !activityFeed?.lines.length && !briefingPrompt;
   const activeBundles = bundles?.length ? bundles : bundle ? [bundle] : [];
+  const quotaExhausted = chatQuotaRemaining !== null && chatQuotaRemaining !== undefined && chatQuotaRemaining <= 0;
 
   return (
     <aside
@@ -200,14 +203,25 @@ export function VaneAnalystPanel({
         ) : null}
       </div>
 
-      <div className="shrink-0 p-3">
+      <div className="shrink-0 space-y-2 p-3">
+        {chatQuotaRemaining !== null && chatQuotaRemaining !== undefined ? (
+          <p className="px-1 text-[11px] text-white/40">
+            {quotaExhausted
+              ? "Free tier chat limit reached"
+              : `${chatQuotaRemaining} free Ask VAYNE message${chatQuotaRemaining === 1 ? "" : "s"} left`}
+          </p>
+        ) : null}
         <AnalystComposer
           input={input}
           disabled={disabled}
           busy={busy}
           thinking={thinking}
           placeholder={
-            bundle ? "Ask about findings, paths, evidence…" : "Ask VAYNE about cybersecurity…"
+            quotaExhausted
+              ? "Free tier chat limit reached…"
+              : bundle
+                ? "Ask about findings, paths, evidence…"
+                : "Ask VAYNE about cybersecurity…"
           }
           inputRef={inputRef}
           onInputChange={onInputChange}

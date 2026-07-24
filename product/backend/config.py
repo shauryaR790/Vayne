@@ -95,7 +95,22 @@ def public_error_message() -> str:
     return "An internal error occurred. Contact support if this persists."
 
 
+_SECRET_PATTERNS = (
+    r"(?i)(api[_-]?key|authorization|bearer|sk-[a-z0-9_-]{10,}|VAYNE_LLM_API_KEY)\s*[:=]\s*\S+",
+    r"(?i)sk-[a-zA-Z0-9_-]{20,}",
+)
+
+
 def sanitize_client_error(message: str | None) -> str:
+    """Never leak secrets to clients — even when detailed errors are enabled."""
+    import re
+
+    raw = (message or "").strip()
+    if not raw:
+        return public_error_message()
+    redacted = raw
+    for pattern in _SECRET_PATTERNS:
+        redacted = re.sub(pattern, "[redacted]", redacted)
     if expose_error_details():
-        return message or public_error_message()
+        return redacted[:300]
     return public_error_message()

@@ -57,7 +57,11 @@ _cors_kwargs: dict = {
         "X-Vayne-Workspace-Id",
         "Accept",
     ],
-    "expose_headers": ["Retry-After"],
+    "expose_headers": [
+        "Retry-After",
+        "X-Vayne-Chat-Remaining",
+        "X-Vayne-Chat-Limit",
+    ],
 }
 if _origin_regex:
     _cors_kwargs["allow_origin_regex"] = _origin_regex

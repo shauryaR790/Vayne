@@ -1,6 +1,7 @@
 """Re-export ORM models."""
 
 from product.backend.models.auth import ApiKeyORM, TeamMemberORM, TeamORM, UserORM
+from product.backend.models.chat_quota import ChatQuotaORM
 from product.backend.models.investigation import (
     AttackPathORM,
     FindingORM,
@@ -21,4 +22,5 @@ __all__ = [
     "TeamORM",
     "TeamMemberORM",
     "ApiKeyORM",
+    "ChatQuotaORM",
 ]

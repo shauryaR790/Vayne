@@ -7,7 +7,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { analyzeFiles, checkHealth } from "@/lib/api";
 import {
   ANALYST_OFFLINE_MESSAGE,
+  ANALYST_QUOTA_MESSAGE,
+  FREE_TIER_CHAT_LIMIT,
   fetchAnalystStatus,
+  fetchChatQuota,
   sanitizeChatHistory,
   streamAnalystChat,
   streamGeneralChat,
@@ -115,6 +118,7 @@ export function VaneWorkspace({
   const [investigationSessionActive, setInvestigationSessionActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [mobileAnalystOpen, setMobileAnalystOpen] = useState(false);
+  const [chatQuotaRemaining, setChatQuotaRemaining] = useState<number | null>(FREE_TIER_CHAT_LIMIT);
   const [briefingPrompt, setBriefingPrompt] = useState<{
     messages: StoredChatMessage[];
     fileCount: number;
@@ -394,6 +398,9 @@ export function VaneWorkspace({
     void fetchAnalystStatus().then((status) => {
       if (!cancelled) setAnalystOnline(Boolean(status?.online));
     });
+    void fetchChatQuota().then((quota) => {
+      if (!cancelled && quota) setChatQuotaRemaining(quota.remaining);
+    });
     migrateLegacyConversationSession();
 
     if (skipResumeRef.current) {
@@ -492,6 +499,17 @@ export function VaneWorkspace({
 
   const streamReply = useCallback(
     async (question: string) => {
+      if (chatQuotaRemaining !== null && chatQuotaRemaining <= 0) {
+        const streamId = `quota-${Date.now()}`;
+        setAnalystMessages((prev) => [
+          ...prev,
+          { id: `user-${Date.now()}`, role: "user", content: question },
+          { id: streamId, role: "assistant", content: ANALYST_QUOTA_MESSAGE },
+        ]);
+        setAnalystInput("");
+        return;
+      }
+
       const streamId = `reply-${Date.now()}`;
       const history = sanitizeChatHistory(analystMessages);
 
@@ -554,6 +572,12 @@ export function VaneWorkspace({
             setActivityFeed(null);
             setThinking(false);
             batcher.finish();
+            if (event.code === "quota_exceeded") {
+              setChatQuotaRemaining(0);
+              updateAnalystMessage(streamId, event.message || ANALYST_QUOTA_MESSAGE, false);
+              setBusy(false);
+              return;
+            }
             const offline =
               event.code === "llm_offline" ||
               event.code === "http_error" ||
@@ -603,9 +627,24 @@ export function VaneWorkspace({
         gotTokens ? batcher.text || ANALYST_OFFLINE_MESSAGE : ANALYST_OFFLINE_MESSAGE,
         false,
       );
+      if (gotTokens) {
+        setChatQuotaRemaining((prev) =>
+          prev === null ? prev : Math.max(0, prev - 1),
+        );
+        void fetchChatQuota().then((quota) => {
+          if (quota) setChatQuotaRemaining(quota.remaining);
+        });
+      }
       setBusy(false);
     },
-    [analystMessages, beginStream, bundle, investigationId, updateAnalystMessage],
+    [
+      analystMessages,
+      beginStream,
+      bundle,
+      chatQuotaRemaining,
+      investigationId,
+      updateAnalystMessage,
+    ],
   );
 
   const handleAnalyze = useCallback(async (queuedFiles?: File[]) => {
@@ -1067,6 +1106,7 @@ export function VaneWorkspace({
               onSkipSummary={dismissBriefingPrompt}
               sourceLabel={engineSourceLabels[0]}
               sourceLabels={engineSourceLabels}
+              chatQuotaRemaining={chatQuotaRemaining}
             />
           </motion.div>
         ) : null}
@@ -1099,6 +1139,7 @@ export function VaneWorkspace({
             onSkipSummary={dismissBriefingPrompt}
             sourceLabel={engineSourceLabels[0]}
             sourceLabels={engineSourceLabels}
+            chatQuotaRemaining={chatQuotaRemaining}
           />
         </div>
       ) : null}

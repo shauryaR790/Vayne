@@ -15,7 +15,7 @@ export type AnalystStreamEvent =
       cost_usd: number;
       cached?: boolean;
     }
-  | { type: "error"; code: string; message: string };
+  | { type: "error"; code: string; message: string; used?: number; limit?: number; remaining?: number };
 
 export type AnalystStatus = {
   provider: string;
@@ -28,6 +28,12 @@ export type ReportMode = "executive" | "technical" | "remediation" | "audit";
 
 export const ANALYST_OFFLINE_MESSAGE =
   "**Analyst unavailable**\n\nThe VAYNE analyst is temporarily offline. Deterministic investigation results in your workspace remain available.";
+
+/** Free-tier hard cap — must match backend `VAYNE_FREE_CHAT_LIMIT` (default 4). */
+export const FREE_TIER_CHAT_LIMIT = 4;
+
+export const ANALYST_QUOTA_MESSAGE =
+  "**Free tier chat limit reached**\n\nYou've used all 4 Ask VAYNE messages on the free plan (including section asks). Chat tokens are limited on free tier — upgrade to continue investigating with the analyst.";
 
 export const ANALYST_PRESETS: Array<{
   id: string;
@@ -186,6 +192,29 @@ export async function fetchAnalystStatus(): Promise<AnalystStatus | null> {
   }
 }
 
+export async function fetchChatQuota(): Promise<{
+  used: number;
+  limit: number;
+  remaining: number;
+  allowed: boolean;
+} | null> {
+  try {
+    const res = await fetch(`${getApiBase()}/api/chat/quota`, {
+      cache: "no-store",
+      headers: requestHeaders(),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as {
+      used: number;
+      limit: number;
+      remaining: number;
+      allowed: boolean;
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Strip empty / structured investigation turns — backend requires min_length=1 per turn. */
 export function sanitizeChatHistory(
   messages: Array<{
@@ -229,8 +258,22 @@ export async function* streamAnalystChat(
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    yield { type: "error", code: "http_error", message: text || res.statusText };
+    await res.text().catch(() => "");
+    if (res.status === 429) {
+      yield {
+        type: "error",
+        code: "quota_exceeded",
+        message:
+          "Free tier chat limit reached — you've used all 4 Ask VAYNE messages. Chat tokens are limited on free tier.",
+      };
+      return;
+    }
+    // Never surface raw backend bodies (may include stack traces in misconfig).
+    yield {
+      type: "error",
+      code: "http_error",
+      message: "Unable to reach the VAYNE analyst. Please try again.",
+    };
     return;
   }
 
@@ -263,8 +306,22 @@ export async function* streamGeneralChat(
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    yield { type: "error", code: "http_error", message: text || res.statusText };
+    await res.text().catch(() => "");
+    if (res.status === 429) {
+      yield {
+        type: "error",
+        code: "quota_exceeded",
+        message:
+          "Free tier chat limit reached — you've used all 4 Ask VAYNE messages. Chat tokens are limited on free tier.",
+      };
+      return;
+    }
+    // Never surface raw backend bodies (may include stack traces in misconfig).
+    yield {
+      type: "error",
+      code: "http_error",
+      message: "Unable to reach the VAYNE analyst. Please try again.",
+    };
     return;
   }
 
@@ -284,8 +341,15 @@ export async function* streamInvestigationBrief(
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    yield { type: "error", code: "http_error", message: text || res.statusText };
+    await res.text().catch(() => "");
+    yield {
+      type: "error",
+      code: res.status === 429 ? "rate_limited" : "http_error",
+      message:
+        res.status === 429
+          ? "Too many requests. Please wait a moment and try again."
+          : "Unable to reach the VAYNE analyst. Please try again.",
+    };
     return;
   }
 

@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
+from product.backend.config import sanitize_client_error
 from product.backend.services.analyst_cache import (
     get_brief,
     get_cached,
@@ -221,10 +222,10 @@ async def stream_analyst_reply(
                 yield event
             yield {
                 "type": "usage",
-                "prompt_tokens": cached.get("prompt_tokens", 0),
-                "completion_tokens": cached.get("completion_tokens", 0),
-                "total_tokens": cached.get("prompt_tokens", 0) + cached.get("completion_tokens", 0),
-                "cost_usd": cached.get("cost_usd", 0.0),
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0,
                 "cached": True,
             }
             yield {"type": "done"}
@@ -247,7 +248,11 @@ async def stream_analyst_reply(
             yield {"type": "token", "token": token}
     except Exception as exc:
         logger.exception("analyst llm error")
-        yield {"type": "error", "code": "llm_error", "message": str(exc)[:500]}
+        yield {
+            "type": "error",
+            "code": "llm_error",
+            "message": sanitize_client_error(str(exc)[:200]),
+        }
         return
 
     usage = TokenUsage()
@@ -262,7 +267,8 @@ async def stream_analyst_reply(
         usage.completion_tokens,
         llm_model(),
     )
-    yield _usage_event(usage)
+    # Do not expose token economics to the browser — billing intel only.
+    yield {"type": "usage", "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "cost_usd": 0.0}
 
     text = "".join(full_text)
     if cache_key and export_dir and text.strip():
@@ -319,7 +325,12 @@ async def stream_investigation_brief(
             full_text.append(token)
             yield {"type": "token", "token": token}
     except Exception as exc:
-        yield {"type": "error", "code": "llm_error", "message": str(exc)[:500]}
+        logger.exception("analyst brief llm error")
+        yield {
+            "type": "error",
+            "code": "llm_error",
+            "message": sanitize_client_error(str(exc)[:200]),
+        }
         return
 
     usage = TokenUsage()
@@ -327,7 +338,7 @@ async def stream_investigation_brief(
         usage = provider.last_usage
 
     cost = estimate_cost_usd(usage)
-    yield _usage_event(usage)
+    yield {"type": "usage", "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "cost_usd": 0.0}
 
     text = "".join(full_text).strip()
     if text:

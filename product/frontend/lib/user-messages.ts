@@ -25,6 +25,8 @@ export const USER_MESSAGES = {
   uploadRequired: "Upload evidence files, then start the analysis.",
   analystUnavailable:
     "The VAYNE analyst is temporarily unavailable. Investigation results in your workspace remain available.",
+  chatQuotaExceeded:
+    "Free tier chat limit reached — you've used all 4 Ask VAYNE messages (including section asks). Chat tokens are limited on free tier.",
 } as const;
 
 const TECHNICAL_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [

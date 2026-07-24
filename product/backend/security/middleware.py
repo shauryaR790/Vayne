@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections import defaultdict, deque
 from threading import Lock
@@ -17,11 +18,31 @@ logger = logging.getLogger("vayne.security")
 _RATE_LOCK = Lock()
 _RATE_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
 
+# Exact path rules: (method, path) -> (limit, window_seconds)
+_EXACT_RULES: dict[tuple[str, str], tuple[int, int]] = {
+    ("POST", "/api/auth/login"): (10, 60),
+    ("POST", "/api/auth/register"): (5, 60),
+    ("POST", "/api/auth/api-keys"): (5, 3600),
+    ("POST", "/api/analyze"): (20, 60),
+    ("POST", "/api/chat"): (8, 60),
+    ("GET", "/api/chat/quota"): (30, 60),
+    ("GET", "/api/analyst/status"): (30, 60),
+}
+
+# Pattern rules for investigation-scoped LLM routes
+_PATTERN_RULES: list[tuple[str, re.Pattern[str], int, int]] = [
+    ("POST", re.compile(r"^/api/investigation/[^/]+/chat$"), 8, 60),
+    ("GET", re.compile(r"^/api/investigation/[^/]+/brief$"), 6, 60),
+]
+
 
 def client_ip(request: Request) -> str:
-    forwarded = request.headers.get("X-Forwarded-For", "").strip()
-    if forwarded:
-        return forwarded.split(",", 1)[0].strip()
+    # Prefer peer IP. Only trust X-Forwarded-For when behind a known proxy
+    # (production). Spoofable headers must not bypass rate limits in local/dev.
+    if is_production():
+        forwarded = request.headers.get("X-Forwarded-For", "").strip()
+        if forwarded:
+            return forwarded.split(",", 1)[0].strip() or "unknown"
     if request.client and request.client.host:
         return request.client.host
     return "unknown"
@@ -38,6 +59,16 @@ def rate_limit_allow(key: str, *, limit: int, window_seconds: int) -> bool:
             return False
         bucket.append(now)
         return True
+
+
+def _match_rule(method: str, path: str) -> tuple[int, int] | None:
+    exact = _EXACT_RULES.get((method, path))
+    if exact:
+        return exact
+    for rule_method, pattern, limit, window in _PATTERN_RULES:
+        if rule_method == method and pattern.match(path):
+            return limit, window
+    return None
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -57,29 +88,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory rate limits for auth and upload endpoints."""
-
-    _RULES: dict[tuple[str, str], tuple[int, int]] = {
-        ("POST", "/api/auth/login"): (10, 60),
-        ("POST", "/api/auth/register"): (5, 60),
-        ("POST", "/api/auth/api-keys"): (5, 3600),
-        ("POST", "/api/analyze"): (20, 60),
-    }
+    """In-memory rate limits for auth, upload, and LLM endpoints."""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         settings = rate_limit_settings()
         if not settings["enabled"]:
             return await call_next(request)
 
-        rule = self._RULES.get((request.method.upper(), request.url.path))
+        method = request.method.upper()
+        path = request.url.path
+        rule = _match_rule(method, path)
         if not rule:
             return await call_next(request)
 
         limit, window = rule
         ip = client_ip(request)
-        key = f"{request.method}:{request.url.path}:{ip}"
+        key = f"{method}:{path}:{ip}"
         if not rate_limit_allow(key, limit=limit, window_seconds=window):
-            logger.warning("Rate limit exceeded for %s from %s", request.url.path, ip)
+            logger.warning("Rate limit exceeded for %s from %s", path, ip)
             return Response(
                 content='{"detail":"Too many requests. Try again later."}',
                 status_code=429,

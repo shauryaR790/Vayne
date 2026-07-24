@@ -24,6 +24,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db() -> None:
+    # Ensure model metadata is registered before create_all.
+    import product.backend.models  # noqa: F401
+
     if DATABASE_URL.startswith("sqlite"):
         # Ensure parent directory exists for file-based SQLite URLs.
         path = DATABASE_URL.split("///", 1)[-1]
