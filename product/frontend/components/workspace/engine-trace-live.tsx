@@ -15,15 +15,17 @@ function formatVal(value: unknown): string {
   return String(value);
 }
 
-type TraceBlock = {
-  id: string;
-  stage: string;
-  title: string;
-  lines: Array<{ label?: string; value?: string; muted?: boolean; arrow?: boolean }>;
-};
+type TraceChunk =
+  | { kind: "proof"; id: string; text: string }
+  | {
+      kind: "stage";
+      id: string;
+      title: string;
+      lines: Array<{ label?: string; value?: string; muted?: boolean; arrow?: boolean }>;
+    };
 
 function pushField(
-  lines: TraceBlock["lines"],
+  lines: Array<{ label?: string; value?: string; muted?: boolean; arrow?: boolean }>,
   label: string,
   value: unknown,
   opts?: { arrow?: boolean },
@@ -32,35 +34,49 @@ function pushField(
   lines.push({ label, value: formatVal(value), arrow: opts?.arrow });
 }
 
-/** Build live reasoning blocks from real engine events only — no fabricated math. */
-export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
-  const blocks: TraceBlock[] = [];
+function flushProof(
+  chunks: TraceChunk[],
+  proofBuf: string[],
+  key: string,
+) {
+  if (!proofBuf.length) return;
+  chunks.push({ kind: "proof", id: key, text: proofBuf.join("\n") });
+  proofBuf.length = 0;
+}
+
+/** Live CLI-faithful stream: proof dumps as continuous text; formulas only when evaluated. */
+export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
+  const chunks: TraceChunk[] = [];
+  const proofBuf: string[] = [];
+  let proofKey = "proof-0";
+  let proofIdx = 0;
 
   for (const ev of events) {
     if (!ev.stage || ev.stage === "console") continue;
     if (ev.event === "formula_catalog" || ev.event === "phase") continue;
 
-    const stageLabel = (STAGE_LABELS[ev.stage] || ev.stage).toUpperCase();
-    const f = ev.fields || {};
-    const lines: TraceBlock["lines"] = [];
-    const id = `${ev.id || `${ev.stage}-${ev.event}-${ev.timestamp_ms || blocks.length}`}`;
-
+    // Exact CLI proof stream — append as raw lines (no per-line [PROOF] chrome).
     if (ev.stage === "proof" && ev.event === "line" && ev.message) {
-      blocks.push({
-        id,
-        stage: ev.stage,
-        title: "PROOF",
-        lines: [{ value: ev.message }],
-      });
+      if (!proofBuf.length) {
+        proofKey = `proof-${proofIdx++}-${ev.timestamp_ms || chunks.length}`;
+      }
+      proofBuf.push(ev.message);
       continue;
     }
+
+    flushProof(chunks, proofBuf, proofKey);
+
+    const stageLabel = (STAGE_LABELS[ev.stage] || ev.stage).toUpperCase();
+    const f = ev.fields || {};
+    const lines: Array<{ label?: string; value?: string; muted?: boolean; arrow?: boolean }> = [];
+    const id = `${ev.id || `${ev.stage}-${ev.event}-${ev.timestamp_ms || chunks.length}`}`;
 
     if (ev.event === "start") {
       lines.push({ value: ev.message || "Started" });
       if (Array.isArray(f.files)) {
         lines.push({ label: "Files detected", value: String(f.files.length), arrow: true });
       }
-      blocks.push({ id, stage: ev.stage, title: stageLabel, lines });
+      chunks.push({ kind: "stage", id, title: stageLabel, lines });
       continue;
     }
 
@@ -74,7 +90,7 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       if (ev.execution_ms != null) {
         pushField(lines, "Execution", `${formatVal(ev.execution_ms)} ms`, { arrow: true });
       }
-      blocks.push({ id, stage: ev.stage, title: stageLabel, lines });
+      chunks.push({ kind: "stage", id, title: stageLabel, lines });
       continue;
     }
 
@@ -84,7 +100,7 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       if (ev.execution_ms != null) {
         pushField(lines, "Execution", `${formatVal(ev.execution_ms)} ms`, { arrow: true });
       }
-      blocks.push({ id, stage: ev.stage, title: stageLabel, lines });
+      chunks.push({ kind: "stage", id, title: stageLabel, lines });
       continue;
     }
 
@@ -92,7 +108,7 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       pushField(lines, "Raw findings", f.raw_findings);
       pushField(lines, "Unique findings", f.unique_findings, { arrow: true });
       pushField(lines, "Duplicates removed", f.duplicates_removed, { arrow: true });
-      blocks.push({ id, stage: ev.stage, title: stageLabel, lines });
+      chunks.push({ kind: "stage", id, title: stageLabel, lines });
       continue;
     }
 
@@ -102,30 +118,27 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       if (ev.execution_ms != null) {
         pushField(lines, "Execution", `${formatVal(ev.execution_ms)} ms`, { arrow: true });
       }
-      blocks.push({ id, stage: ev.stage, title: stageLabel, lines });
+      chunks.push({ kind: "stage", id, title: stageLabel, lines });
 
+      // Compact sample merges (not a full dump) — top agreements only.
       const samples = Array.isArray(f.samples) ? f.samples : [];
-      for (const sample of samples.slice(0, 12)) {
+      for (const sample of samples.slice(0, 6)) {
         if (!sample || typeof sample !== "object") continue;
         const s = sample as Record<string, unknown>;
-        const sLines: TraceBlock["lines"] = [];
+        const sLines: typeof lines = [];
         pushField(sLines, "Finding", s.title);
-        pushField(sLines, "Host", s.host, { arrow: true });
         if (s.cve) pushField(sLines, "Matched", s.cve, { arrow: true });
         if (s.scanner_agreement != null) {
           pushField(sLines, "Scanner Agreement", s.scanner_agreement, { arrow: true });
-        }
-        if (Array.isArray(s.sources) && s.sources.length) {
-          pushField(sLines, "Sources", (s.sources as unknown[]).join(", "), { arrow: true });
         }
         if (s.finding_id) {
           pushField(sLines, "Merged Investigation", `#${String(s.finding_id).slice(0, 8)}`, {
             arrow: true,
           });
         }
-        blocks.push({
+        chunks.push({
+          kind: "stage",
           id: `${id}-sample-${String(s.finding_id || s.title)}`,
-          stage: "correlation",
           title: "CORRELATION",
           lines: sLines,
         });
@@ -140,7 +153,7 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       if (ev.execution_ms != null) {
         pushField(lines, "Execution", `${formatVal(ev.execution_ms)} ms`, { arrow: true });
       }
-      blocks.push({ id, stage: ev.stage, title: stageLabel, lines });
+      chunks.push({ kind: "stage", id, title: stageLabel, lines });
       continue;
     }
 
@@ -164,7 +177,7 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
           ? ev.formula.result * 100
           : ev.formula.result);
       pushField(lines, "Final", final, { arrow: true });
-      blocks.push({ id, stage: ev.stage, title: "CONFIDENCE", lines });
+      chunks.push({ kind: "stage", id, title: "CONFIDENCE", lines });
       continue;
     }
 
@@ -174,11 +187,10 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       pushField(lines, "Exploitability", f.exploitability);
       pushField(lines, "Business Impact", f.business_impact, { arrow: true });
       if (f.internet_exposure != null) {
-        const exposed = Number(f.internet_exposure) >= 60;
-        pushField(lines, "Internet Exposure", exposed, { arrow: true });
+        pushField(lines, "Internet Exposure", Number(f.internet_exposure) >= 60, { arrow: true });
       }
       pushField(lines, "Priority", ev.formula.result ?? f.priority, { arrow: true });
-      blocks.push({ id, stage: ev.stage, title: "PRIORITY", lines });
+      chunks.push({ kind: "stage", id, title: "PRIORITY", lines });
       continue;
     }
 
@@ -192,7 +204,7 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       if (ev.execution_ms != null) {
         pushField(lines, "Execution", `${formatVal(ev.execution_ms)} ms`, { arrow: true });
       }
-      blocks.push({ id, stage: ev.stage, title: "ATTACK GRAPH", lines });
+      chunks.push({ kind: "stage", id, title: "ATTACK GRAPH", lines });
       continue;
     }
 
@@ -201,7 +213,7 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       pushField(lines, "Risk", f.risk_score, { arrow: true });
       pushField(lines, "Confidence", f.confidence, { arrow: true });
       pushField(lines, "Effort", f.attacker_effort, { arrow: true });
-      blocks.push({ id, stage: ev.stage, title: "ATTACK PATH", lines });
+      chunks.push({ kind: "stage", id, title: "ATTACK PATH", lines });
       continue;
     }
 
@@ -211,13 +223,13 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       if (ev.execution_ms != null) {
         pushField(lines, "Execution", `${formatVal(ev.execution_ms)} ms`, { arrow: true });
       }
-      blocks.push({ id, stage: ev.stage, title: stageLabel, lines });
+      chunks.push({ kind: "stage", id, title: stageLabel, lines });
       continue;
     }
 
     if (ev.stage === "priority" && ev.event === "attention") {
       pushField(lines, "Attention findings", f.count);
-      blocks.push({ id, stage: ev.stage, title: "PRIORITY", lines });
+      chunks.push({ kind: "stage", id, title: "PRIORITY", lines });
       continue;
     }
 
@@ -227,7 +239,7 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       pushField(lines, "Attack paths", f.attack_paths, { arrow: true });
       pushField(lines, "Average confidence", f.average_confidence, { arrow: true });
       pushField(lines, "Highest priority", f.highest_priority, { arrow: true });
-      blocks.push({ id, stage: ev.stage, title: "SUMMARY", lines });
+      chunks.push({ kind: "stage", id, title: "SUMMARY", lines });
       continue;
     }
 
@@ -235,11 +247,11 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
       lines.push({ value: "Deterministic engine complete — AI boundary reached" });
       pushField(lines, "AI invoked in engine", f.ai_invoked_in_engine, { arrow: true });
       pushField(lines, "Deterministic ms", f.deterministic_execution_ms, { arrow: true });
-      blocks.push({ id, stage: ev.stage, title: "AI BOUNDARY", lines });
+      chunks.push({ kind: "stage", id, title: "AI BOUNDARY", lines });
       continue;
     }
 
-    if (ev.event === "complete" || ev.event === "score" || ev.event === "path") {
+    if (ev.event === "complete" || ev.event === "score" || ev.event === "path" || ev.event === "intake") {
       if (ev.message) lines.push({ value: ev.message });
       for (const [k, v] of Object.entries(f)) {
         if (k === "samples" || k === "findings" || k === "files" || k === "formulas") continue;
@@ -250,12 +262,13 @@ export function buildTraceBlocks(events: EngineTraceEvent[]): TraceBlock[] {
         pushField(lines, "Execution", `${formatVal(ev.execution_ms)} ms`, { arrow: true });
       }
       if (lines.length) {
-        blocks.push({ id, stage: ev.stage, title: stageLabel, lines });
+        chunks.push({ kind: "stage", id, title: stageLabel, lines });
       }
     }
   }
 
-  return blocks;
+  flushProof(chunks, proofBuf, proofKey);
+  return chunks;
 }
 
 export function EngineTraceLive({
@@ -270,13 +283,13 @@ export function EngineTraceLive({
   const scrollerRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   const [manualScroll, setManualScroll] = useState(false);
-  const blocks = useMemo(() => buildTraceBlocks(events), [events]);
+  const chunks = useMemo(() => buildTraceChunks(events), [events]);
 
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el || !stickToBottom.current) return;
     el.scrollTop = el.scrollHeight;
-  }, [blocks.length, events.length]);
+  }, [chunks.length, events.length]);
 
   return (
     <aside
@@ -290,13 +303,13 @@ export function EngineTraceLive({
           Engine Trace
         </p>
         <p className="mt-1 font-mono text-[11px] text-white/35">
-          Live execution telemetry — formulas only when evaluated
+          Live CLI proof + formulas as evaluated
         </p>
       </header>
 
       <div
         ref={scrollerRef}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-[1.55]"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-[11.5px] leading-[1.45]"
         onScroll={() => {
           const el = scrollerRef.current;
           if (!el) return;
@@ -305,33 +318,46 @@ export function EngineTraceLive({
           setManualScroll(!atBottom);
         }}
       >
-        {blocks.length === 0 ? (
+        {chunks.length === 0 ? (
           <p className="text-white/35">
             {running ? "Awaiting engine events…" : "No engine events yet"}
           </p>
         ) : (
-          blocks.map((block, idx) => (
-            <div key={block.id} className={cn(idx > 0 && "mt-5 border-t border-white/[0.08] pt-5")}>
-              <p className="mb-2 tracking-[0.12em] text-white/85">[{block.title}]</p>
-              <div className="space-y-1">
-                {block.lines.map((line, i) => (
-                  <div key={i}>
-                    {line.arrow ? <p className="text-white/25">↓</p> : null}
-                    {line.label && line.muted ? (
-                      <p className="text-white/45">{line.label}</p>
-                    ) : line.label ? (
-                      <div className="flex justify-between gap-4 text-white/65">
-                        <span>{line.label}</span>
-                        <span className="tabular-nums text-white/90">{line.value}</span>
-                      </div>
-                    ) : (
-                      <p className="whitespace-pre-wrap text-white/70">{line.value}</p>
-                    )}
-                  </div>
-                ))}
+          chunks.map((chunk, idx) =>
+            chunk.kind === "proof" ? (
+              <div
+                key={chunk.id}
+                className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
+              >
+                <p className="mb-2 tracking-[0.12em] text-white/50">=== VAYNE PROOF MODE ===</p>
+                <pre className="whitespace-pre-wrap break-words text-white/75">{chunk.text}</pre>
               </div>
-            </div>
-          ))
+            ) : (
+              <div
+                key={chunk.id}
+                className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
+              >
+                <p className="mb-2 tracking-[0.12em] text-white/85">[{chunk.title}]</p>
+                <div className="space-y-1">
+                  {chunk.lines.map((line, i) => (
+                    <div key={i}>
+                      {line.arrow ? <p className="text-white/25">↓</p> : null}
+                      {line.label && line.muted ? (
+                        <p className="text-white/45">{line.label}</p>
+                      ) : line.label ? (
+                        <div className="flex justify-between gap-4 text-white/65">
+                          <span>{line.label}</span>
+                          <span className="tabular-nums text-white/90">{line.value}</span>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-white/70">{line.value}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ),
+          )
         )}
         {running ? <span className="mt-3 inline-block text-white/40">▌</span> : null}
       </div>

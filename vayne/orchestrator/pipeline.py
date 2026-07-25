@@ -425,7 +425,9 @@ class Orchestrator:
             execution_ms=(time.perf_counter() - t_inv) * 1000,
         )
         _phase(STAGE_INVESTIGATION, files_processed=n_files)
-        highest_priority = emit_priority_samples(trace, investigated=investigated)
+        highest_priority = emit_priority_samples(
+            trace, investigated=investigated, attack_paths=attack_paths
+        )
         _phase(STAGE_PRIORITY, files_processed=n_files)
 
         self.on_stage(6, STAGES[5], "Scoring exploitability")

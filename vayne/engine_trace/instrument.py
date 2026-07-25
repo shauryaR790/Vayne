@@ -19,7 +19,7 @@ from vayne.engine_trace.events import (
     STAGE_SUMMARY,
     STAGE_VALIDATION,
 )
-from vayne.investigation.quality_score import composite_priority_score
+from vayne.investigation.quality_score import composite_priority_score, compute_quality_score
 from vayne.models import Classification
 
 
@@ -124,17 +124,18 @@ def emit_attention_findings(
             reasons.append("High exploitability")
         if corr.cve:
             reasons.append(f"CVE {corr.cve}")
+        if q.get("business_impact", 0) >= 70:
+            reasons.append("High business impact")
         if not reasons:
-            breakdown = list(getattr(val, "confidence_breakdown", None) or [])
-            if breakdown:
-                reasons.append(str(breakdown[0])[:120])
+            if conf >= 70:
+                reasons.append(f"High confidence ({int(conf)}%)")
             else:
                 reasons.append(corr.severity or "Prioritized by engine score")
         cards.append(
             {
                 "finding_id": corr.id,
                 "title": corr.title,
-                "host": corr.host,
+                "host": corr.host or "—",
                 "severity": (corr.severity or "info").upper(),
                 "priority": priority,
                 "confidence": conf,
@@ -453,17 +454,25 @@ def emit_priority_samples(
     emitter: EngineTraceEmitter,
     *,
     investigated: list,
+    attack_paths: list | None = None,
 ) -> float | None:
-    """Emit priority formula using real quality dimensions when present.
+    """Emit priority formula from real quality dimensions.
 
-    Returns the highest priority observed (or None if none computed).
+    Quality scores are computed per finding when the intelligence bundle does not
+    yet carry ``quality_score`` (that field is normally added later during analyst
+    cluster export). Returns the highest priority observed, or None.
     """
+    paths = attack_paths or []
     samples = []
     for item in investigated:
         intel = item.intelligence or {}
         quality = intel.get("quality_score") or intel.get("quality") or {}
         if not isinstance(quality, dict) or not quality:
-            continue
+            quality = compute_quality_score(
+                members=[item],
+                attack_paths=paths,
+                cluster_type=_cluster_type_hint(item),
+            )
         # Normalize keys to ints
         q = {k: int(v) for k, v in quality.items() if isinstance(v, (int, float))}
         if not q:
@@ -511,6 +520,15 @@ def emit_priority_samples(
     if samples:
         emit_attention_findings(emitter, samples=samples)
     return float(samples[0][0]) if samples else None
+
+
+def _cluster_type_hint(item: Any) -> str:
+    blob = f"{getattr(item.correlated, 'title', '')} {getattr(item.correlated, 'cve', '') or ''}".lower()
+    if any(k in blob for k in ("credential", "secret", "key", "password", "token")):
+        return "credential"
+    if any(k in blob for k in ("iam", "role", "identity", "assume")):
+        return "identity"
+    return "asset"
 
 
 def emit_investigation_build(
