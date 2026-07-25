@@ -252,12 +252,21 @@ export function EngineTracePanel({
         style={{ backgroundColor: C.bg }}
       >
         <p
-          className="font-mono text-[11px] uppercase tracking-[0.14em]"
-          style={{ color: C.dim }}
+          className="font-mono text-[13px] leading-[1.35]"
+          style={{
+            color: C.fg,
+            fontFamily: "Consolas, 'Courier New', ui-monospace, monospace",
+          }}
         >
           Engine Trace
         </p>
-        <p className="font-mono text-[11px] tabular-nums" style={{ color: C.dim }}>
+        <p
+          className="font-mono text-[13px] leading-[1.35] tabular-nums"
+          style={{
+            color: C.fg,
+            fontFamily: "Consolas, 'Courier New', ui-monospace, monospace",
+          }}
+        >
           {running ? "RUNNING" : "COMPLETE"} · {lines.length}
         </p>
       </header>
@@ -312,17 +321,17 @@ export function EngineTracePanel({
 
       {!running && onViewFullReport ? (
         <div
-          className="flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] px-4 py-2"
+          className="flex shrink-0 items-center justify-end border-t border-white/[0.08] px-4 py-2"
           style={{ backgroundColor: C.bg }}
         >
-          <p className="font-mono text-[11px]" style={{ color: C.dim }}>
-            Panel stays open until you continue
-          </p>
           <button
             type="button"
             onClick={onViewFullReport}
-            className="font-mono text-[11px] uppercase tracking-[0.12em]"
-            style={{ color: C.white }}
+            className="font-mono text-[13px] leading-[1.35]"
+            style={{
+              color: C.fg,
+              fontFamily: "Consolas, 'Courier New', ui-monospace, monospace",
+            }}
           >
             View full report
           </button>
