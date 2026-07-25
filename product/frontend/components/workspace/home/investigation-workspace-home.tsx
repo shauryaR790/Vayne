@@ -93,18 +93,6 @@ export function InvestigationWorkspaceHome({
               <MetaRow label="Execution Time" value="—" />
             </div>
 
-            <div className="mt-4 border-t border-white/[0.08] pt-3 text-[12px] leading-relaxed text-white/55">
-              <p className="text-white/75">How this engine works</p>
-              <p className="mt-2">
-                Parser → Normalizer → Correlator → Validator → Confidence → Attack Graph →
-                Priority → Investigation export.
-              </p>
-              <p className="mt-2">
-                Every score is computed from scanner evidence. Formulas evaluate only while the
-                pipeline runs — nothing is simulated here.
-              </p>
-            </div>
-
             <div
               className={cn(
                 "mt-5 flex flex-col gap-2 sm:flex-row",
