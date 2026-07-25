@@ -47,7 +47,7 @@ export function VaneInvestigationWorkspace({
 
   if (showTrace) {
     return (
-      <div ref={scrollRef} className="flex h-full min-h-0 flex-col bg-[#0c0c0c]">
+      <div ref={scrollRef} className="flex h-full min-h-0 flex-col bg-[#141414]">
         <EngineTracePanel
           events={engineTraceEvents}
           running={enginePhase === "running"}
