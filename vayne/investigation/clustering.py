@@ -25,12 +25,15 @@ _PORT_OBS_RE = re.compile(
 _CVE_RE = re.compile(r"CVE-\d{4}-\d+", re.I)
 _INTERNAL_SCORING = re.compile(
     r"(?i)evidence class:|composite score|\(\+\d+\)|\(-\d+\)|\(\d+/100\)|"
-    r"spoofable evidence|version flagged without"
+    r"spoofable evidence|version flagged without|"
+    r"model\s*=|confidence_model\s*=|observation_confidence"
 )
 
 
 def _looks_like_internal_scoring(text: str) -> bool:
-    return bool(_INTERNAL_SCORING.search(str(text or "").strip()))
+    from vayne.investigation.analyst_reasons import is_internal_reason
+
+    return is_internal_reason(text) or bool(_INTERNAL_SCORING.search(str(text or "").strip()))
 
 
 def _analyst_reason_line(finding: dict[str, Any]) -> str:
@@ -625,6 +628,9 @@ def build_findings_fallback_investigations(
         host = str(finding.get("host") or "").strip()
         score = int(finding.get("machine_confidence") or finding.get("final_confidence") or 50)
         title = _generate_title(ctype, [finding])
+        from vayne.investigation.analyst_reasons import build_analyst_reasons_from_finding_dict
+
+        priority_reasons = build_analyst_reasons_from_finding_dict(finding, sources=sources)
         out.append(
             {
                 "id": f"finding:{fid}",
@@ -632,14 +638,11 @@ def build_findings_fallback_investigations(
                 "kind": "investigation",
                 "tier": tier,
                 "title": title,
-                "reason": str(finding.get("why_it_matters") or finding.get("business_impact") or title),
+                "reason": priority_reasons[0] if priority_reasons else title,
                 "risk_score": score,
                 "confidence": score,
                 "claim_status": str(finding.get("claim_status") or "needs_validation"),
-                "priority_reasons": [
-                    f"Retained {str(finding.get('severity') or 'finding').lower()} severity evidence",
-                    "Promoted from retained findings because clustering produced no queue",
-                ],
+                "priority_reasons": priority_reasons,
                 "business_impact": str(finding.get("business_impact") or ""),
                 "confidence_explanation": str(finding.get("analyst_confidence") or ""),
                 "estimated_review_minutes": _review_minutes(tier, 1),
@@ -777,28 +780,37 @@ def _cluster_priority_reasons(
     path: dict[str, Any] | None,
     sources: list[str],
 ) -> list[str]:
+    from vayne.investigation.analyst_reasons import build_analyst_reasons_from_finding_dict
+
     reasons: list[str] = []
     if path and path.get("status") == "VALIDATED":
-        reasons.append("Validated attack path survived evidence gates")
+        reasons.append("On a surviving attack path")
         conf = int(path.get("confidence") or 0)
         if conf >= 70:
             reasons.append(f"Path confidence {conf}%")
 
-    if len(sources) >= 2:
+    # Prefer deterministic per-finding reasons (scanners, version, exposure).
+    for finding in findings[:4]:
+        for line in build_analyst_reasons_from_finding_dict(
+            finding, path=path, sources=sources
+        ):
+            reasons.append(line)
+
+    if len(sources) >= 2 and not any("Corroborated by" in r for r in reasons):
         reasons.append(
             f"Corroborated by {len(sources)} scanners ({', '.join(sources[:4])})"
         )
-    elif sources:
-        reasons.append(f"Primary evidence from {sources[0]}")
+    elif sources and not any(r.startswith("Observed by") for r in reasons):
+        reasons.append(f"Observed by {sources[0]}")
 
     cves = sorted({str(f.get("cve") or "") for f in findings if f.get("cve")})
-    if cves:
-        reasons.append(f"CVE cluster: {', '.join(cves[:3])}")
+    if cves and not any("CVE matched" in r for r in reasons):
+        reasons.append(f"CVE matched ({', '.join(cves[:3])})")
 
-    if _internet_facing(findings):
-        reasons.append("Internet-facing or entry-point reachable exposure")
-    if _has_exploit(findings):
-        reasons.append("Exploitability signals present across clustered evidence")
+    if _internet_facing(findings) and "Internet-facing" not in reasons:
+        reasons.append("Internet-facing")
+    if _has_exploit(findings) and not any("Exploit evidence" in r for r in reasons):
+        reasons.append("Exploit evidence present")
 
     for f in findings:
         if f.get("review_incomplete"):
@@ -809,8 +821,8 @@ def _cluster_priority_reasons(
     out: list[str] = []
     for r in reasons:
         k = r.lower()
-        if k in seen:
+        if k in seen or _looks_like_internal_scoring(r):
             continue
         seen.add(k)
         out.append(r)
-    return out[:8] or ["Clustered evidence warrants analyst review."]
+    return out[:8] or ["Needs analyst review"]

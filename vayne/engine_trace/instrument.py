@@ -189,8 +189,9 @@ _ACTIONABLE_TITLE = (
 
 
 def _is_formula_text(text: str) -> bool:
-    low = text.lower()
-    return "confidence = " in low or "round(" in low or "×" in text or " * " in low and "scanner" in low
+    from vayne.investigation.analyst_reasons import is_internal_reason
+
+    return is_internal_reason(text)
 
 
 def _attention_score(
@@ -230,44 +231,30 @@ def _attention_reason(
     on_path: bool,
     host_count: int,
 ) -> str:
-    corr = item.correlated
-    val = item.validation
-    conf = _finding_confidence(item, quality)
-    if on_path:
-        return "On a surviving attack path"
-    if corr.cve:
-        cve = str(corr.cve)
-        return f"{cve if cve.upper().startswith('CVE') else f'CVE {cve}'} — validate exploitability"
+    from vayne.investigation.analyst_reasons import (
+        build_analyst_reasons_from_engine_item,
+        format_reason_line,
+    )
 
-    for bucket in (
-        list(getattr(val, "confidence_breakdown", None) or []),
-        list(getattr(val, "reasoning", None) or []),
-        list(getattr(corr, "evidence", None) or []),
-    ):
-        for raw in bucket:
-            text = str(raw).strip()
-            if text and not _is_formula_text(text):
-                return text[:140]
+    return format_reason_line(
+        build_analyst_reasons_from_engine_item(
+            item, quality, on_path=on_path, host_count=host_count
+        )
+    )
 
-    title = str(corr.title or "")
-    if any(k in title.lower() for k in ("secret", "credential", "key", "password", "token")):
-        return "Exposed secret/credential material — rotate and restrict access"
-    if "injection" in title.lower():
-        return "Injection signal — confirm input path and impact"
-    if "mfa" in title.lower():
-        return "Authentication weakness — confirm MFA enforcement"
-    if quality.get("internet_exposure", 0) >= 60:
-        return "Internet-facing exposure"
-    if quality.get("exploitability", 0) >= 60:
-        return "Elevated exploitability signal"
-    if host_count > 1:
-        return f"Repeated across {host_count} hosts — review source artifacts"
-    if conf >= 50:
-        return f"Engine confidence {int(conf)}% — prioritize validation"
-    source_file = _source_file_for(item)
-    if source_file:
-        return f"Review scan artifact: {source_file}"
-    return "Needs analyst review"
+
+def _attention_reasons(
+    item: Any,
+    quality: dict,
+    *,
+    on_path: bool,
+    host_count: int,
+) -> list[str]:
+    from vayne.investigation.analyst_reasons import build_analyst_reasons_from_engine_item
+
+    return build_analyst_reasons_from_engine_item(
+        item, quality, on_path=on_path, host_count=host_count
+    )
 
 
 def _is_high_signal(
@@ -364,6 +351,9 @@ def emit_attention_findings(
         corr = item.correlated
         conf = _finding_confidence(item, q)
         source_file = _source_file_for(item)
+        reasons = _attention_reasons(
+            item, q, on_path=on_path, host_count=host_count
+        )
         cards.append(
             {
                 "finding_id": corr.id,
@@ -376,6 +366,7 @@ def emit_attention_findings(
                 "reason": _attention_reason(
                     item, q, on_path=on_path, host_count=host_count
                 ),
+                "reasons": reasons,
                 "cve": corr.cve or None,
                 "source_file": source_file,
                 "on_attack_path": on_path,

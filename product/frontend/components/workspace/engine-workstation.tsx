@@ -44,6 +44,7 @@ type AttentionFinding = {
   priority: number;
   confidence: number;
   reason: string;
+  reasons?: string[];
   cve?: string | null;
   source_file?: string | null;
   on_attack_path?: boolean;
@@ -154,7 +155,16 @@ function PriorityCard({
         ) : null}
         <div className="pt-1">
           <p className="text-white/40">Reason</p>
-          <p className="mt-0.5 text-white/70">{finding.reason}</p>
+          <ul className="mt-0.5 space-y-0.5 text-white/70">
+            {(finding.reasons?.length
+              ? finding.reasons
+              : finding.reason
+                ? finding.reason.split(/\s·\s|\n+/).map((r) => r.trim()).filter(Boolean)
+                : []
+            ).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
         </div>
       </div>
       {onOpen ? (

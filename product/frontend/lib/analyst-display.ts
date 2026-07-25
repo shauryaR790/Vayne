@@ -2,7 +2,7 @@ import type { WorkbenchPriorityItem } from "./types";
 
 /** Engine scoring labels that must never appear in analyst-facing UI. */
 const INTERNAL_SCORING =
-  /evidence class:|composite score|\(\+\d+\)|\(-\d+\)|\(\d+\/100\)|spoofable evidence|version flagged without|moderately spoofable/i;
+  /evidence class:|composite score|\(\+\d+\)|\(-\d+\)|\(\d+\/100\)|spoofable evidence|version flagged without|moderately spoofable|model\s*=|confidence_model\s*=|observation_confidence|confidence\s*=\s*round/i;
 
 export function isInternalScoringText(text: string): boolean {
   return INTERNAL_SCORING.test(text.trim());
