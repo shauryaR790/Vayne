@@ -13,12 +13,12 @@ import {
 import {
   loadWorkspacePanelOrder,
   panelDragMime,
+  panelGridTemplate,
   saveWorkspacePanelOrder,
   swapWorkspacePanels,
   type WorkspacePanelId,
 } from "@/lib/workspace-panel-order";
 import { cn } from "@/lib/utils";
-
 type PanelOrderContextValue = {
   order: WorkspacePanelId[];
   swap: (a: WorkspacePanelId, b: WorkspacePanelId) => void;
@@ -105,8 +105,8 @@ export function SwappablePanelSlot({
 }
 
 /**
- * Desktop dock: CSS grid so columns cannot be crushed by content width.
- * ~42% / 29% / 29% — Engine slightly wider, Trace + Analyst share the rest.
+ * Desktop dock: CSS grid sized by panel identity.
+ * Engine always 39, Trace 29, Analyst 31 — widths travel with the panel on swap.
  */
 export function SwappablePanelRow({
   panels,
@@ -122,9 +122,7 @@ export function SwappablePanelRow({
         "grid h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden divide-x divide-vx-border",
         className,
       )}
-      style={{
-        gridTemplateColumns: "minmax(0, 39fr) minmax(0, 29fr) minmax(0, 31fr)",
-      }}
+      style={{ gridTemplateColumns: panelGridTemplate(order) }}
     >
       {order.map((id) => (
         <SwappablePanelSlot key={id} id={id}>

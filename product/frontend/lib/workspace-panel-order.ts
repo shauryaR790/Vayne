@@ -49,6 +49,17 @@ export function saveWorkspacePanelOrder(order: WorkspacePanelId[]): void {
   }
 }
 
+/** Width share follows the panel identity, not the column index. */
+export const PANEL_WIDTH_FR: Record<WorkspacePanelId, number> = {
+  engine: 39,
+  trace: 29,
+  analyst: 31,
+};
+
+export function panelGridTemplate(order: WorkspacePanelId[]): string {
+  return order.map((id) => `minmax(0, ${PANEL_WIDTH_FR[id]}fr)`).join(" ");
+}
+
 /** Swap two panels by id (positions exchange). */
 export function swapWorkspacePanels(
   order: WorkspacePanelId[],
