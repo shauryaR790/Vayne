@@ -104,11 +104,7 @@ export function InvestigationWorkspaceHome({
 
         {dragOver ? (
           <p className="mt-5 text-[12px] tracking-[0.14em] text-white/60">Drop artifacts</p>
-        ) : (
-          <p className="mt-5 text-center text-[11px] tracking-[0.12em] text-white/30">
-            Nmap · Nessus · Nuclei · Burp · BloodHound · OpenVAS
-          </p>
-        )}
+        ) : null}
       </div>
     </div>
   );
