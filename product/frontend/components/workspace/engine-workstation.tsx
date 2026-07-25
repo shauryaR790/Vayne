@@ -150,7 +150,7 @@ function buildStageCards(events: EngineTraceEvent[]): StageCard[] {
 
 function EngineBootBanner({ version }: { version: string }) {
   return (
-    <div className="border border-white/[0.1] bg-black/40 px-4 py-4 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
+    <div className="border border-white/[0.1] bg-[#141414] px-4 py-4 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
       <p className="mb-2 tracking-[0.18em] text-white/50">VAYNE ENGINE</p>
       <pre className="overflow-x-auto whitespace-pre text-white/90">{BANNER}</pre>
       <div className="mt-4 space-y-1 border-t border-white/[0.08] pt-3 text-white/55">
