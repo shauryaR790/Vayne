@@ -58,8 +58,12 @@ export function VaneUploadStage({
   return (
     <div
       className="relative flex h-full min-h-0 w-full flex-col"
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e) => {
+        if ([...e.dataTransfer.types].includes("application/x-vayne-panel")) return;
+        e.preventDefault();
+      }}
       onDrop={(e) => {
+        if ([...e.dataTransfer.types].includes("application/x-vayne-panel")) return;
         e.preventDefault();
         if (disabled) return;
         const picked = Array.from(e.dataTransfer.files ?? []);

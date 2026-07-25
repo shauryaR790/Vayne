@@ -305,7 +305,7 @@ export function EngineTraceLive({
   return (
     <aside
       className={cn(
-        "flex h-full min-h-0 w-full min-w-0 flex-col overflow-x-hidden border-l border-white/[0.08] bg-[#141414]",
+        "flex h-full min-h-0 w-full min-w-0 flex-col overflow-x-hidden bg-[#141414]",
         className,
       )}
     >

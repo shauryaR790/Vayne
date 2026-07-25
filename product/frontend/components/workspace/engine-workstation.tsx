@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 
 import { InvestigationEngineHeader } from "@/components/workspace/analyst/analyst-panel-header";
-import { EngineTraceLive } from "@/components/workspace/engine-trace-live";
 import type { EngineTraceEvent } from "@/lib/engine-trace";
 import { cn } from "@/lib/utils";
 
@@ -209,19 +208,17 @@ export function EngineWorkstation({
 
   return (
     <section className={cn("flex h-full min-h-0 w-full flex-col", className)} style={{ backgroundColor: BG }}>
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* Center: Engine Status Dashboard */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden bg-[#141414]">
-          <InvestigationEngineHeader />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden bg-[#141414]">
+        <InvestigationEngineHeader />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-4">
           <div className="shrink-0 py-1 font-mono text-[11px] leading-[1.35] text-white/90 sm:text-[12px]">
             <pre className="max-w-full overflow-x-hidden whitespace-pre">{BANNER}</pre>
             <pre className="mt-3 max-w-full overflow-x-hidden whitespace-pre">{ENGINE_MARK}</pre>
           </div>
 
           <div className="mt-auto flex flex-col pt-10">
-          <div className="py-1 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
-            <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
+            <div className="py-1 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
+              <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
               <MetaRow label="Version" value={phase.version} />
               <MetaRow label="Created By" value={phase.createdBy} />
               <MetaRow label="Current Phase" value={phase.phase} />
@@ -235,41 +232,35 @@ export function EngineWorkstation({
                 label="Execution Time"
                 value={phase.elapsedS != null ? `${phase.elapsedS.toFixed(2)} s` : "—"}
               />
-          </div>
+            </div>
 
-          <div className="mt-4">
-            <ProgressBar pct={phase.progressPct} phase={phase.phase} />
-          </div>
+            <div className="mt-4">
+              <ProgressBar pct={phase.progressPct} phase={phase.phase} />
+            </div>
 
-          <div className="pt-8 pb-1">
-            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
-              Priority findings
-            </p>
-            {findings.length === 0 ? (
-              <p className="font-mono text-[12px] text-white/35">
-                {running
-                  ? "Awaiting priority engine…"
-                  : "No priority findings emitted for this run"}
+            <div className="pt-8 pb-1">
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
+                Priority findings
               </p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {findings.map((finding) => (
-                  <PriorityCard
-                    key={finding.finding_id}
-                    finding={finding}
-                    onOpen={onViewFullReport}
-                  />
-                ))}
-              </div>
-            )}
+              {findings.length === 0 ? (
+                <p className="font-mono text-[12px] text-white/35">
+                  {running
+                    ? "Awaiting priority engine…"
+                    : "No priority findings emitted for this run"}
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {findings.map((finding) => (
+                    <PriorityCard
+                      key={finding.finding_id}
+                      finding={finding}
+                      onOpen={onViewFullReport}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          </div>
-          </div>
-        </div>
-
-        {/* Right-center: ENGINE TRACE */}
-        <div className="flex h-[42vh] min-h-0 w-full min-w-0 shrink-0 flex-col overflow-x-hidden border-t border-white/[0.08] lg:h-auto lg:w-[360px] lg:self-stretch lg:border-t-0 xl:w-[400px]">
-          <EngineTraceLive events={events} running={running} className="h-full min-h-0 min-w-0 flex-1" />
         </div>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 
 import { analyzeFiles, checkHealth } from "@/lib/api";
 import {
@@ -69,6 +69,11 @@ import { analysisPromptForFiles } from "@/lib/staged-files-summary";
 import { VaneSidebar } from "@/components/workspace/vane-sidebar";
 import { VaneEnginePanel } from "@/components/workspace/vane-engine-panel";
 import { VaneAnalystPanel } from "@/components/workspace/vane-analyst-panel";
+import { EngineTracePanel } from "@/components/workspace/engine-trace-panel";
+import {
+  SwappablePanelRow,
+  WorkspacePanelOrderProvider,
+} from "@/components/workspace/swappable-panels";
 import { MobileWorkspaceHeader } from "@/components/workspace/mobile-workspace-chrome";
 import {
   InvestigationReportAskProvider,
@@ -1039,150 +1044,238 @@ export function VaneWorkspace({
         />
       </Suspense>
 
-      <motion.div
-        className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-vx-border bg-vx-app pt-12 lg:h-dvh lg:pt-0"
-        animate={{
-          flex: isLgUp ? "1 1 55%" : "1 1 100%",
-        }}
-        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-      >
-        <InvestigationReportAskProvider askSection={askAboutSection}>
-          <VaneEnginePanel
-            scrollRef={scrollRef}
-            sessionActive={investigationSessionActive}
-            hasInvestigationData={hasInvestigationData}
-            busy={busy}
-            backendOnline={backendOnline}
-            analystOnline={analystOnline}
-            error={error}
-            files={files}
-            enginePhase={engineTraceOpen ? "complete" : enginePhase}
-            engineTraceEvents={engineTraceEvents}
-            onViewEngineTrace={() => {
-              const id =
-                investigationIds[0] ||
-                (bundle ? bundle.detail.summary.id : null);
-              if (id && engineTraceEvents.length === 0) {
-                void fetchEngineTrace(id).then((events) => {
-                  if (events.length) setEngineTraceEvents(events);
-                });
-              }
-              setEngineTraceOpen(true);
-            }}
-            onCloseEngineTrace={() => {
-              setEngineTraceOpen(false);
-              setEnginePhase((phase) => (phase === "complete" ? "idle" : phase));
-            }}
-            messages={messages}
-            investigationIds={
-              investigationIds.length
-                ? investigationIds
-                : bundle
-                  ? [bundle.detail.summary.id]
-                  : []
-            }
-            investigationGroupId={investigationGroupId}
-            investigationMode={investigationMode}
-            sourceLabels={engineSourceLabels}
-            onSelectFiles={(picked) => {
-              setFiles((prev) => {
-                const seen = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
-                const merged = [...prev];
-                for (const file of picked) {
-                  const key = `${file.name}:${file.size}:${file.lastModified}`;
-                  if (!seen.has(key)) {
-                    seen.add(key);
-                    merged.push(file);
-                  }
-                }
-                return merged;
-              });
-              setError("");
-              setInvestigationSessionActive(true);
-              void handleAnalyze(picked);
-            }}
-            onRemoveFile={removeFile}
-            onClearFiles={clearFiles}
-            onInvestigationModeChange={handleInvestigationModeChange}
-            onBeginSession={handleHomeBegin}
-            onOpenInvestigation={handleOpenInvestigation}
-            onFocusAnalyst={openMobileAnalyst}
-            onNewInvestigation={() => window.dispatchEvent(new Event("vayne:new-chat"))}
-          />
-        </InvestigationReportAskProvider>
-      </motion.div>
-
-      <AnimatePresence initial={false}>
-        {isLgUp ? (
-          <motion.div
-            key="analyst-panel"
-            initial={{ width: 0, opacity: 0, x: 16 }}
-            animate={{ width: "25%", opacity: 1, x: 0 }}
-            exit={{ width: 0, opacity: 0, x: 16 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="h-dvh min-w-[300px] shrink-0 overflow-hidden"
-          >
-            <VaneAnalystPanel
-              bundle={bundle}
-              bundles={analystBundles}
-              contextLabel={analystContextLabel}
-              messages={analystMessages}
-              input={analystInput}
-              busy={busy}
-              thinking={thinking}
-              activityFeed={activityFeed}
-              analystOnline={analystOnline}
-              initialScrollTop={analystScrollTopRef.current}
-              onInputChange={setAnalystInput}
-              onAsk={(q) => void streamReply(q)}
-              onScroll={(top) => {
-                analystScrollTopRef.current = top;
-                persist({ analystScrollTop: top });
+      {isLgUp ? (
+        <WorkspacePanelOrderProvider>
+          <InvestigationReportAskProvider askSection={askAboutSection}>
+            <SwappablePanelRow
+              className="h-dvh min-w-0"
+              panels={{
+                engine: (
+                  <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col border-r-0 bg-vx-app">
+                    <VaneEnginePanel
+                      scrollRef={scrollRef}
+                      sessionActive={investigationSessionActive}
+                      hasInvestigationData={hasInvestigationData}
+                      busy={busy}
+                      backendOnline={backendOnline}
+                      analystOnline={analystOnline}
+                      error={error}
+                      files={files}
+                      enginePhase={engineTraceOpen ? "complete" : enginePhase}
+                      engineTraceEvents={engineTraceEvents}
+                      onViewEngineTrace={() => {
+                        const id =
+                          investigationIds[0] ||
+                          (bundle ? bundle.detail.summary.id : null);
+                        if (id && engineTraceEvents.length === 0) {
+                          void fetchEngineTrace(id).then((events) => {
+                            if (events.length) setEngineTraceEvents(events);
+                          });
+                        }
+                        setEngineTraceOpen(true);
+                      }}
+                      onCloseEngineTrace={() => {
+                        setEngineTraceOpen(false);
+                        setEnginePhase((phase) => (phase === "complete" ? "idle" : phase));
+                      }}
+                      messages={messages}
+                      investigationIds={
+                        investigationIds.length
+                          ? investigationIds
+                          : bundle
+                            ? [bundle.detail.summary.id]
+                            : []
+                      }
+                      investigationGroupId={investigationGroupId}
+                      investigationMode={investigationMode}
+                      sourceLabels={engineSourceLabels}
+                      onSelectFiles={(picked) => {
+                        setFiles((prev) => {
+                          const seen = new Set(
+                            prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`),
+                          );
+                          const merged = [...prev];
+                          for (const file of picked) {
+                            const key = `${file.name}:${file.size}:${file.lastModified}`;
+                            if (!seen.has(key)) {
+                              seen.add(key);
+                              merged.push(file);
+                            }
+                          }
+                          return merged;
+                        });
+                        setError("");
+                        setInvestigationSessionActive(true);
+                        void handleAnalyze(picked);
+                      }}
+                      onRemoveFile={removeFile}
+                      onClearFiles={clearFiles}
+                      onInvestigationModeChange={handleInvestigationModeChange}
+                      onBeginSession={handleHomeBegin}
+                      onOpenInvestigation={handleOpenInvestigation}
+                      onFocusAnalyst={openMobileAnalyst}
+                      onNewInvestigation={() => window.dispatchEvent(new Event("vayne:new-chat"))}
+                    />
+                  </div>
+                ),
+                trace: (
+                  <EngineTracePanel
+                    events={engineTraceEvents}
+                    running={enginePhase === "running"}
+                    className="h-full min-h-0"
+                  />
+                ),
+                analyst: (
+                  <VaneAnalystPanel
+                    bundle={bundle}
+                    bundles={analystBundles}
+                    contextLabel={analystContextLabel}
+                    messages={analystMessages}
+                    input={analystInput}
+                    busy={busy}
+                    thinking={thinking}
+                    activityFeed={activityFeed}
+                    analystOnline={analystOnline}
+                    initialScrollTop={analystScrollTopRef.current}
+                    onInputChange={setAnalystInput}
+                    onAsk={(q) => void streamReply(q)}
+                    onScroll={(top) => {
+                      analystScrollTopRef.current = top;
+                      persist({ analystScrollTop: top });
+                    }}
+                    inputRef={analystInputRef}
+                    onClearChat={() => setAnalystMessages([])}
+                    briefingPrompt={briefingPrompt ? { fileCount: briefingPrompt.fileCount } : null}
+                    onGetSummary={runBriefingPrompt}
+                    onSkipSummary={dismissBriefingPrompt}
+                    sourceLabel={engineSourceLabels[0]}
+                    sourceLabels={engineSourceLabels}
+                    chatQuotaRemaining={chatQuotaRemaining}
+                  />
+                ),
               }}
-              inputRef={analystInputRef}
-              onClearChat={() => setAnalystMessages([])}
-              briefingPrompt={briefingPrompt ? { fileCount: briefingPrompt.fileCount } : null}
-              onGetSummary={runBriefingPrompt}
-              onSkipSummary={dismissBriefingPrompt}
-              sourceLabel={engineSourceLabels[0]}
-              sourceLabels={engineSourceLabels}
-              chatQuotaRemaining={chatQuotaRemaining}
             />
+          </InvestigationReportAskProvider>
+        </WorkspacePanelOrderProvider>
+      ) : (
+        <>
+          <motion.div
+            className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-vx-border bg-vx-app pt-12"
+            animate={{ flex: "1 1 100%" }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <InvestigationReportAskProvider askSection={askAboutSection}>
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <VaneEnginePanel
+                    scrollRef={scrollRef}
+                    sessionActive={investigationSessionActive}
+                    hasInvestigationData={hasInvestigationData}
+                    busy={busy}
+                    backendOnline={backendOnline}
+                    analystOnline={analystOnline}
+                    error={error}
+                    files={files}
+                    enginePhase={engineTraceOpen ? "complete" : enginePhase}
+                    engineTraceEvents={engineTraceEvents}
+                    onViewEngineTrace={() => {
+                      const id =
+                        investigationIds[0] ||
+                        (bundle ? bundle.detail.summary.id : null);
+                      if (id && engineTraceEvents.length === 0) {
+                        void fetchEngineTrace(id).then((events) => {
+                          if (events.length) setEngineTraceEvents(events);
+                        });
+                      }
+                      setEngineTraceOpen(true);
+                    }}
+                    onCloseEngineTrace={() => {
+                      setEngineTraceOpen(false);
+                      setEnginePhase((phase) => (phase === "complete" ? "idle" : phase));
+                    }}
+                    messages={messages}
+                    investigationIds={
+                      investigationIds.length
+                        ? investigationIds
+                        : bundle
+                          ? [bundle.detail.summary.id]
+                          : []
+                    }
+                    investigationGroupId={investigationGroupId}
+                    investigationMode={investigationMode}
+                    sourceLabels={engineSourceLabels}
+                    onSelectFiles={(picked) => {
+                      setFiles((prev) => {
+                        const seen = new Set(
+                          prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`),
+                        );
+                        const merged = [...prev];
+                        for (const file of picked) {
+                          const key = `${file.name}:${file.size}:${file.lastModified}`;
+                          if (!seen.has(key)) {
+                            seen.add(key);
+                            merged.push(file);
+                          }
+                        }
+                        return merged;
+                      });
+                      setError("");
+                      setInvestigationSessionActive(true);
+                      void handleAnalyze(picked);
+                    }}
+                    onRemoveFile={removeFile}
+                    onClearFiles={clearFiles}
+                    onInvestigationModeChange={handleInvestigationModeChange}
+                    onBeginSession={handleHomeBegin}
+                    onOpenInvestigation={handleOpenInvestigation}
+                    onFocusAnalyst={openMobileAnalyst}
+                    onNewInvestigation={() => window.dispatchEvent(new Event("vayne:new-chat"))}
+                  />
+                </div>
+                <div className="flex h-[42vh] min-h-0 shrink-0 flex-col overflow-hidden border-t border-white/[0.08]">
+                  <EngineTracePanel
+                    events={engineTraceEvents}
+                    running={enginePhase === "running"}
+                    className="h-full min-h-0"
+                  />
+                </div>
+              </div>
+            </InvestigationReportAskProvider>
           </motion.div>
-        ) : null}
-      </AnimatePresence>
 
-      {!isLgUp && mobileAnalystOpen ? (
-        <div className="fixed inset-0 z-40 bg-vx-analyst">
-          <VaneAnalystPanel
-            bundle={bundle}
-            bundles={analystBundles}
-            contextLabel={analystContextLabel}
-            messages={analystMessages}
-            input={analystInput}
-            busy={busy}
-            thinking={thinking}
-            activityFeed={activityFeed}
-            analystOnline={analystOnline}
-            initialScrollTop={analystScrollTopRef.current}
-            onInputChange={setAnalystInput}
-            onAsk={(q) => void streamReply(q)}
-            onScroll={(top) => {
-              analystScrollTopRef.current = top;
-              persist({ analystScrollTop: top });
-            }}
-            inputRef={analystInputRef}
-            onClearChat={() => setAnalystMessages([])}
-            onClose={() => setMobileAnalystOpen(false)}
-            briefingPrompt={briefingPrompt ? { fileCount: briefingPrompt.fileCount } : null}
-            onGetSummary={runBriefingPrompt}
-            onSkipSummary={dismissBriefingPrompt}
-            sourceLabel={engineSourceLabels[0]}
-            sourceLabels={engineSourceLabels}
-            chatQuotaRemaining={chatQuotaRemaining}
-          />
-        </div>
-      ) : null}
+          {mobileAnalystOpen ? (
+            <div className="fixed inset-0 z-40 bg-vx-analyst">
+              <VaneAnalystPanel
+                bundle={bundle}
+                bundles={analystBundles}
+                contextLabel={analystContextLabel}
+                messages={analystMessages}
+                input={analystInput}
+                busy={busy}
+                thinking={thinking}
+                activityFeed={activityFeed}
+                analystOnline={analystOnline}
+                initialScrollTop={analystScrollTopRef.current}
+                onInputChange={setAnalystInput}
+                onAsk={(q) => void streamReply(q)}
+                onScroll={(top) => {
+                  analystScrollTopRef.current = top;
+                  persist({ analystScrollTop: top });
+                }}
+                inputRef={analystInputRef}
+                onClearChat={() => setAnalystMessages([])}
+                onClose={() => setMobileAnalystOpen(false)}
+                briefingPrompt={briefingPrompt ? { fileCount: briefingPrompt.fileCount } : null}
+                onGetSummary={runBriefingPrompt}
+                onSkipSummary={dismissBriefingPrompt}
+                sourceLabel={engineSourceLabels[0]}
+                sourceLabels={engineSourceLabels}
+                chatQuotaRemaining={chatQuotaRemaining}
+              />
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

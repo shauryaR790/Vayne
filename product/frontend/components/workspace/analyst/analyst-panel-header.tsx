@@ -11,7 +11,9 @@ import {
   Terminal,
 } from "lucide-react";
 
+import { useOptionalWorkspacePanelOrder } from "@/components/workspace/swappable-panels";
 import { ANALYST_NAME } from "@/lib/brand";
+import { panelDragMime, type WorkspacePanelId } from "@/lib/workspace-panel-order";
 import { cn } from "@/lib/utils";
 
 function HeaderIconButton({
@@ -52,6 +54,7 @@ function HeaderIconButton({
 export function WorkspacePanelHeader({
   icon: Icon,
   title,
+  panelId,
   onClose,
   onPrimaryAction,
   primaryActionLabel = "New",
@@ -59,20 +62,34 @@ export function WorkspacePanelHeader({
 }: {
   icon: LucideIcon;
   title: string;
+  /** When set (desktop dock), the tab can be dragged to swap panel positions. */
+  panelId?: WorkspacePanelId;
   onClose?: () => void;
   onPrimaryAction?: () => void;
   primaryActionLabel?: string;
   /** Active tab surface — should match the panel body for seamless merge. */
   surfaceClassName?: string;
 }) {
+  const panelOrder = useOptionalWorkspacePanelOrder();
+  const canDrag = Boolean(panelId && panelOrder);
+
   return (
     <header className="flex shrink-0 items-stretch bg-[#0e0e0e]">
       {/* Active tab — same surface as panel body, open bottom edge */}
       <div
+        draggable={canDrag}
+        onDragStart={(e) => {
+          if (!panelId || !panelOrder) return;
+          e.dataTransfer.setData(panelDragMime(), panelId);
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        onDragEnd={() => panelOrder?.setDragOverId(null)}
         className={cn(
           "flex min-w-0 max-w-[min(100%,280px)] items-center gap-1.5 border-r border-vx-border px-3 py-2",
           surfaceClassName,
+          canDrag && "cursor-grab active:cursor-grabbing",
         )}
+        title={canDrag ? "Drag to swap panel position" : undefined}
       >
         <Icon className="size-3.5 shrink-0 text-white/55" strokeWidth={1.75} aria-hidden />
         <p className="min-w-0 truncate text-[13px] font-medium text-white/90">{title}</p>
@@ -111,6 +128,7 @@ export function AnalystPanelHeader({
     <WorkspacePanelHeader
       icon={MessageSquare}
       title={contextLabel?.trim() || ANALYST_NAME}
+      panelId="analyst"
       onClose={onClose}
       onPrimaryAction={onNewChat}
       primaryActionLabel="New chat"
@@ -129,6 +147,7 @@ export function EngineTraceHeader({
     <WorkspacePanelHeader
       icon={Terminal}
       title="Engine Trace"
+      panelId="trace"
       onClose={onClose}
       onPrimaryAction={onClear}
       primaryActionLabel="Clear trace"
@@ -141,6 +160,7 @@ export function InvestigationEngineHeader({ onClose }: { onClose?: () => void } 
     <WorkspacePanelHeader
       icon={Cpu}
       title="Investigation Engine"
+      panelId="engine"
       onClose={onClose}
     />
   );
