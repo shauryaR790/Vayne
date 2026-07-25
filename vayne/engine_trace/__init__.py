@@ -12,6 +12,8 @@ from vayne.engine_trace.events import (
     STAGE_NORMALIZATION,
     STAGE_PARSER,
     STAGE_PRIORITY,
+    STAGE_PROOF,
+    STAGE_CONSOLE,
     STAGE_RISK,
     STAGE_SUMMARY,
     STAGE_VALIDATION,
@@ -35,4 +37,6 @@ __all__ = [
     "STAGE_EXPORT",
     "STAGE_SUMMARY",
     "STAGE_AI",
+    "STAGE_CONSOLE",
+    "STAGE_PROOF",
 ]

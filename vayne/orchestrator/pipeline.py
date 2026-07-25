@@ -11,7 +11,7 @@ from vayne.analyst.engine import generate_brief
 from vayne.attack_paths.discovery import discover_attack_paths
 from vayne.correlator.engine import correlate_assets, correlate_findings
 from vayne.engine_trace.emitter import EngineTraceEmitter
-from vayne.engine_trace.events import STAGE_PARSER
+from vayne.engine_trace.events import STAGE_CONSOLE, STAGE_PARSER, STAGE_PROOF
 from vayne.engine_trace.instrument import (
     emit_ai_boundary,
     emit_correlation,
@@ -98,9 +98,44 @@ class Orchestrator:
         self._start = 0.0
 
     def _think(self, msg: str) -> None:
-        line = f"[VAYNE] {msg}"
+        # Proof audit lines from graph_proof.log_lines() are emitted verbatim.
+        proof_prefixes = (
+            "===",
+            "NODE ",
+            "EDGE ",
+            "REJECTED",
+            "ATTACK ",
+            "  ",
+            "Paths ",
+            "Nodes ",
+            "Edges ",
+            "Algorithm:",
+            "Entry ",
+            "Terminal ",
+            "Confidence ",
+            "Hypothetical ",
+            "False positives",
+            "Manual analyst",
+            "Unknowns ",
+            "Max blast",
+            "Connected ",
+            "Average ",
+            "Reachable ",
+            "Candidate ",
+            "Valid ",
+            "Analyst ",
+            "sample path:",
+            "Why this path",
+            "MITRE ",
+            "MATCHED ",
+            "WHY THIS",
+        )
+        is_proof = (not msg.strip()) or any(msg.startswith(p) for p in proof_prefixes)
+        line = msg if is_proof or msg.startswith("[VAYNE]") else f"[VAYNE] {msg}"
         self.thinking_log.append(line)
         self.on_thinking(line)
+        stage = STAGE_PROOF if is_proof else STAGE_CONSOLE
+        self.trace.emit_stage(stage, "line", message=line)
 
     def run(self, export_dir: Path | None = None) -> InvestigationReport:
         self._start = time.perf_counter()

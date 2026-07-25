@@ -1,0 +1,14 @@
+---
+description: Always commit and push after completing code changes
+alwaysApply: true
+---
+
+# Always push after changes
+
+When you finish a set of code changes the user asked for:
+
+1. Create a git commit (unless the user explicitly said not to commit).
+2. Push to `origin` on the current branch immediately after a successful commit.
+3. Do not wait for a separate "push" message — treat push as part of finishing the work.
+4. Skip secrets, `cache/`, local scan dumps, and other clearly non-source artifacts.
+5. If push fails, report the error and stop; do not force-push unless the user explicitly asks.

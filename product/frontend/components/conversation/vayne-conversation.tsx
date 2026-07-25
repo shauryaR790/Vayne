@@ -748,9 +748,8 @@ export function VaneWorkspace({
       setFiles([]);
 
       const finishEngineAnimation = async () => {
+        // Stay on Engine Trace until the user clicks "View full report".
         setEnginePhase("complete");
-        await new Promise((r) => window.setTimeout(r, 1600));
-        setEnginePhase((phase) => (phase === "complete" ? "idle" : phase));
       };
 
       if (result.mode === "separate" && result.investigations.length > 1) {

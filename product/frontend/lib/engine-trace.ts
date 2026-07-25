@@ -114,4 +114,6 @@ export const STAGE_LABELS: Record<string, string> = {
   export: "Export",
   summary: "Engine Summary",
   ai_explanation: "AI Explanation",
+  console: "Engine Console",
+  proof: "Proof Mode",
 };

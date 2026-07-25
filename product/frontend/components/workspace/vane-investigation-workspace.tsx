@@ -47,22 +47,12 @@ export function VaneInvestigationWorkspace({
 
   if (showTrace) {
     return (
-      <div ref={scrollRef} className="flex h-full min-h-0 flex-col bg-[#0a0a0a]">
-        {enginePhase !== "running" && onCloseEngineTrace ? (
-          <div className="flex shrink-0 items-center justify-end border-b border-white/10 px-5 py-2">
-            <button
-              type="button"
-              onClick={onCloseEngineTrace}
-              className="font-mono text-[11px] uppercase tracking-[0.12em] text-white/55 hover:text-white"
-            >
-              Continue to report
-            </button>
-          </div>
-        ) : null}
+      <div ref={scrollRef} className="flex h-full min-h-0 flex-col bg-[#0c0c0c]">
         <EngineTracePanel
           events={engineTraceEvents}
           running={enginePhase === "running"}
           className="min-h-0 flex-1"
+          onViewFullReport={enginePhase !== "running" ? onCloseEngineTrace : undefined}
         />
         {error ? (
           <p className="shrink-0 border-t border-white/10 px-5 py-3 font-mono text-[12px] text-red-400/80">
