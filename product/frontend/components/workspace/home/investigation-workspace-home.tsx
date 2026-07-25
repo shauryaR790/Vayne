@@ -130,6 +130,16 @@ export function InvestigationWorkspaceHome({
             ) : null}
           </div>
 
+          <div className="mt-4 border border-white/[0.1] px-4 py-3 text-[12px] text-white/75">
+            <p className="tracking-wide text-white/35">
+              ░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+            </p>
+            <div className="mt-2 flex items-baseline justify-between gap-3">
+              <span className="tabular-nums text-white/50">0%</span>
+              <span className="text-white/40">Awaiting artifacts</span>
+            </div>
+          </div>
+
           <div className="mt-6">
             <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-white/45">
               Priority findings
