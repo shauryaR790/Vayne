@@ -3,6 +3,7 @@
 import type { DragEvent } from "react";
 import { useCallback, useState } from "react";
 
+import { EngineTraceStandby } from "@/components/workspace/engine-trace-standby";
 import { cn } from "@/lib/utils";
 
 const BG = "#141414";
@@ -155,52 +156,18 @@ export function InvestigationWorkspaceHome({
           </div>
         </div>
 
-        {/* Right-center: ENGINE TRACE (preview terminal) */}
+        {/* Right-center: ENGINE TRACE (idle terminal) */}
         <div className="h-[42vh] shrink-0 border-t border-white/[0.08] lg:h-auto lg:w-[360px] lg:border-t-0 xl:w-[400px]">
           <aside className="flex h-full min-h-0 w-full flex-col border-l border-white/[0.08] bg-[#141414]">
-            <header className="shrink-0 border-b border-white/[0.08] px-4 py-3">
-              <p className="text-[12px] uppercase tracking-[0.14em] text-white/75">Engine Trace</p>
-              <p className="mt-1 text-[11px] text-white/35">
-                Live CLI proof + formulas as evaluated
+            <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 py-3">
+              <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-white/75">
+                Engine Trace
+              </p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
+                Idle
               </p>
             </header>
-
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-[11.5px] leading-[1.55] text-white/65">
-              <p className="tracking-[0.12em] text-white/85">[STANDBY]</p>
-              <p className="mt-2 text-white/45">No artifacts loaded — trace idle.</p>
-
-              <div className="mt-5 border-t border-white/[0.08] pt-5">
-                <p className="tracking-[0.12em] text-white/85">[WHAT YOU WILL SEE]</p>
-                <p className="mt-2">↓</p>
-                <p className="mt-1">Parser — files detected, findings extracted, execution ms</p>
-                <p className="mt-1">↓</p>
-                <p className="mt-1">Correlation — merges, scanner agreement, CVE matches</p>
-                <p className="mt-1">↓</p>
-                <p className="mt-1">finding_confidence() — Observation × 0.34 · Reliability × 0.24 · Exploit × 0.24 · Impact × 0.18</p>
-                <p className="mt-1">↓</p>
-                <p className="mt-1">priority_score() — weighted quality dimensions → priority</p>
-                <p className="mt-1">↓</p>
-                <p className="mt-1">Attack Graph — nodes, edges, traversal, surviving paths</p>
-                <p className="mt-1">↓</p>
-                <p className="mt-1">Proof Mode — NODE / EDGE / PATH dump (exact CLI stream)</p>
-              </div>
-
-              <div className="mt-5 border-t border-white/[0.08] pt-5">
-                <p className="tracking-[0.12em] text-white/85">[FORMULAS]</p>
-                <p className="mt-2 text-white/45">Documented permanently in Engine Documentation.</p>
-                <p className="mt-2">Live evaluations appear here only while the engine runs.</p>
-                <p className="mt-2">Inactive formulas are never shown.</p>
-              </div>
-
-              <div className="mt-5 border-t border-white/[0.08] pt-5">
-                <p className="tracking-[0.12em] text-white/85">[EXPECT AFTER RUN]</p>
-                <p className="mt-2">Streaming stage blocks + continuous proof telemetry.</p>
-                <p className="mt-1">Priority cards fill on the left when attention findings emit.</p>
-                <p className="mt-1">Analyst panel explains results only after the engine completes.</p>
-              </div>
-
-              <span className="mt-4 inline-block text-white/35">▌</span>
-            </div>
+            <EngineTraceStandby />
           </aside>
         </div>
       </div>

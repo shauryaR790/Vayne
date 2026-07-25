@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { EngineTraceStandby } from "@/components/workspace/engine-trace-standby";
 import { STAGE_LABELS, type EngineTraceEvent } from "@/lib/engine-trace";
 import { cn } from "@/lib/utils";
 
@@ -298,84 +299,84 @@ export function EngineTraceLive({
         className,
       )}
     >
-      <header className="shrink-0 border-b border-white/[0.08] px-4 py-3">
+      <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 py-3">
         <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-white/75">
           Engine Trace
         </p>
-        <p className="mt-1 font-mono text-[11px] text-white/35">
-          Live CLI proof + formulas as evaluated
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
+          {running ? "Live" : chunks.length ? "Complete" : "Idle"}
         </p>
       </header>
 
-      <div
-        ref={scrollerRef}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-[11.5px] leading-[1.45]"
-        onScroll={() => {
-          const el = scrollerRef.current;
-          if (!el) return;
-          const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
-          stickToBottom.current = atBottom;
-          setManualScroll(!atBottom);
-        }}
-      >
-        {chunks.length === 0 ? (
-          <p className="text-white/35">
-            {running ? "Awaiting engine events…" : "No engine events yet"}
-          </p>
-        ) : (
-          chunks.map((chunk, idx) =>
-            chunk.kind === "proof" ? (
-              <div
-                key={chunk.id}
-                className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
-              >
-                <p className="mb-2 tracking-[0.12em] text-white/50">=== VAYNE PROOF MODE ===</p>
-                <pre className="whitespace-pre-wrap break-words text-white/75">{chunk.text}</pre>
-              </div>
-            ) : (
-              <div
-                key={chunk.id}
-                className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
-              >
-                <p className="mb-2 tracking-[0.12em] text-white/85">[{chunk.title}]</p>
-                <div className="space-y-1">
-                  {chunk.lines.map((line, i) => (
-                    <div key={i}>
-                      {line.arrow ? <p className="text-white/25">↓</p> : null}
-                      {line.label && line.muted ? (
-                        <p className="text-white/45">{line.label}</p>
-                      ) : line.label ? (
-                        <div className="flex justify-between gap-4 text-white/65">
-                          <span>{line.label}</span>
-                          <span className="tabular-nums text-white/90">{line.value}</span>
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap text-white/70">{line.value}</p>
-                      )}
-                    </div>
-                  ))}
+      {chunks.length === 0 ? (
+        <EngineTraceStandby running={running} />
+      ) : (
+        <>
+          <div
+            ref={scrollerRef}
+            className="min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-[11.5px] leading-[1.45]"
+            onScroll={() => {
+              const el = scrollerRef.current;
+              if (!el) return;
+              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+              stickToBottom.current = atBottom;
+              setManualScroll(!atBottom);
+            }}
+          >
+            {chunks.map((chunk, idx) =>
+              chunk.kind === "proof" ? (
+                <div
+                  key={chunk.id}
+                  className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
+                >
+                  <p className="mb-2 tracking-[0.12em] text-white/50">=== VAYNE PROOF MODE ===</p>
+                  <pre className="whitespace-pre-wrap break-words text-white/75">{chunk.text}</pre>
                 </div>
-              </div>
-            ),
-          )
-        )}
-        {running ? <span className="mt-3 inline-block text-white/40">▌</span> : null}
-      </div>
+              ) : (
+                <div
+                  key={chunk.id}
+                  className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
+                >
+                  <p className="mb-2 tracking-[0.12em] text-white/85">[{chunk.title}]</p>
+                  <div className="space-y-1">
+                    {chunk.lines.map((line, i) => (
+                      <div key={i}>
+                        {line.arrow ? <p className="text-white/25">↓</p> : null}
+                        {line.label && line.muted ? (
+                          <p className="text-white/45">{line.label}</p>
+                        ) : line.label ? (
+                          <div className="flex justify-between gap-4 text-white/65">
+                            <span>{line.label}</span>
+                            <span className="tabular-nums text-white/90">{line.value}</span>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap text-white/70">{line.value}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ),
+            )}
+            {running ? <span className="mt-3 inline-block text-white/40">▌</span> : null}
+          </div>
 
-      {manualScroll ? (
-        <button
-          type="button"
-          className="shrink-0 border-t border-white/[0.08] px-4 py-1.5 text-left font-mono text-[11px] text-white/60"
-          onClick={() => {
-            stickToBottom.current = true;
-            setManualScroll(false);
-            const el = scrollerRef.current;
-            if (el) el.scrollTop = el.scrollHeight;
-          }}
-        >
-          Resume auto-scroll
-        </button>
-      ) : null}
+          {manualScroll ? (
+            <button
+              type="button"
+              className="shrink-0 border-t border-white/[0.08] px-4 py-1.5 text-left font-mono text-[11px] text-white/60"
+              onClick={() => {
+                stickToBottom.current = true;
+                setManualScroll(false);
+                const el = scrollerRef.current;
+                if (el) el.scrollTop = el.scrollHeight;
+              }}
+            >
+              Resume auto-scroll
+            </button>
+          ) : null}
+        </>
+      )}
     </aside>
   );
 }
