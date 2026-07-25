@@ -78,7 +78,7 @@ export function InvestigationWorkspaceHome({
         {/* Center: Engine Status Dashboard (preview) */}
         <div className="flex min-h-0 flex-1 flex-col bg-[#141414]">
           <InvestigationEngineHeader />
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
           <div className="bg-[#141414] py-1 text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
             <pre className="overflow-x-auto whitespace-pre text-white/90">{BANNER}</pre>
             <div className="mt-4 pt-3">
@@ -140,7 +140,7 @@ export function InvestigationWorkspaceHome({
             </div>
           </div>
 
-          <div className="mt-6">
+          <div className="mt-auto pt-8 pb-1">
             <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-white/45">
               Priority findings
             </p>
