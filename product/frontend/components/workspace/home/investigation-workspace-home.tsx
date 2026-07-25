@@ -3,6 +3,7 @@
 import type { DragEvent } from "react";
 import { useCallback, useState } from "react";
 
+import { EngineTraceHeader } from "@/components/workspace/analyst/analyst-panel-header";
 import { EngineTraceStandby } from "@/components/workspace/engine-trace-standby";
 import { cn } from "@/lib/utils";
 
@@ -159,14 +160,7 @@ export function InvestigationWorkspaceHome({
         {/* Right-center: ENGINE TRACE (idle terminal) */}
         <div className="h-[42vh] shrink-0 border-t border-white/[0.08] lg:h-auto lg:w-[360px] lg:border-t-0 xl:w-[400px]">
           <aside className="flex h-full min-h-0 w-full flex-col border-l border-white/[0.08] bg-[#141414]">
-            <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 py-3">
-              <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-white/75">
-                Engine Trace
-              </p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-                Idle
-              </p>
-            </header>
+            <EngineTraceHeader />
             <EngineTraceStandby />
           </aside>
         </div>

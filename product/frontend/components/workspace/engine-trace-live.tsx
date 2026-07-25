@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { EngineTraceHeader } from "@/components/workspace/analyst/analyst-panel-header";
 import { EngineTraceStandby } from "@/components/workspace/engine-trace-standby";
 import { STAGE_LABELS, type EngineTraceEvent } from "@/lib/engine-trace";
 import { cn } from "@/lib/utils";
@@ -299,14 +300,7 @@ export function EngineTraceLive({
         className,
       )}
     >
-      <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 py-3">
-        <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-white/75">
-          Engine Trace
-        </p>
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">
-          {running ? "Live" : chunks.length ? "Complete" : "Idle"}
-        </p>
-      </header>
+      <EngineTraceHeader />
 
       {chunks.length === 0 ? (
         <EngineTraceStandby running={running} />
