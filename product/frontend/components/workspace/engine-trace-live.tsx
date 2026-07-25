@@ -18,6 +18,15 @@ function formatVal(value: unknown): string {
   return String(value);
 }
 
+type TraceLine = {
+  label?: string;
+  value?: string;
+  muted?: boolean;
+  arrow?: boolean;
+  code?: boolean;
+  highlight?: boolean;
+};
+
 type TraceChunk =
   | { kind: "proof"; id: string; text: string }
   | {
@@ -25,25 +34,11 @@ type TraceChunk =
       id: string;
       title: string;
       accent?: "formula" | "stage";
-      lines: Array<{
-        label?: string;
-        value?: string;
-        muted?: boolean;
-        arrow?: boolean;
-        code?: boolean;
-        highlight?: boolean;
-      }>;
+      lines: TraceLine[];
     };
 
 function pushField(
-  lines: Array<{
-    label?: string;
-    value?: string;
-    muted?: boolean;
-    arrow?: boolean;
-    code?: boolean;
-    highlight?: boolean;
-  }>,
+  lines: TraceLine[],
   label: string,
   value: unknown,
   opts?: { arrow?: boolean; code?: boolean; highlight?: boolean },
@@ -86,7 +81,7 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
 
     const stageLabel = (STAGE_LABELS[ev.stage] || ev.stage).toUpperCase();
     const f = ev.fields || {};
-    const lines: Array<{ label?: string; value?: string; muted?: boolean; arrow?: boolean }> = [];
+    const lines: TraceLine[] = [];
     const id = `${ev.id || `${ev.stage}-${ev.event}-${ev.timestamp_ms || chunks.length}`}`;
 
     if (ev.event === "start") {
