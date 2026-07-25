@@ -91,7 +91,12 @@ function certaintySnippet(wb: WorkbenchData): string {
   }
 
   const top = wb.confirmed_findings[0];
-  if (!top) return "**How certain**\nNo retained finding.";
+  if (!top) {
+    if (wb.priority_queue?.[0]) {
+      return `**How certain**\nStart with **${wb.priority_queue[0].title}** in the priority queue — evidence strength varies by finding.`;
+    }
+    return "**How certain**\nNo retained finding.";
+  }
 
   const sem = semanticConfidence(top);
   const score = top.machine_confidence;

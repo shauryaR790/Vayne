@@ -34,14 +34,17 @@ export function buildPlainTermsSection(wb: WorkbenchData): string {
     return parts.join(" ");
   }
 
-  const top = wb.confirmed_findings[0];
+  const top = wb.confirmed_findings[0] ?? wb.priority_queue?.[0];
   if (!top) {
+    if ((wb.totals?.confirmed_findings ?? 0) > 0 || (wb.investigations?.length ?? 0) > 0) {
+      return "The engine retained findings for review — open the priority queue to start with the highest-signal exposure.";
+    }
     return "The scan finished, but nothing met the bar for a confirmed security problem. That usually means either a clean surface or findings that still need manual validation.";
   }
 
   const title = inv?.title || top.title;
-  const host = top.host;
-  const claim = top.claim_status || "needs_validation";
+  const host = "host" in top ? top.host : undefined;
+  const claim = "claim_status" in top ? top.claim_status || "needs_validation" : "needs_validation";
   const confirmed = claim === "confirmed";
   const suspected = claim === "suspected" || claim === "observed";
 
@@ -59,6 +62,8 @@ export function buildPlainTermsSection(wb: WorkbenchData): string {
 
   if (wb.totals.validated_paths > 0) {
     lead += ` There ${wb.totals.validated_paths === 1 ? "is" : "are"} ${wb.totals.validated_paths} validated attack path${wb.totals.validated_paths === 1 ? "" : "s"} connecting the dots.`;
+  } else if (wb.confirmed_findings.length > 1) {
+    lead += ` ${wb.confirmed_findings.length} findings were retained after validation — start with the highest priority.`;
   }
 
   return lead;
@@ -71,7 +76,13 @@ export function buildWhySection(wb: WorkbenchData): string {
   }
 
   const top = wb.confirmed_findings[0];
-  if (!top) return "- No retained finding to anchor belief on.";
+  if (!top) {
+    if (wb.priority_queue?.[0]) {
+      const pq = wb.priority_queue[0];
+      return `- Priority queue leads with **${pq.title}** — open it before treating the surface as clean.`;
+    }
+    return "- No retained finding to anchor belief on.";
+  }
 
   const proof = top.proof?.length
     ? top.proof
@@ -121,7 +132,12 @@ function buildCertaintySection(wb: WorkbenchData): string {
     return inv.confidence_explanation.trim();
   }
 
-  if (!top) return "No retained finding — nothing to score.";
+  if (!top) {
+    if (wb.priority_queue?.[0] || (wb.confirmed_findings?.length ?? 0) > 0) {
+      return "Confidence varies by finding — open the priority queue for the strongest retained exposure.";
+    }
+    return "No retained finding — nothing to score.";
+  }
 
   const score = top.machine_confidence;
   const label = humanConfidenceLabel(score);

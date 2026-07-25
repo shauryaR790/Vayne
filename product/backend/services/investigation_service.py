@@ -554,6 +554,33 @@ class InvestigationService:
             "graph_proof": {},
             "assets": [],
             "discovered_assets": [],
+            # Critical: fallback must still carry findings so workbench/LLM
+            # never claims zero retained when the engine kept validated rows.
+            "findings": [
+                {
+                    "correlated": {
+                        "id": row.get("id"),
+                        "title": row.get("title"),
+                        "host": row.get("host"),
+                        "severity": row.get("severity") or "info",
+                        "cve": row.get("cve") or "",
+                        "evidence": row.get("evidence") or [],
+                        "sources": row.get("sources") or [],
+                        "confidence": row.get("confidence") or 0,
+                    },
+                    "validation": {
+                        "classification": row.get("classification") or "observed",
+                        "confidence": row.get("confidence") or 0,
+                        "overall_confidence": row.get("confidence") or 0,
+                        "confidence_breakdown": row.get("reasoning") or [],
+                        "reasoning": row.get("reasoning") or [],
+                    },
+                    "analyst": {},
+                    "intelligence": {},
+                }
+                for row in validated
+            ],
+            "attack_paths": [],
         }
 
     def get_workbench(self, inv_id: str) -> dict | None:
@@ -563,12 +590,26 @@ class InvestigationService:
             return None
 
         cached = self.load_artifact(inv_id, "workbench.json")
-        if cached:
+        if cached and self._workbench_cache_usable(inv_id, cached):
             return cached
 
         payload = self._build_workbench_payload(inv)
         self._save_workbench_cache(inv_id, payload)
         return payload
+
+    def _workbench_cache_usable(self, inv_id: str, cached: dict) -> bool:
+        """Reject stale caches that claim zero findings while the engine retained some."""
+        confirmed = cached.get("confirmed_findings") or []
+        if confirmed:
+            return True
+        findings = self.get_findings_export(inv_id) or {}
+        validated = findings.get("validated") or []
+        if validated:
+            return False
+        # Also rebuild if priority queue / investigations exist but confirmed is empty.
+        if (cached.get("investigations") or cached.get("priority_queue")) and not confirmed:
+            return False
+        return True
 
     def write_workbench_cache(self, inv_id: str) -> None:
         inv = self.get_investigation(inv_id)

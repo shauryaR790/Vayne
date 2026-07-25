@@ -70,6 +70,52 @@ def _sev_bucket(sev: str) -> str:
     return "info"
 
 
+def _hydrate_investigated_from_export(findings_export: dict) -> list[dict[str, Any]]:
+    """Rebuild investigated-shaped rows from findings.json when report.findings is empty.
+
+    The engine always writes findings.json validated/rejected. If investigation.json
+    is missing findings (fallback report, partial write, size issues), the analyst
+    workbench must still see retained findings — never contradict the engine.
+    """
+    rows: list[dict[str, Any]] = []
+    for entry in findings_export.get("validated") or []:
+        if not isinstance(entry, dict):
+            continue
+        classification = str(entry.get("classification") or "observed")
+        conf = int(entry.get("confidence") or entry.get("overall_confidence") or 0)
+        title = entry.get("title") or entry.get("cve") or "Finding"
+        host = entry.get("host") or ""
+        evidence = [str(e) for e in (entry.get("evidence") or []) if str(e).strip()]
+        reasoning = [str(r) for r in (entry.get("reasoning") or []) if str(r).strip()]
+        rows.append(
+            {
+                "correlated": {
+                    "id": entry.get("id") or f"{host}:{title}",
+                    "title": title,
+                    "host": host,
+                    "severity": entry.get("severity") or "info",
+                    "cve": entry.get("cve") or "",
+                    "evidence": evidence,
+                    "sources": entry.get("sources") or [],
+                    "findings": entry.get("findings") or [],
+                    "source_files": entry.get("source_files") or [],
+                    "confidence": conf,
+                },
+                "validation": {
+                    "classification": classification,
+                    "confidence": conf,
+                    "overall_confidence": conf,
+                    "observation_confidence": conf,
+                    "confidence_breakdown": reasoning,
+                    "reasoning": reasoning,
+                },
+                "analyst": {},
+                "intelligence": {},
+            }
+        )
+    return rows
+
+
 def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
 
@@ -100,6 +146,9 @@ def build_workbench(
     findings = findings or {}
     stats = report.get("stats") or {}
     investigated = report.get("findings") or []
+    # Never let the analyst layer go empty while the engine retained findings.
+    if not investigated:
+        investigated = _hydrate_investigated_from_export(findings)
     assets = report.get("assets") or []
     discovered = report.get("discovered_assets") or []
     graph_proof = report.get("graph_proof") or {}
@@ -214,14 +263,21 @@ def build_workbench(
             if svc.get("port") is not None:
                 all_ports.append(svc.get("port"))
 
-    asset_count = len(assets) or len(discovered)
+    asset_hosts = {
+        str((item.get("correlated") or {}).get("host") or "").strip()
+        for item in investigated
+        if str((item.get("correlated") or {}).get("host") or "").strip()
+    }
+    asset_count = len(assets) or len(discovered) or len(asset_hosts)
     service_count = len(_distinct(all_services)) or len(_distinct(all_ports))
     port_count = len(_distinct(all_ports))
     tech_count = len(_distinct([t for t in all_tech if t]))
 
-    findings_loaded = int(stats.get("findings_loaded") or 0)
-    findings_correlated = int(stats.get("findings_correlated") or 0)
-    findings_retained = int(stats.get("findings_retained") or 0)
+    findings_loaded = int(stats.get("findings_loaded") or 0) or len(investigated) + len(
+        findings.get("rejected") or []
+    )
+    findings_correlated = int(stats.get("findings_correlated") or 0) or len(investigated)
+    findings_retained = int(stats.get("findings_retained") or 0) or len(investigated)
     paths_explored = int(stats.get("paths_explored") or 0)
     paths_rejected = int(stats.get("paths_rejected") or 0)
     fp_removed = int(stats.get("false_positives_removed") or 0)
@@ -391,6 +447,15 @@ def build_workbench(
         available_scanners=[e["label"] for e in evidence_sources],
     )
     confirmed_findings = evidence["confirmed_findings"]
+    # Last-resort: if analyze_findings still empty but export has validated rows,
+    # re-hydrate and re-analyze so the LLM never contradicts the engine.
+    if not confirmed_findings and (findings.get("validated") or []):
+        investigated = _hydrate_investigated_from_export(findings)
+        evidence = analyze_findings(
+            investigated,
+            available_scanners=[e["label"] for e in evidence_sources],
+        )
+        confirmed_findings = evidence["confirmed_findings"]
     hypotheses = evidence["hypotheses"]
     unknowns = evidence["unknowns"]
 

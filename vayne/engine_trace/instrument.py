@@ -166,6 +166,33 @@ def _normalize_title_key(title: str) -> str:
     return " ".join(parts) if parts else "finding"
 
 
+_ACTIONABLE_TITLE = (
+    "secret",
+    "credential",
+    "password",
+    "api key",
+    "aws",
+    "iam",
+    "rce",
+    "injection",
+    "traversal",
+    "mfa",
+    "socket",
+    "backdoor",
+    "exposure",
+    "public",
+    "unauth",
+    "privilege",
+    "certificate",
+    "token",
+)
+
+
+def _is_formula_text(text: str) -> bool:
+    low = text.lower()
+    return "confidence = " in low or "round(" in low or "×" in text or " * " in low and "scanner" in low
+
+
 def _attention_score(
     priority: float,
     item: Any,
@@ -176,9 +203,10 @@ def _attention_score(
     corr = item.correlated
     conf = _finding_confidence(item, quality)
     sev = str(corr.severity or "info").lower()
+    title = str(corr.title or "").lower()
     score = float(priority)
     score += _SEV_ATTENTION_BOOST.get(sev, 0)
-    score += conf * 0.2
+    score += conf * 0.25
     if corr.cve:
         score += 28
     if on_path:
@@ -187,9 +215,11 @@ def _attention_score(
         score += 12
     if quality.get("internet_exposure", 0) >= 60:
         score += 10
-    # Pure INFO noise with no confidence/CVE/path sinks to the bottom.
-    if sev in ("info", "none", "") and not corr.cve and not on_path and conf < 20:
-        score -= 35
+    if any(k in title for k in _ACTIONABLE_TITLE):
+        score += 18
+    # Pure INFO noise with no confidence/CVE/path sinks hard.
+    if sev in ("info", "none", "") and not corr.cve and not on_path and conf < 35:
+        score -= 45
     return score
 
 
@@ -208,27 +238,62 @@ def _attention_reason(
     if corr.cve:
         cve = str(corr.cve)
         return f"{cve if cve.upper().startswith('CVE') else f'CVE {cve}'} — validate exploitability"
-    breakdown = list(getattr(val, "confidence_breakdown", None) or [])
-    if breakdown:
-        return str(breakdown[0])[:140]
-    reasoning = list(getattr(val, "reasoning", None) or [])
-    if reasoning:
-        return str(reasoning[0])[:140]
+
+    for bucket in (
+        list(getattr(val, "confidence_breakdown", None) or []),
+        list(getattr(val, "reasoning", None) or []),
+        list(getattr(corr, "evidence", None) or []),
+    ):
+        for raw in bucket:
+            text = str(raw).strip()
+            if text and not _is_formula_text(text):
+                return text[:140]
+
+    title = str(corr.title or "")
+    if any(k in title.lower() for k in ("secret", "credential", "key", "password", "token")):
+        return "Exposed secret/credential material — rotate and restrict access"
+    if "injection" in title.lower():
+        return "Injection signal — confirm input path and impact"
+    if "mfa" in title.lower():
+        return "Authentication weakness — confirm MFA enforcement"
     if quality.get("internet_exposure", 0) >= 60:
         return "Internet-facing exposure"
     if quality.get("exploitability", 0) >= 60:
         return "Elevated exploitability signal"
     if host_count > 1:
         return f"Repeated across {host_count} hosts — review source artifacts"
-    evidence = list(getattr(corr, "evidence", None) or [])
-    if evidence:
-        return str(evidence[0])[:140]
-    if conf > 0:
-        return f"Engine confidence {int(conf)}%"
-    sources = list(getattr(corr, "source_files", None) or [])
-    if sources:
-        return f"Review scan artifact: {sources[0]}"
-    return "Needs analyst review — low evidence strength"
+    if conf >= 50:
+        return f"Engine confidence {int(conf)}% — prioritize validation"
+    source_file = _source_file_for(item)
+    if source_file:
+        return f"Review scan artifact: {source_file}"
+    return "Needs analyst review"
+
+
+def _is_high_signal(
+    item: Any,
+    quality: dict,
+    *,
+    on_path: bool,
+    priority: float,
+) -> bool:
+    corr = item.correlated
+    conf = _finding_confidence(item, quality)
+    sev = str(corr.severity or "info").lower()
+    title = str(corr.title or "").lower()
+    if on_path or corr.cve:
+        return True
+    if sev in ("critical", "high"):
+        return True
+    if sev == "medium" and conf >= 40:
+        return True
+    if conf >= 55:
+        return True
+    if priority >= 40 and conf >= 35:
+        return True
+    if any(k in title for k in _ACTIONABLE_TITLE) and conf >= 40:
+        return True
+    return False
 
 
 def _source_file_for(item: Any) -> str | None:
@@ -279,24 +344,20 @@ def emit_attention_findings(
         on_path = best_item.correlated.id in path_ids or any(
             row[2].correlated.id in path_ids for row in group
         )
-        # Prefer groups that are not pure noise when stronger signal exists later.
         ranked_groups.append(
             (best_rank, best_priority, best_item, best_q, max(1, len(hosts) or len(group)), on_path)
         )
 
     ranked_groups.sort(key=lambda row: row[0], reverse=True)
 
-    # Drop pure INFO/0-conf noise if we have stronger signal elsewhere.
     strong = [
         row
         for row in ranked_groups
-        if row[5]
-        or row[2].correlated.cve
-        or str(row[2].correlated.severity or "").lower() in ("critical", "high", "medium")
-        or _finding_confidence(row[2], row[3]) >= 35
-        or row[1] >= 45
+        if _is_high_signal(row[2], row[3], on_path=row[5], priority=row[1])
     ]
-    pool = strong if strong else ranked_groups
+    # Prefer high-signal only; if the whole run is weak, still surface top 3
+    # distinct titles so the dashboard never lies about "nothing found".
+    pool = strong if strong else ranked_groups[:3]
 
     cards = []
     for _rank, priority, item, q, host_count, on_path in pool[:6]:

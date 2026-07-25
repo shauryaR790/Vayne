@@ -1524,6 +1524,16 @@ def build_executive_summary(
 ) -> str:
     """Interpretive first-person assessment — what happened, why, certainty, next."""
     if not confirmed:
+        # Never claim "nothing retained" when hypotheses still need analyst work.
+        if hypotheses:
+            top_h = hypotheses[0]
+            return (
+                f"I reviewed {file_count} evidence source"
+                f"{'' if file_count == 1 else 's'} across {asset_count or 'multiple'} asset"
+                f"{'' if asset_count == 1 else 's'}. Nothing reached full confirmation yet, "
+                f"but {len(hypotheses)} hypothes{'is' if len(hypotheses) == 1 else 'es'} still "
+                f"need attention — starting with {top_h.get('title') or 'the top hypothesis'}."
+            )
         return (
             f"I reviewed {file_count} evidence source"
             f"{'' if file_count == 1 else 's'} across {asset_count} asset"
@@ -1550,12 +1560,17 @@ def build_executive_summary(
         "exploit": "exploit",
     }.get(str(primary.get("metric") or ""), "observation")
     primary_score = primary.get("score", top.get("machine_confidence"))
+    others = max(0, len(confirmed) - 1)
 
     parts: list[str] = [
         f"{top['title']} on {host} is the strongest retained exposure "
         f"({primary_score}% {primary_label} confidence, {top['status'].lower()})."
         f"{proof_bit}"
     ]
+    if others:
+        parts.append(
+            f" {others} additional finding{'s were' if others != 1 else ' was'} retained for review."
+        )
 
     if cross_source_matches:
         parts.append(
