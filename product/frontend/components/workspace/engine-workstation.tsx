@@ -243,8 +243,8 @@ export function EngineWorkstation({
         </div>
 
         {/* Right-center: ENGINE TRACE */}
-        <div className="h-[42vh] shrink-0 border-t border-white/[0.08] lg:h-auto lg:w-[360px] lg:border-t-0 xl:w-[400px]">
-          <EngineTraceLive events={events} running={running} className="h-full" />
+        <div className="flex h-[42vh] min-h-0 shrink-0 flex-col border-t border-white/[0.08] lg:h-auto lg:w-[360px] lg:self-stretch lg:border-t-0 xl:w-[400px]">
+          <EngineTraceLive events={events} running={running} className="h-full min-h-0 flex-1" />
         </div>
       </div>
 

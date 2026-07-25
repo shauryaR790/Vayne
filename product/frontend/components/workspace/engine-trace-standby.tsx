@@ -1,14 +1,11 @@
 "use client";
 
+import { AnalystDockFootprint } from "@/components/workspace/analyst/analyst-dock-footprint";
 import { cn } from "@/lib/utils";
 
-/** Matches Ask VAYNE empty copy so both side panels share type + vertical center. */
-const EMPTY_COPY =
-  "font-sans text-[14px] leading-relaxed text-vx-muted";
-
 /**
- * Empty Engine Trace body — same type + vertical center as Analyst empty state.
- * Bottom spacer mirrors the analyst composer block so the sentences line up.
+ * Empty Engine Trace — mirrors Analyst empty layout so the sentence shares
+ * the same vertical center (content flex-1 + identical dock footprint).
  */
 export function EngineTraceStandby({
   running,
@@ -19,21 +16,16 @@ export function EngineTraceStandby({
 }) {
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
-      <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-5 text-center">
-        <p className={cn("max-w-[240px]", EMPTY_COPY)}>
-          {running
-            ? "Listening for the first stage — proof lines and formula evaluations will stream here as the engine runs."
-            : "Ingest scanner evidence to stream live CLI proof, formula evaluations, and stage telemetry here."}
-        </p>
+      <div className="min-h-0 flex-1 overflow-hidden px-4 py-5">
+        <div className="flex h-full min-h-[200px] items-center justify-center px-2 text-center">
+          <p className="max-w-[240px] font-sans text-[14px] leading-relaxed text-vx-muted">
+            {running
+              ? "Listening for the first stage — proof lines and formula evaluations will stream here as the engine runs."
+              : "Ingest scanner evidence to stream live CLI proof, formula evaluations, and stage telemetry here."}
+          </p>
+        </div>
       </div>
-
-      {/* Footprint of analyst quota + composer so empty copy sits at the same height */}
-      <div className="shrink-0 space-y-2 p-3" aria-hidden>
-        <div className="h-[11px]" />
-        <div className="h-[76px]" />
-      </div>
+      <AnalystDockFootprint />
     </div>
   );
 }
-
-export const ENGINE_TRACE_EMPTY_COPY_CLASS = EMPTY_COPY;
