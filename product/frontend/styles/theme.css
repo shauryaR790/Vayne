@@ -11,7 +11,7 @@
 :root {
   /* Main application (home screen, canvas) */
   --vx-app: #141414;
-  --vx-sidebar: #0e0e0e;
+  --vx-sidebar: #181818;
 
   /* Investigation results — headers darkest, bodies lighter */
   --vx-panel: #131313;
