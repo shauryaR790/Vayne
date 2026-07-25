@@ -13,7 +13,6 @@ import {
 import {
   loadWorkspacePanelOrder,
   panelDragMime,
-  panelSlotClass,
   saveWorkspacePanelOrder,
   swapWorkspacePanels,
   type WorkspacePanelId,
@@ -62,7 +61,7 @@ export function useOptionalWorkspacePanelOrder(): PanelOrderContextValue | null 
   return useContext(PanelOrderContext);
 }
 
-/** Droppable column shell for one of the three workspace panels. */
+/** Droppable cell for one workspace panel — width comes from the parent grid. */
 export function SwappablePanelSlot({
   id,
   children,
@@ -78,8 +77,7 @@ export function SwappablePanelSlot({
   return (
     <div
       className={cn(
-        panelSlotClass(id),
-        "relative overflow-hidden transition-[box-shadow] duration-150",
+        "relative flex min-h-0 min-w-0 flex-col overflow-hidden",
         over && "ring-1 ring-inset ring-white/25",
         className,
       )}
@@ -107,8 +105,8 @@ export function SwappablePanelSlot({
 }
 
 /**
- * Desktop-only row of the three panels in persisted order.
- * Always horizontal — callers must gate on lg viewport.
+ * Desktop dock: CSS grid so columns cannot be crushed by content width.
+ * ~42% / 29% / 29% — Engine slightly wider, Trace + Analyst share the rest.
  */
 export function SwappablePanelRow({
   panels,
@@ -121,9 +119,12 @@ export function SwappablePanelRow({
   return (
     <div
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-row divide-x divide-vx-border overflow-hidden",
+        "grid h-full min-h-0 w-full min-w-0 flex-1 overflow-hidden divide-x divide-vx-border",
         className,
       )}
+      style={{
+        gridTemplateColumns: "minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr)",
+      }}
     >
       {order.map((id) => (
         <SwappablePanelSlot key={id} id={id}>

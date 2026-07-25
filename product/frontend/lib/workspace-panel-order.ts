@@ -9,7 +9,7 @@ export const DEFAULT_WORKSPACE_PANEL_ORDER: WorkspacePanelId[] = [
 ];
 
 /** Bump when layout contract changes so stale orders cannot leave a crushed column. */
-const STORAGE_KEY = "vayne-workspace-panel-order-v2";
+const STORAGE_KEY = "vayne-workspace-panel-order-v3";
 const PANEL_MIME = "application/x-vayne-panel";
 
 export function panelDragMime(): string {
@@ -63,22 +63,4 @@ export function swapWorkspacePanels(
   next[i] = b;
   next[j] = a;
   return next;
-}
-
-/**
- * Desktop dock widths only — this row is gated behind isLgUp.
- * Trace + Analyst share space with Engine (closer to the old ~55/45 engine/trace split),
- * not fixed narrow side columns.
- */
-export function panelSlotClass(id: WorkspacePanelId): string {
-  switch (id) {
-    case "engine":
-      return "flex min-h-0 min-w-[300px] flex-[1.2] flex-col";
-    case "trace":
-      return "flex min-h-0 min-w-[360px] flex-1 flex-col";
-    case "analyst":
-      return "flex min-h-0 min-w-[340px] flex-1 flex-col";
-    default:
-      return "flex min-h-0 min-w-[300px] flex-1 flex-col";
-  }
 }
