@@ -36,17 +36,6 @@
   /* Accent — active states only */
   --vx-accent: #5eead4;
 
-  /* Engine Trace — keyword / syntax scheme (from editor reference) */
-  --vx-trace-bg: #1f1f1f;
-  --vx-trace-kw-bg: #1a3324;
-  --vx-trace-line-hl: #3b0a1e;
-  --vx-trace-keyword: #c9b896;
-  --vx-trace-string: #e8a0b8;
-  --vx-trace-number: #9dcea8;
-  --vx-trace-fn: #7eb8d4;
-  --vx-trace-op: rgba(255, 255, 255, 0.45);
-  --vx-trace-comment: rgba(255, 255, 255, 0.38);
-
   /* Analyst chat — markdown (solid white copy) */
   --vx-md-code-bg: rgba(255, 255, 255, 0.08);
   --vx-md-code-path: #ffffff;

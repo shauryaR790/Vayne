@@ -132,7 +132,6 @@ export function EngineTraceHeader({
       onClose={onClose}
       onPrimaryAction={onClear}
       primaryActionLabel="Clear trace"
-      surfaceClassName="bg-vx-trace-bg"
     />
   );
 }

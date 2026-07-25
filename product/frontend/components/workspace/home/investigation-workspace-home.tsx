@@ -168,7 +168,7 @@ export function InvestigationWorkspaceHome({
 
         {/* Right-center: ENGINE TRACE (idle terminal) */}
         <div className="flex h-[42vh] min-h-0 shrink-0 flex-col border-t border-white/[0.08] lg:h-auto lg:w-[360px] lg:self-stretch lg:border-t-0 xl:w-[400px]">
-          <aside className="flex h-full min-h-0 w-full flex-1 flex-col border-l border-white/[0.08] bg-vx-trace-bg">
+          <aside className="flex h-full min-h-0 w-full flex-1 flex-col border-l border-white/[0.08] bg-[#141414]">
             <EngineTraceHeader />
             <EngineTraceStandby />
           </aside>
