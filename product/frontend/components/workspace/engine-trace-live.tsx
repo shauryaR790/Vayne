@@ -53,9 +53,13 @@ function flushProof(
   proofBuf.length = 0;
 }
 
-/** Live CLI-faithful stream: proof dumps as continuous text; formulas only when evaluated. */
+/**
+ * Live CLI-faithful stream: stage telemetry first; PATH DISCOVERY / proof dumps
+ * are deferred to the bottom (after Investigation Generator and later stages).
+ */
 export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
   const chunks: TraceChunk[] = [];
+  const proofChunks: TraceChunk[] = [];
   const proofBuf: string[] = [];
   let proofKey = "proof-0";
   let proofIdx = 0;
@@ -64,16 +68,14 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
     if (!ev.stage || ev.stage === "console") continue;
     if (ev.event === "formula_catalog" || ev.event === "phase") continue;
 
-    // Exact CLI proof stream — append as raw lines (no per-line [PROOF] chrome).
-    if (ev.stage === "proof" && ev.event === "line" && ev.message) {
+    // Buffer proof lines — do not interleave with stage blocks.
+    if (ev.stage === "proof" && ev.event === "line" && ev.message != null) {
       if (!proofBuf.length) {
         proofKey = `proof-${proofIdx++}-${ev.timestamp_ms || chunks.length}`;
       }
       proofBuf.push(ev.message);
       continue;
     }
-
-    flushProof(chunks, proofBuf, proofKey);
 
     const stageLabel = (STAGE_LABELS[ev.stage] || ev.stage).toUpperCase();
     const f = ev.fields || {};
@@ -276,8 +278,8 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
     }
   }
 
-  flushProof(chunks, proofBuf, proofKey);
-  return chunks;
+  flushProof(proofChunks, proofBuf, proofKey);
+  return [...chunks, ...proofChunks];
 }
 
 export function EngineTraceLive({
