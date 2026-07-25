@@ -130,18 +130,13 @@ export function InvestigationWorkspaceHome({
             ) : null}
           </div>
 
-          <div className="mt-8">
-            <p className="mb-4 text-[11px] uppercase tracking-[0.14em] text-white/45">
-              Priority findings
+          <div className="mt-8 flex min-h-[160px] flex-1 items-center justify-center px-2 text-center">
+            <p className="max-w-[320px] font-sans text-[14px] leading-relaxed text-vx-muted">
+              Empty until the run finishes. After completion you will see up to six cards here —
+              ranked by engine priority, not severity labels alone. Each card shows confidence,
+              host, source file, and why it needs attention, with Open Investigation → into the
+              full report.
             </p>
-            <div className="flex min-h-[120px] items-center justify-center px-2 text-center">
-              <p className="max-w-[320px] font-sans text-[14px] leading-relaxed text-vx-muted">
-                Empty until the run finishes. After completion you will see up to six cards here —
-                ranked by engine priority, not severity labels alone. Each card shows confidence,
-                host, source file, and why it needs attention, with Open Investigation → into the
-                full report.
-              </p>
-            </div>
           </div>
           </div>
         </div>
