@@ -18,7 +18,9 @@ import {
   swapWorkspacePanels,
   type WorkspacePanelId,
 } from "@/lib/workspace-panel-order";
-import { cn } from "@/lib/utils";type PanelOrderContextValue = {
+import { cn } from "@/lib/utils";
+
+type PanelOrderContextValue = {
   order: WorkspacePanelId[];
   swap: (a: WorkspacePanelId, b: WorkspacePanelId) => void;
   dragOverId: WorkspacePanelId | null;
@@ -60,7 +62,7 @@ export function useOptionalWorkspacePanelOrder(): PanelOrderContextValue | null 
   return useContext(PanelOrderContext);
 }
 
-/** Droppable/draggable column shell for one of the three workspace panels. */
+/** Droppable column shell for one of the three workspace panels. */
 export function SwappablePanelSlot({
   id,
   children,
@@ -77,7 +79,7 @@ export function SwappablePanelSlot({
     <div
       className={cn(
         panelSlotClass(id),
-        "relative min-h-0 overflow-hidden transition-[box-shadow] duration-150",
+        "relative overflow-hidden transition-[box-shadow] duration-150",
         over && "ring-1 ring-inset ring-white/25",
         className,
       )}
@@ -104,7 +106,10 @@ export function SwappablePanelSlot({
   );
 }
 
-/** Renders the three panels in persisted left-to-right order. */
+/**
+ * Desktop-only row of the three panels in persisted order.
+ * Always horizontal — callers must gate on lg viewport.
+ */
 export function SwappablePanelRow({
   panels,
   className,
@@ -116,7 +121,7 @@ export function SwappablePanelRow({
   return (
     <div
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col divide-y divide-vx-border lg:flex-row lg:divide-x lg:divide-y-0",
+        "flex min-h-0 min-w-0 flex-1 flex-row divide-x divide-vx-border overflow-hidden",
         className,
       )}
     >

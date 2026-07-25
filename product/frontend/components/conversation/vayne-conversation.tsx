@@ -1046,116 +1046,117 @@ export function VaneWorkspace({
 
       {isLgUp ? (
         <WorkspacePanelOrderProvider>
-          <InvestigationReportAskProvider askSection={askAboutSection}>
-            <SwappablePanelRow
-              className="h-dvh min-w-0"
-              panels={{
-                engine: (
-                  <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col border-r-0 bg-vx-app">
-                    <VaneEnginePanel
-                      scrollRef={scrollRef}
-                      sessionActive={investigationSessionActive}
-                      hasInvestigationData={hasInvestigationData}
-                      busy={busy}
-                      backendOnline={backendOnline}
-                      analystOnline={analystOnline}
-                      error={error}
-                      files={files}
-                      enginePhase={engineTraceOpen ? "complete" : enginePhase}
-                      engineTraceEvents={engineTraceEvents}
-                      onViewEngineTrace={() => {
-                        const id =
-                          investigationIds[0] ||
-                          (bundle ? bundle.detail.summary.id : null);
-                        if (id && engineTraceEvents.length === 0) {
-                          void fetchEngineTrace(id).then((events) => {
-                            if (events.length) setEngineTraceEvents(events);
-                          });
-                        }
-                        setEngineTraceOpen(true);
-                      }}
-                      onCloseEngineTrace={() => {
-                        setEngineTraceOpen(false);
-                        setEnginePhase((phase) => (phase === "complete" ? "idle" : phase));
-                      }}
-                      messages={messages}
-                      investigationIds={
-                        investigationIds.length
-                          ? investigationIds
-                          : bundle
-                            ? [bundle.detail.summary.id]
-                            : []
-                      }
-                      investigationGroupId={investigationGroupId}
-                      investigationMode={investigationMode}
-                      sourceLabels={engineSourceLabels}
-                      onSelectFiles={(picked) => {
-                        setFiles((prev) => {
-                          const seen = new Set(
-                            prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`),
-                          );
-                          const merged = [...prev];
-                          for (const file of picked) {
-                            const key = `${file.name}:${file.size}:${file.lastModified}`;
-                            if (!seen.has(key)) {
-                              seen.add(key);
-                              merged.push(file);
-                            }
+          <div className="flex h-dvh min-h-0 min-w-0 flex-1 flex-row overflow-hidden">
+            <InvestigationReportAskProvider askSection={askAboutSection}>
+              <SwappablePanelRow
+                panels={{
+                  engine: (
+                    <div className="flex h-full min-h-0 w-full flex-col bg-vx-app">
+                      <VaneEnginePanel
+                        scrollRef={scrollRef}
+                        sessionActive={investigationSessionActive}
+                        hasInvestigationData={hasInvestigationData}
+                        busy={busy}
+                        backendOnline={backendOnline}
+                        analystOnline={analystOnline}
+                        error={error}
+                        files={files}
+                        enginePhase={engineTraceOpen ? "complete" : enginePhase}
+                        engineTraceEvents={engineTraceEvents}
+                        onViewEngineTrace={() => {
+                          const id =
+                            investigationIds[0] ||
+                            (bundle ? bundle.detail.summary.id : null);
+                          if (id && engineTraceEvents.length === 0) {
+                            void fetchEngineTrace(id).then((events) => {
+                              if (events.length) setEngineTraceEvents(events);
+                            });
                           }
-                          return merged;
-                        });
-                        setError("");
-                        setInvestigationSessionActive(true);
-                        void handleAnalyze(picked);
-                      }}
-                      onRemoveFile={removeFile}
-                      onClearFiles={clearFiles}
-                      onInvestigationModeChange={handleInvestigationModeChange}
-                      onBeginSession={handleHomeBegin}
-                      onOpenInvestigation={handleOpenInvestigation}
-                      onFocusAnalyst={openMobileAnalyst}
-                      onNewInvestigation={() => window.dispatchEvent(new Event("vayne:new-chat"))}
+                          setEngineTraceOpen(true);
+                        }}
+                        onCloseEngineTrace={() => {
+                          setEngineTraceOpen(false);
+                          setEnginePhase((phase) => (phase === "complete" ? "idle" : phase));
+                        }}
+                        messages={messages}
+                        investigationIds={
+                          investigationIds.length
+                            ? investigationIds
+                            : bundle
+                              ? [bundle.detail.summary.id]
+                              : []
+                        }
+                        investigationGroupId={investigationGroupId}
+                        investigationMode={investigationMode}
+                        sourceLabels={engineSourceLabels}
+                        onSelectFiles={(picked) => {
+                          setFiles((prev) => {
+                            const seen = new Set(
+                              prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`),
+                            );
+                            const merged = [...prev];
+                            for (const file of picked) {
+                              const key = `${file.name}:${file.size}:${file.lastModified}`;
+                              if (!seen.has(key)) {
+                                seen.add(key);
+                                merged.push(file);
+                              }
+                            }
+                            return merged;
+                          });
+                          setError("");
+                          setInvestigationSessionActive(true);
+                          void handleAnalyze(picked);
+                        }}
+                        onRemoveFile={removeFile}
+                        onClearFiles={clearFiles}
+                        onInvestigationModeChange={handleInvestigationModeChange}
+                        onBeginSession={handleHomeBegin}
+                        onOpenInvestigation={handleOpenInvestigation}
+                        onFocusAnalyst={openMobileAnalyst}
+                        onNewInvestigation={() => window.dispatchEvent(new Event("vayne:new-chat"))}
+                      />
+                    </div>
+                  ),
+                  trace: (
+                    <EngineTracePanel
+                      events={engineTraceEvents}
+                      running={enginePhase === "running"}
+                      className="h-full min-h-0 w-full"
                     />
-                  </div>
-                ),
-                trace: (
-                  <EngineTracePanel
-                    events={engineTraceEvents}
-                    running={enginePhase === "running"}
-                    className="h-full min-h-0"
-                  />
-                ),
-                analyst: (
-                  <VaneAnalystPanel
-                    bundle={bundle}
-                    bundles={analystBundles}
-                    contextLabel={analystContextLabel}
-                    messages={analystMessages}
-                    input={analystInput}
-                    busy={busy}
-                    thinking={thinking}
-                    activityFeed={activityFeed}
-                    analystOnline={analystOnline}
-                    initialScrollTop={analystScrollTopRef.current}
-                    onInputChange={setAnalystInput}
-                    onAsk={(q) => void streamReply(q)}
-                    onScroll={(top) => {
-                      analystScrollTopRef.current = top;
-                      persist({ analystScrollTop: top });
-                    }}
-                    inputRef={analystInputRef}
-                    onClearChat={() => setAnalystMessages([])}
-                    briefingPrompt={briefingPrompt ? { fileCount: briefingPrompt.fileCount } : null}
-                    onGetSummary={runBriefingPrompt}
-                    onSkipSummary={dismissBriefingPrompt}
-                    sourceLabel={engineSourceLabels[0]}
-                    sourceLabels={engineSourceLabels}
-                    chatQuotaRemaining={chatQuotaRemaining}
-                  />
-                ),
-              }}
-            />
-          </InvestigationReportAskProvider>
+                  ),
+                  analyst: (
+                    <VaneAnalystPanel
+                      bundle={bundle}
+                      bundles={analystBundles}
+                      contextLabel={analystContextLabel}
+                      messages={analystMessages}
+                      input={analystInput}
+                      busy={busy}
+                      thinking={thinking}
+                      activityFeed={activityFeed}
+                      analystOnline={analystOnline}
+                      initialScrollTop={analystScrollTopRef.current}
+                      onInputChange={setAnalystInput}
+                      onAsk={(q) => void streamReply(q)}
+                      onScroll={(top) => {
+                        analystScrollTopRef.current = top;
+                        persist({ analystScrollTop: top });
+                      }}
+                      inputRef={analystInputRef}
+                      onClearChat={() => setAnalystMessages([])}
+                      briefingPrompt={briefingPrompt ? { fileCount: briefingPrompt.fileCount } : null}
+                      onGetSummary={runBriefingPrompt}
+                      onSkipSummary={dismissBriefingPrompt}
+                      sourceLabel={engineSourceLabels[0]}
+                      sourceLabels={engineSourceLabels}
+                      chatQuotaRemaining={chatQuotaRemaining}
+                    />
+                  ),
+                }}
+              />
+            </InvestigationReportAskProvider>
+          </div>
         </WorkspacePanelOrderProvider>
       ) : (
         <>
