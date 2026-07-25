@@ -10,15 +10,10 @@ from vayne.attack_paths.formulas import (
     EDGE_CONFIDENCE_FORMULA,
     RISK_SCORE_FORMULA,
 )
-from vayne.engine_trace.instrument import PRIORITY_WEIGHTS
-
-# Mirrors vayne.confidence.finding_confidence overall mix.
-FINDING_CONFIDENCE_DIM_WEIGHTS = {
-    "observation": 0.34,
-    "reliability": 0.24,
-    "exploit": 0.24,
-    "impact": 0.18,
-}
+from vayne.engine_trace.instrument import (
+    FINDING_CONFIDENCE_DIM_WEIGHTS,
+    PRIORITY_WEIGHTS,
+)
 
 SCANNER_AGREEMENT_FORMULA = (
     "scanner_agreement.ratio = len(agreed_tools) / max(len(capable_tools), 1)"

@@ -34,6 +34,121 @@ PRIORITY_WEIGHTS = {
     "investigation_completeness": 0.12,
 }
 
+FINDING_CONFIDENCE_DIM_WEIGHTS = {
+    "observation": 0.34,
+    "reliability": 0.24,
+    "exploit": 0.24,
+    "impact": 0.18,
+}
+
+# Deterministic progress anchors — updated only when a stage actually completes.
+PHASE_PROGRESS: dict[str, float] = {
+    STAGE_PARSER: 12.0,
+    STAGE_NORMALIZATION: 22.0,
+    STAGE_DEDUPLICATION: 32.0,
+    STAGE_CORRELATION: 42.0,
+    STAGE_VALIDATION: 55.0,
+    STAGE_CONFIDENCE: 62.0,
+    STAGE_GRAPH: 74.0,
+    STAGE_PRIORITY: 82.0,
+    STAGE_INVESTIGATION: 90.0,
+    STAGE_EXPORT: 96.0,
+    STAGE_SUMMARY: 100.0,
+}
+
+PHASE_LABELS: dict[str, str] = {
+    STAGE_PARSER: "Parser",
+    STAGE_NORMALIZATION: "Normalizer",
+    STAGE_DEDUPLICATION: "Deduplicator",
+    STAGE_CORRELATION: "Correlation Engine",
+    STAGE_VALIDATION: "Validation Engine",
+    STAGE_CONFIDENCE: "Confidence Engine",
+    STAGE_GRAPH: "Attack Graph Builder",
+    STAGE_PRIORITY: "Priority Engine",
+    STAGE_INVESTIGATION: "Investigation Generator",
+    STAGE_EXPORT: "Export",
+    STAGE_SUMMARY: "Engine Summary",
+    STAGE_AI: "AI Boundary",
+}
+
+
+def emit_phase(
+    emitter: EngineTraceEmitter,
+    *,
+    phase_id: str,
+    files_ingested: int,
+    files_processed: int | None = None,
+    elapsed_s: float | None = None,
+    status: str = "running",
+    progress_pct: float | None = None,
+) -> None:
+    """Dashboard phase/progress — progress_pct only advances on real stage completion."""
+    progress = (
+        float(progress_pct)
+        if progress_pct is not None
+        else PHASE_PROGRESS.get(phase_id, 0.0)
+    )
+    emitter.emit_stage(
+        STAGE_SUMMARY,
+        "phase",
+        message=PHASE_LABELS.get(phase_id, phase_id),
+        fields={
+            "phase": PHASE_LABELS.get(phase_id, phase_id),
+            "phase_id": phase_id,
+            "progress_pct": progress,
+            "files_ingested": files_ingested,
+            "files_processed": files_processed if files_processed is not None else files_ingested,
+            "elapsed_s": round(elapsed_s, 3) if elapsed_s is not None else None,
+            "status": status,
+            "created_by": "Shaurya",
+            "version": __import__("vayne").__version__,
+        },
+    )
+
+
+def emit_attention_findings(
+    emitter: EngineTraceEmitter,
+    *,
+    samples: list[tuple[float, Any, dict, list]],
+) -> None:
+    """Top priority findings for the Engine Status dashboard (max 6)."""
+    cards = []
+    for priority, item, q, _contributions in samples[:6]:
+        corr = item.correlated
+        val = item.validation
+        conf = float(getattr(val, "overall_confidence", 0) or 0)
+        reasons = []
+        if q.get("internet_exposure", 0) >= 60:
+            reasons.append("Internet-facing exposure")
+        if q.get("exploitability", 0) >= 70:
+            reasons.append("High exploitability")
+        if corr.cve:
+            reasons.append(f"CVE {corr.cve}")
+        if not reasons:
+            breakdown = list(getattr(val, "confidence_breakdown", None) or [])
+            if breakdown:
+                reasons.append(str(breakdown[0])[:120])
+            else:
+                reasons.append(corr.severity or "Prioritized by engine score")
+        cards.append(
+            {
+                "finding_id": corr.id,
+                "title": corr.title,
+                "host": corr.host,
+                "severity": (corr.severity or "info").upper(),
+                "priority": priority,
+                "confidence": conf,
+                "reason": reasons[0],
+                "cve": corr.cve or None,
+            }
+        )
+    emitter.emit_stage(
+        STAGE_PRIORITY,
+        "attention",
+        message="Highest priority findings requiring analyst attention",
+        fields={"findings": cards, "count": len(cards)},
+    )
+
 
 def emit_parser_complete(
     emitter: EngineTraceEmitter,
@@ -198,45 +313,52 @@ def emit_validation(
         reverse=True,
     )
     for item, validation in ranked[:40]:
-        factors = getattr(validation, "confidence_factors", None) or {}
         overall = float(getattr(validation, "overall_confidence", 0) or 0)
-        if not factors:
-            # Still emit the score even without a factor vector.
-            emitter.emit_stage(
-                STAGE_CONFIDENCE,
-                "score",
-                message=f"Confidence for {item.title}",
-                fields={
-                    "finding_id": item.id,
-                    "host": item.host,
-                    "title": item.title,
-                    "overall_confidence": overall,
-                    "observation": getattr(validation, "observation_confidence", None),
-                    "exploit": getattr(validation, "exploit_confidence", None),
-                    "impact": getattr(validation, "impact_confidence", None),
-                    "reliability": getattr(validation, "reliability_confidence", None),
-                    "confidence_breakdown": list(getattr(validation, "confidence_breakdown", None) or [])[:12],
-                },
-            )
-            continue
-        # Flatten factor contributions for the formula panel.
+        observation = getattr(validation, "observation_confidence", None)
+        reliability = getattr(validation, "reliability_confidence", None)
+        exploit = getattr(validation, "exploit_confidence", None)
+        impact = getattr(validation, "impact_confidence", None)
+
+        # Live formula terms: dimension scores × implemented weights (exact mix).
         contributions = []
-        total = 0.0
-        for dim, rows in factors.items():
+        for label, value, weight in (
+            ("Observation", observation, FINDING_CONFIDENCE_DIM_WEIGHTS["observation"]),
+            ("Reliability", reliability, FINDING_CONFIDENCE_DIM_WEIGHTS["reliability"]),
+            ("Exploitability", exploit, FINDING_CONFIDENCE_DIM_WEIGHTS["exploit"]),
+            ("Impact", impact, FINDING_CONFIDENCE_DIM_WEIGHTS["impact"]),
+        ):
+            if value is None:
+                continue
+            score = float(value)
+            contributions.append(
+                {
+                    "label": label,
+                    "value": score,
+                    "weight": weight,
+                    "weighted": round(score * weight, 4),
+                }
+            )
+
+        # Surface false-positive / spoofability penalties when present.
+        factors = getattr(validation, "confidence_factors", None) or {}
+        for dim in ("false_positive", "spoofability", "penalty"):
+            rows = factors.get(dim) if isinstance(factors, dict) else None
             if not isinstance(rows, list):
                 continue
-            for row in rows[:8]:
+            for row in rows[:4]:
                 if not isinstance(row, dict):
                     continue
-                delta = float(row.get("delta") or row.get("weight") or 0)
+                delta = float(row.get("delta") or 0)
+                if delta >= 0:
+                    continue
                 contributions.append(
                     {
-                        "dimension": dim,
-                        "label": row.get("label") or row.get("feature") or dim,
+                        "label": row.get("label") or "Penalty",
+                        "value": delta,
                         "delta": delta,
                     }
                 )
-                total += delta
+
         emitter.emit_stage(
             STAGE_CONFIDENCE,
             "score",
@@ -246,17 +368,20 @@ def emit_validation(
                 "host": item.host,
                 "title": item.title,
                 "overall_confidence": overall,
-                "observation": getattr(validation, "observation_confidence", None),
-                "exploit": getattr(validation, "exploit_confidence", None),
-                "impact": getattr(validation, "impact_confidence", None),
-                "reliability": getattr(validation, "reliability_confidence", None),
+                "observation": observation,
+                "exploit": exploit,
+                "impact": impact,
+                "reliability": reliability,
             },
             formula={
                 "name": "finding_confidence",
                 "result": overall / 100.0 if overall > 1 else overall,
                 "result_pct": overall,
+                "expression": (
+                    "overall = Σ(dimension_score × dim_weight) / Σ(dim_weight)"
+                ),
+                "weights": FINDING_CONFIDENCE_DIM_WEIGHTS,
                 "contributions": contributions,
-                "sum_deltas": round(total, 4),
             },
         )
 
@@ -367,6 +492,10 @@ def emit_priority_samples(
                 "title": item.correlated.title,
                 "priority": priority,
                 "quality": q,
+                "internet_exposure": q.get("internet_exposure"),
+                "exploitability": q.get("exploitability"),
+                "business_impact": q.get("business_impact"),
+                "confidence": q.get("confidence"),
             },
             formula={
                 "name": "composite_priority_score",
@@ -379,6 +508,8 @@ def emit_priority_samples(
                 "contributions": contributions,
             },
         )
+    if samples:
+        emit_attention_findings(emitter, samples=samples)
     return float(samples[0][0]) if samples else None
 
 

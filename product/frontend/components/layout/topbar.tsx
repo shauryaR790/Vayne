@@ -15,6 +15,7 @@ const segmentMap: Record<string, string> = {
   "/investigations": "Investigations",
   "/playbooks": "Playbooks",
   "/methodology": "Methodology",
+  "/engine-docs": "Engine Documentation",
   "/research": "Research",
   "/roadmap": "Roadmap",
   "/system": "System",

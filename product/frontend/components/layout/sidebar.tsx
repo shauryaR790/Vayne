@@ -45,6 +45,7 @@ const primaryNav: NavItem[] = [
 const intelligenceNav: NavItem[] = [
   { id: "playbooks", label: "Playbooks", href: "/playbooks", icon: BookOpen },
   { id: "methodology", label: "Methodology", href: "/methodology", icon: Workflow },
+  { id: "engine-docs", label: "Engine Documentation", href: "/engine-docs", icon: FileText },
   { id: "research", label: "Research", href: "/research", icon: Telescope },
   { id: "roadmap", label: "Roadmap", href: "/roadmap", icon: Map },
 ];

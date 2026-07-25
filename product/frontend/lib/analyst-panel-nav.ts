@@ -33,6 +33,7 @@ export const ANALYST_RESOURCE_NAV: AnalystNavItem[] = [
   { id: "tutorial", label: "Tutorial", href: "/tutorial", icon: BookOpen },
   { id: "playbooks", label: "Playbooks", href: "/playbooks", icon: Workflow },
   { id: "methodology", label: "Methodology", href: "/methodology", icon: GitBranch },
+  { id: "engine-docs", label: "Engine Documentation", href: "/engine-docs", icon: FileText },
   { id: "research", label: "Research", href: "/research", icon: Telescope },
   { id: "roadmap", label: "Roadmap", href: "/roadmap", icon: Map },
   { id: "about", label: "About VAYNE", href: "/about", icon: Info },

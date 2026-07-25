@@ -11,7 +11,20 @@ from vayne.analyst.engine import generate_brief
 from vayne.attack_paths.discovery import discover_attack_paths
 from vayne.correlator.engine import correlate_assets, correlate_findings
 from vayne.engine_trace.emitter import EngineTraceEmitter
-from vayne.engine_trace.events import STAGE_CONSOLE, STAGE_PARSER, STAGE_PROOF, STAGE_SUMMARY
+from vayne.engine_trace.events import (
+    STAGE_CONSOLE,
+    STAGE_CONFIDENCE,
+    STAGE_CORRELATION,
+    STAGE_EXPORT,
+    STAGE_GRAPH,
+    STAGE_INVESTIGATION,
+    STAGE_NORMALIZATION,
+    STAGE_PARSER,
+    STAGE_PRIORITY,
+    STAGE_PROOF,
+    STAGE_SUMMARY,
+    STAGE_VALIDATION,
+)
 from vayne.engine_trace.formulas import formula_catalog
 from vayne.engine_trace.instrument import (
     emit_ai_boundary,
@@ -21,6 +34,7 @@ from vayne.engine_trace.instrument import (
     emit_investigation_build,
     emit_normalization,
     emit_parser_complete,
+    emit_phase,
     emit_priority_samples,
     emit_summary,
     emit_validation,
@@ -141,10 +155,29 @@ class Orchestrator:
     def run(self, export_dir: Path | None = None) -> InvestigationReport:
         self._start = time.perf_counter()
         trace = self.trace
+        n_files = len(self.paths)
+
+        def _phase(
+            phase_id: str,
+            *,
+            files_processed: int | None = None,
+            status: str = "running",
+            progress_pct: float | None = None,
+        ) -> None:
+            emit_phase(
+                trace,
+                phase_id=phase_id,
+                files_ingested=n_files,
+                files_processed=files_processed if files_processed is not None else 0,
+                elapsed_s=time.perf_counter() - self._start,
+                status=status,
+                progress_pct=progress_pct,
+            )
 
         self.on_stage(1, STAGES[0], "Reading scanner outputs")
         self._think("Initializing investigation workspace...")
         trace.mark_stage_start(STAGE_PARSER)
+        _phase(STAGE_PARSER, files_processed=0, progress_pct=0.0)
         trace.emit_stage(
             STAGE_SUMMARY,
             "formula_catalog",
@@ -185,6 +218,7 @@ class Orchestrator:
             ports=len(ports),
             services=len(services),
         )
+        _phase(STAGE_PARSER, files_processed=n_files)
         if not raw_findings and not raw_assets:
             self._think("No parseable findings in uploaded files — check for empty or skipped files.")
         if self.parse_manifest.get("cache_hits"):
@@ -202,6 +236,7 @@ class Orchestrator:
             raw_findings=len(raw_findings),
             execution_ms=(time.perf_counter() - t_norm) * 1000,
         )
+        _phase(STAGE_NORMALIZATION, files_processed=n_files)
 
         self.on_stage(3, STAGES[2], "Merging duplicate signals")
         t_corr = time.perf_counter()
@@ -214,6 +249,7 @@ class Orchestrator:
             assets=assets,
             execution_ms=(time.perf_counter() - t_corr) * 1000,
         )
+        _phase(STAGE_CORRELATION, files_processed=n_files)
         self._think(f"Correlated into {len(correlated)} unique investigation targets.")
 
         self.on_stage(4, STAGES[3], "Validating each finding")
@@ -258,6 +294,8 @@ class Orchestrator:
             correlated=correlated,
             execution_ms=(time.perf_counter() - t_val) * 1000,
         )
+        _phase(STAGE_VALIDATION, files_processed=n_files)
+        _phase(STAGE_CONFIDENCE, files_processed=n_files)
 
         fp_count = sum(
             1 for v in validations if v.classification == Classification.FALSE_POSITIVE
@@ -279,6 +317,7 @@ class Orchestrator:
             attack_paths=attack_paths,
             execution_ms=(time.perf_counter() - t_graph) * 1000,
         )
+        _phase(STAGE_GRAPH, files_processed=n_files)
         from vayne.models import DiscoveredAsset
 
         discovered_assets = [
@@ -385,7 +424,9 @@ class Orchestrator:
             full_investigations=len(full_ids),
             execution_ms=(time.perf_counter() - t_inv) * 1000,
         )
+        _phase(STAGE_INVESTIGATION, files_processed=n_files)
         highest_priority = emit_priority_samples(trace, investigated=investigated)
+        _phase(STAGE_PRIORITY, files_processed=n_files)
 
         self.on_stage(6, STAGES[5], "Scoring exploitability")
         self._think("Calculating exploitability from validation signals...")
@@ -431,6 +472,7 @@ class Orchestrator:
                 export_dir=str(export_dir),
                 execution_ms=(time.perf_counter() - t_exp) * 1000,
             )
+            _phase(STAGE_EXPORT, files_processed=n_files)
             self._think(f"Reports exported to {export_dir}")
 
         confidences = [
@@ -454,6 +496,7 @@ class Orchestrator:
             files_processed=len(self.paths),
             assets=len(assets),
         )
+        _phase(STAGE_SUMMARY, files_processed=n_files, status="complete")
         emit_ai_boundary(
             trace,
             deterministic_ms=duration * 1000,
