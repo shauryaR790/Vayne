@@ -136,10 +136,6 @@ export function InvestigationWorkspaceHome({
               <span className="tabular-nums text-white/50">0%</span>
               <span className="text-white/40">Awaiting artifacts</span>
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-white/40">
-              After ingest, this bar advances only when real stages complete — Parser, Correlation,
-              Confidence, Attack Graph, Priority.
-            </p>
           </div>
 
           <div className="mt-6">
