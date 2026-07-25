@@ -33,7 +33,11 @@ class EngineEvent:
         # Drop empty optional keys for a clean wire format.
         if payload.get("execution_ms") is None:
             payload.pop("execution_ms", None)
-        if not payload.get("message"):
+        # Keep blank proof/console lines (empty message) — needed for CLI-faithful layout.
+        if payload.get("event") == "line":
+            if payload.get("message") is None:
+                payload["message"] = ""
+        elif not payload.get("message"):
             payload.pop("message", None)
         if not payload.get("fields"):
             payload.pop("fields", None)

@@ -294,7 +294,11 @@ class Orchestrator:
         if self.proof:
             self.proof_log = graph_proof.log_lines()
             for line in self.proof_log:
-                self._think(line)
+                # Emit verbatim proof lines (exact CLI --proof stream). Do not
+                # route through _think classification — that can mis-tag lines.
+                self.thinking_log.append(line)
+                self.on_thinking(line)
+                self.trace.emit_stage(STAGE_PROOF, "line", message=line)
 
         pd = graph_proof.path_discovery
         if pd:
