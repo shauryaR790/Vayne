@@ -2,12 +2,15 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import type { EngineTraceEvent } from "@/lib/engine-trace";
+import {
+  STAGE_LABELS,
+  type EngineTraceEvent,
+} from "@/lib/engine-trace";
 import { cn } from "@/lib/utils";
 
 /**
- * CLI proof-mode palette (matches Cursor terminal / Rich output).
- * Mostly white — green IPs, cyan ports/CVE/versions only.
+ * CLI / Rich terminal palette on #141414.
+ * Mostly white — green IPs, cyan ports/CVE/versions, amber rejects.
  */
 const C = {
   bg: "#141414",
@@ -19,19 +22,120 @@ const C = {
   reject: "#CE9178",
 } as const;
 
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : value.toFixed(4).replace(/\.?0+$/, "");
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    if (value.every((v) => typeof v === "string" || typeof v === "number")) {
+      return value.slice(0, 24).join(", ") + (value.length > 24 ? "…" : "");
+    }
+    return JSON.stringify(value);
+  }
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
 /**
- * Engine Trace shows the same text the CLI prints in proof mode.
- * Structured telemetry ([ Parser ], formulas, field dumps) is kept in the
- * event audit trail but never rendered here — that is what made the UI diverge.
+ * Full engine dump — every stage, formula, console line, and proof line.
+ * This is the complete deterministic investigation stream, not a summary.
  */
 function eventsToLines(events: EngineTraceEvent[]): string[] {
   const lines: string[] = [];
+  let lastStage = "";
+
   for (const ev of events) {
-    if (ev.event !== "line") continue;
-    // Proof stream only (NODE / EDGE / === sections) — identical to CLI --proof.
-    if (ev.stage !== "proof") continue;
-    lines.push(ev.message ?? "");
+    // Live / proof console lines (verbatim from the engine)
+    if (ev.event === "line") {
+      lines.push(ev.message ?? "");
+      continue;
+    }
+
+    if (ev.stage && ev.stage !== lastStage) {
+      lines.push("");
+      lines.push(`=== ${STAGE_LABELS[ev.stage] || ev.stage} ===`.toUpperCase());
+      lastStage = ev.stage;
+    }
+
+    const headParts = [ev.event, ev.message].filter((x) => x && x !== "line");
+    if (headParts.length) {
+      lines.push(headParts.join(" — "));
+    }
+
+    if (ev.execution_ms != null) {
+      lines.push(`  Execution: ${formatValue(ev.execution_ms)} ms`);
+    }
+
+    if (ev.fields) {
+      for (const [key, value] of Object.entries(ev.fields)) {
+        if (value == null) continue;
+        if (key === "samples" && Array.isArray(value)) {
+          lines.push(`  samples: ${value.length}`);
+          for (const sample of value.slice(0, 12)) {
+            if (sample && typeof sample === "object") {
+              for (const [sk, sv] of Object.entries(sample as Record<string, unknown>)) {
+                if (sv == null) continue;
+                lines.push(`    ${sk}: ${formatValue(sv)}`);
+              }
+              lines.push("");
+            } else {
+              lines.push(`    ${formatValue(sample)}`);
+            }
+          }
+          continue;
+        }
+        if (key === "note" && typeof value === "string") {
+          lines.push(`  ${value}`);
+          continue;
+        }
+        if (key === "classification_counts" && typeof value === "object") {
+          lines.push(`  classification_counts:`);
+          for (const [ck, cv] of Object.entries(value as Record<string, unknown>)) {
+            lines.push(`    ${ck}: ${formatValue(cv)}`);
+          }
+          continue;
+        }
+        if (key === "quality" && typeof value === "object") {
+          lines.push(`  quality dimensions:`);
+          for (const [qk, qv] of Object.entries(value as Record<string, unknown>)) {
+            lines.push(`    ${qk}: ${formatValue(qv)}`);
+          }
+          continue;
+        }
+        lines.push(`  ${key}: ${formatValue(value)}`);
+      }
+    }
+
+    if (ev.formula) {
+      lines.push(`  Formula: ${ev.formula.name || "computed"}`);
+      if (ev.formula.expression) {
+        lines.push(`    ${ev.formula.expression}`);
+      }
+      if (ev.formula.weights && typeof ev.formula.weights === "object") {
+        lines.push(`    weights:`);
+        for (const [wk, wv] of Object.entries(ev.formula.weights)) {
+          lines.push(`      ${wk}: ${formatValue(wv)}`);
+        }
+      }
+      for (const row of ev.formula.contributions || []) {
+        const label = String(row.label || row.dimension || "factor");
+        const val = formatValue(row.delta ?? row.weighted ?? row.value);
+        const weight =
+          row.weight != null ? `  (weight ${formatValue(row.weight)})` : "";
+        lines.push(`    ${label}: ${val}${weight}`);
+      }
+      if (ev.formula.sum_deltas != null) {
+        lines.push(`    sum_deltas: ${formatValue(ev.formula.sum_deltas)}`);
+      }
+      if (ev.formula.result_pct != null || ev.formula.result != null) {
+        lines.push(`    Result: ${formatValue(ev.formula.result_pct ?? ev.formula.result)}`);
+      }
+    }
   }
+
   return lines;
 }
 
@@ -47,6 +151,9 @@ function push(out: Seg[], text: string, color: string) {
 function colorize(line: string): Seg[] {
   if (!line.trim()) return [{ text: "\u00a0", color: C.fg }];
 
+  if (line.startsWith("===")) {
+    return [{ text: line, color: C.white }];
+  }
   if (line.startsWith("REJECTED")) {
     return [{ text: line, color: C.reject }];
   }
@@ -60,7 +167,7 @@ function colorize(line: string): Seg[] {
   }
 
   const field = line.match(
-    /^(\s*)(Tool:|Artifact:|Tier:|Confidence:|Validation:|DISCOVERED FROM)(.*)$/i,
+    /^(\s*)(Tool:|Artifact:|Tier:|Confidence:|Validation:|DISCOVERED FROM|Execution:|Formula:|Result:|weights:|quality dimensions:|classification_counts:|sum_deltas:)(.*)$/i,
   );
   if (field) {
     const out: Seg[] = [];
@@ -69,8 +176,8 @@ function colorize(line: string): Seg[] {
     return out;
   }
 
-  if (line.trimStart().startsWith("- ")) {
-    return paintAccents(line, C.white);
+  if (line.startsWith("[VAYNE]")) {
+    return paintAccents(line, C.fg);
   }
 
   return paintAccents(line, C.fg);
@@ -230,7 +337,7 @@ export function EngineTracePanel({
       >
         {lines.length === 0 ? (
           <p style={{ color: C.dim }}>
-            {running ? "Running deterministic engine…" : "No proof output for this run."}
+            {running ? "Running deterministic engine…" : "No engine output."}
           </p>
         ) : null}
 

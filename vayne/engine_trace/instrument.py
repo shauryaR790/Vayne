@@ -117,9 +117,9 @@ def emit_correlation(
         },
     )
 
-    # Emit a few concrete merge examples from real correlated entities.
+    # Emit concrete merge examples from real correlated entities.
     samples = []
-    for item in correlated[:8]:
+    for item in correlated[:40]:
         sources = list(getattr(item, "source_tools", None) or getattr(item, "sources", None) or [])
         if not sources and getattr(item, "source_tool", None):
             sources = [item.source_tool]
@@ -197,10 +197,27 @@ def emit_validation(
         key=lambda pair: int(getattr(pair[1], "overall_confidence", 0) or 0),
         reverse=True,
     )
-    for item, validation in ranked[:6]:
+    for item, validation in ranked[:40]:
         factors = getattr(validation, "confidence_factors", None) or {}
         overall = float(getattr(validation, "overall_confidence", 0) or 0)
         if not factors:
+            # Still emit the score even without a factor vector.
+            emitter.emit_stage(
+                STAGE_CONFIDENCE,
+                "score",
+                message=f"Confidence for {item.title}",
+                fields={
+                    "finding_id": item.id,
+                    "host": item.host,
+                    "title": item.title,
+                    "overall_confidence": overall,
+                    "observation": getattr(validation, "observation_confidence", None),
+                    "exploit": getattr(validation, "exploit_confidence", None),
+                    "impact": getattr(validation, "impact_confidence", None),
+                    "reliability": getattr(validation, "reliability_confidence", None),
+                    "confidence_breakdown": list(getattr(validation, "confidence_breakdown", None) or [])[:12],
+                },
+            )
             continue
         # Flatten factor contributions for the formula panel.
         contributions = []
@@ -339,7 +356,7 @@ def emit_priority_samples(
         samples.append((priority, item, q, contributions))
 
     samples.sort(key=lambda row: row[0], reverse=True)
-    for priority, item, q, contributions in samples[:5]:
+    for priority, item, q, contributions in samples[:25]:
         emitter.emit_stage(
             STAGE_PRIORITY,
             "score",
