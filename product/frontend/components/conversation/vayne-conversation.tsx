@@ -1024,7 +1024,7 @@ export function VaneWorkspace({
 
       <MobileWorkspaceHeader
         onOpenNav={() => setMobileNavOpen(true)}
-        showAnalyst={investigationSessionActive}
+        showAnalyst
         onOpenAnalyst={openMobileAnalyst}
       />
 
@@ -1042,7 +1042,7 @@ export function VaneWorkspace({
       <motion.div
         className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-vx-border bg-vx-app pt-12 lg:h-dvh lg:pt-0"
         animate={{
-          flex: investigationSessionActive && isLgUp ? "1 1 55%" : "1 1 100%",
+          flex: isLgUp ? "1 1 55%" : "1 1 100%",
         }}
         transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
       >
@@ -1098,6 +1098,8 @@ export function VaneWorkspace({
                 return merged;
               });
               setError("");
+              setInvestigationSessionActive(true);
+              void handleAnalyze(picked);
             }}
             onRemoveFile={removeFile}
             onClearFiles={clearFiles}
@@ -1111,7 +1113,7 @@ export function VaneWorkspace({
       </motion.div>
 
       <AnimatePresence initial={false}>
-        {investigationSessionActive && isLgUp ? (
+        {isLgUp ? (
           <motion.div
             key="analyst-panel"
             initial={{ width: 0, opacity: 0, x: 16 }}
@@ -1150,7 +1152,7 @@ export function VaneWorkspace({
         ) : null}
       </AnimatePresence>
 
-      {investigationSessionActive && !isLgUp && mobileAnalystOpen ? (
+      {!isLgUp && mobileAnalystOpen ? (
         <div className="fixed inset-0 z-40 bg-vx-analyst">
           <VaneAnalystPanel
             bundle={bundle}
