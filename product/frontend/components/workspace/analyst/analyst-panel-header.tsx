@@ -55,17 +55,25 @@ export function WorkspacePanelHeader({
   onClose,
   onPrimaryAction,
   primaryActionLabel = "New",
+  surfaceClassName = "bg-[#141414]",
 }: {
   icon: LucideIcon;
   title: string;
   onClose?: () => void;
   onPrimaryAction?: () => void;
   primaryActionLabel?: string;
+  /** Active tab surface — should match the panel body for seamless merge. */
+  surfaceClassName?: string;
 }) {
   return (
     <header className="flex shrink-0 items-stretch bg-[#0e0e0e]">
       {/* Active tab — same surface as panel body, open bottom edge */}
-      <div className="flex min-w-0 max-w-[min(100%,280px)] items-center gap-1.5 border-r border-vx-border bg-[#141414] px-3 py-2">
+      <div
+        className={cn(
+          "flex min-w-0 max-w-[min(100%,280px)] items-center gap-1.5 border-r border-vx-border px-3 py-2",
+          surfaceClassName,
+        )}
+      >
         <Icon className="size-3.5 shrink-0 text-white/55" strokeWidth={1.75} aria-hidden />
         <p className="min-w-0 truncate text-[13px] font-medium text-white/90">{title}</p>
       </div>
@@ -124,6 +132,7 @@ export function EngineTraceHeader({
       onClose={onClose}
       onPrimaryAction={onClear}
       primaryActionLabel="Clear trace"
+      surfaceClassName="bg-vx-trace-bg"
     />
   );
 }

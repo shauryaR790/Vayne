@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { EngineTraceHeader } from "@/components/workspace/analyst/analyst-panel-header";
 import { EngineTraceStandby } from "@/components/workspace/engine-trace-standby";
+import { TraceSyntaxText, toTraceKeyword } from "@/components/workspace/engine-trace-syntax";
 import { STAGE_LABELS, type EngineTraceEvent } from "@/lib/engine-trace";
 import { cn } from "@/lib/utils";
 
@@ -23,17 +24,32 @@ type TraceChunk =
       kind: "stage";
       id: string;
       title: string;
-      lines: Array<{ label?: string; value?: string; muted?: boolean; arrow?: boolean }>;
+      accent?: "formula" | "stage";
+      lines: Array<{
+        label?: string;
+        value?: string;
+        muted?: boolean;
+        arrow?: boolean;
+        code?: boolean;
+        highlight?: boolean;
+      }>;
     };
 
 function pushField(
-  lines: Array<{ label?: string; value?: string; muted?: boolean; arrow?: boolean }>,
+  lines: Array<{
+    label?: string;
+    value?: string;
+    muted?: boolean;
+    arrow?: boolean;
+    code?: boolean;
+    highlight?: boolean;
+  }>,
   label: string,
   value: unknown,
-  opts?: { arrow?: boolean },
+  opts?: { arrow?: boolean; code?: boolean; highlight?: boolean },
 ) {
   if (value == null || value === "") return;
-  lines.push({ label, value: formatVal(value), arrow: opts?.arrow });
+  lines.push({ label, value: formatVal(value), arrow: opts?.arrow, code: opts?.code, highlight: opts?.highlight });
 }
 
 function flushProof(
@@ -160,26 +176,47 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
     }
 
     if (ev.event === "score" && ev.formula?.name === "finding_confidence") {
-      lines.push({ label: "finding_confidence()", muted: true });
+      lines.push({ label: "finding_confidence()", muted: true, code: true });
       if (f.title) pushField(lines, "Finding", f.title);
       for (const row of ev.formula.contributions || []) {
         const label = String(row.label || row.dimension || "term");
         const value = row.value ?? row.delta;
         const weight = row.weight;
         if (value == null) continue;
-        const display =
+        const kw = toTraceKeyword(label);
+        const rhs =
           weight != null
-            ? `${formatVal(value)}  ×  ${formatVal(weight)}`
+            ? `${formatVal(value)} × ${formatVal(weight)}`
             : formatVal(value);
-        lines.push({ label, value: display, arrow: true });
+        const noteRaw = row.note ?? row.source ?? row.detail;
+        const note = noteRaw != null && String(noteRaw) ? ` (${String(noteRaw)})` : "";
+        lines.push({
+          value: `${kw} = ${rhs}${note}`,
+          code: true,
+          arrow: true,
+        });
       }
       const final =
         ev.formula.result_pct ??
         (typeof ev.formula.result === "number" && ev.formula.result <= 1
           ? ev.formula.result * 100
           : ev.formula.result);
-      pushField(lines, "Final", final, { arrow: true });
-      chunks.push({ kind: "stage", id, title: "CONFIDENCE", lines });
+      const dims = (ev.formula.contributions || [])
+        .map((row) => toTraceKeyword(String(row.label || row.dimension || "")))
+        .filter(Boolean);
+      const formulaExpr =
+        dims.length > 0
+          ? `confidence = round(100 × ${dims.join(" × ")})`
+          : `confidence = ${formatVal(final)}`;
+      lines.push({ value: formulaExpr, code: true, highlight: true, arrow: true });
+      if (final != null) {
+        lines.push({
+          value: `result = ${formatVal(final)}`,
+          code: true,
+          highlight: true,
+        });
+      }
+      chunks.push({ kind: "stage", id, title: "CONFIDENCE", accent: "formula", lines });
       continue;
     }
 
@@ -296,7 +333,7 @@ export function EngineTraceLive({
   return (
     <aside
       className={cn(
-        "flex h-full min-h-0 w-full flex-col border-l border-white/[0.08] bg-[#141414]",
+        "flex h-full min-h-0 w-full flex-col border-l border-white/[0.08] bg-vx-trace-bg",
         className,
       )}
     >
@@ -308,7 +345,7 @@ export function EngineTraceLive({
         <>
           <div
             ref={scrollerRef}
-            className="min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-[11.5px] leading-[1.45]"
+            className="min-h-0 flex-1 overflow-y-auto px-3 py-3 font-mono text-[11.5px] leading-[1.5]"
             onScroll={() => {
               const el = scrollerRef.current;
               if (!el) return;
@@ -321,30 +358,67 @@ export function EngineTraceLive({
               chunk.kind === "proof" ? (
                 <div
                   key={chunk.id}
-                  className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
+                  className={cn(
+                    "rounded-sm px-2 py-2",
+                    idx > 0 && "mt-3",
+                    "bg-vx-trace-kw-bg/60",
+                  )}
                 >
-                  <p className="mb-2 tracking-[0.12em] text-white/50">=== VAYNE PROOF MODE ===</p>
+                  <p className="mb-2 tracking-[0.12em] text-vx-trace-keyword">
+                    === VAYNE PROOF MODE ===
+                  </p>
                   <pre className="whitespace-pre-wrap break-words text-white/75">{chunk.text}</pre>
                 </div>
               ) : (
                 <div
                   key={chunk.id}
-                  className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
+                  className={cn("rounded-sm px-1 py-1", idx > 0 && "mt-3")}
                 >
-                  <p className="mb-2 tracking-[0.12em] text-white/85">[{chunk.title}]</p>
-                  <div className="space-y-1">
+                  <p
+                    className={cn(
+                      "mb-2 inline-block rounded-sm px-2 py-0.5 tracking-[0.12em]",
+                      chunk.accent === "formula"
+                        ? "bg-vx-trace-line-hl text-vx-trace-string"
+                        : "bg-vx-trace-kw-bg text-vx-trace-keyword",
+                    )}
+                  >
+                    [{chunk.title}]
+                  </p>
+                  <div className="space-y-0.5">
                     {chunk.lines.map((line, i) => (
                       <div key={i}>
-                        {line.arrow ? <p className="text-white/25">↓</p> : null}
-                        {line.label && line.muted ? (
-                          <p className="text-white/45">{line.label}</p>
+                        {line.arrow ? <p className="text-vx-trace-op">↓</p> : null}
+                        {line.code && (line.value || line.label) ? (
+                          <p
+                            className={cn(
+                              "rounded-sm px-2 py-0.5",
+                              line.highlight && "bg-vx-trace-line-hl",
+                              line.muted && !line.highlight && "bg-vx-trace-kw-bg/50",
+                            )}
+                          >
+                            {line.label && line.value ? (
+                              <>
+                                <TraceSyntaxText text={line.label} />
+                                <span className="text-vx-trace-op"> = </span>
+                                <TraceSyntaxText text={line.value} />
+                              </>
+                            ) : (
+                              <TraceSyntaxText text={line.value || line.label || ""} />
+                            )}
+                          </p>
+                        ) : line.label && line.muted ? (
+                          <p className="rounded-sm bg-vx-trace-kw-bg/40 px-2 py-0.5 text-vx-trace-keyword">
+                            {line.label}
+                          </p>
                         ) : line.label ? (
-                          <div className="flex justify-between gap-4 text-white/65">
-                            <span>{line.label}</span>
-                            <span className="tabular-nums text-white/90">{line.value}</span>
+                          <div className="flex justify-between gap-4 rounded-sm px-2 py-0.5 hover:bg-white/[0.02]">
+                            <span className="text-vx-trace-keyword">{line.label}</span>
+                            <span className="tabular-nums text-vx-trace-number">{line.value}</span>
                           </div>
                         ) : (
-                          <p className="whitespace-pre-wrap text-white/70">{line.value}</p>
+                          <p className="px-2 py-0.5">
+                            <TraceSyntaxText text={line.value || ""} />
+                          </p>
                         )}
                       </div>
                     ))}
@@ -352,13 +426,15 @@ export function EngineTraceLive({
                 </div>
               ),
             )}
-            {running ? <span className="mt-3 inline-block text-white/40">▌</span> : null}
+            {running ? (
+              <span className="mt-3 inline-block text-vx-trace-keyword">▌</span>
+            ) : null}
           </div>
 
           {manualScroll ? (
             <button
               type="button"
-              className="shrink-0 border-t border-white/[0.08] px-4 py-1.5 text-left font-mono text-[11px] text-white/60"
+              className="shrink-0 border-t border-white/[0.08] bg-vx-trace-bg px-4 py-1.5 text-left font-mono text-[11px] text-vx-trace-keyword"
               onClick={() => {
                 stickToBottom.current = true;
                 setManualScroll(false);
