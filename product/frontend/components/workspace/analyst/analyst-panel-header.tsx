@@ -8,7 +8,6 @@ import {
   PanelRight,
   Plus,
   Terminal,
-  X,
 } from "lucide-react";
 
 import { ANALYST_NAME } from "@/lib/brand";
@@ -22,7 +21,6 @@ function HeaderIconButton({
 }: {
   label: string;
   onClick?: () => void;
-  /** Keep chrome visible even when the action is not wired yet. */
   muted?: boolean;
   children: React.ReactNode;
 }) {
@@ -46,55 +44,45 @@ function HeaderIconButton({
   );
 }
 
-/** Shared Cursor-style tab chrome for side panels (Analyst + Engine Trace). */
+/**
+ * Cursor-style tab chrome: active title tab merges into the panel body
+ * (no bottom border under the tab); actions sit on the bordered strip.
+ */
 export function WorkspacePanelHeader({
   icon: Icon,
   title,
-  onDismiss,
   onClose,
   onPrimaryAction,
   primaryActionLabel = "New",
 }: {
   icon: LucideIcon;
   title: string;
-  onDismiss?: () => void;
   onClose?: () => void;
   onPrimaryAction?: () => void;
   primaryActionLabel?: string;
 }) {
   return (
-    <header className="shrink-0 border-b border-vx-border px-2 py-1.5">
-      <div className="flex items-center gap-1">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 py-1">
-          <Icon className="size-3.5 shrink-0 text-white/55" strokeWidth={1.75} aria-hidden />
-          <p className="min-w-0 truncate text-[13px] font-medium text-white/90">{title}</p>
-          {onDismiss || onClose ? (
-            <button
-              type="button"
-              onClick={onDismiss || onClose}
-              className="flex size-5 shrink-0 items-center justify-center rounded text-white/40 transition-colors hover:bg-white/[0.08] hover:text-white"
-              aria-label={onDismiss ? "Dismiss" : "Close"}
-              title={onDismiss ? "Dismiss" : "Close"}
-            >
-              <X className="size-3" strokeWidth={2} />
-            </button>
-          ) : null}
-        </div>
+    <header className="flex shrink-0 items-stretch bg-[#0e0e0e]">
+      {/* Active tab — same surface as panel body, open bottom edge */}
+      <div className="flex min-w-0 max-w-[min(100%,280px)] items-center gap-1.5 border-r border-vx-border bg-[#141414] px-3 py-2">
+        <Icon className="size-3.5 shrink-0 text-white/55" strokeWidth={1.75} aria-hidden />
+        <p className="min-w-0 truncate text-[13px] font-medium text-white/90">{title}</p>
+      </div>
 
-        <div className="flex shrink-0 items-center gap-0.5">
-          <HeaderIconButton label={primaryActionLabel} onClick={onPrimaryAction} muted={!onPrimaryAction}>
-            <Plus className="size-3.5" strokeWidth={1.75} />
-          </HeaderIconButton>
-          <HeaderIconButton label="History" muted>
-            <History className="size-3.5" strokeWidth={1.75} />
-          </HeaderIconButton>
-          <HeaderIconButton label="More" muted>
-            <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
-          </HeaderIconButton>
-          <HeaderIconButton label="Toggle panel" onClick={onClose} muted={!onClose}>
-            <PanelRight className="size-3.5" strokeWidth={1.75} />
-          </HeaderIconButton>
-        </div>
+      {/* Tab-bar remainder — keeps the bottom rule; tab merges past it */}
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 border-b border-vx-border px-2 py-1.5">
+        <HeaderIconButton label={primaryActionLabel} onClick={onPrimaryAction} muted={!onPrimaryAction}>
+          <Plus className="size-3.5" strokeWidth={1.75} />
+        </HeaderIconButton>
+        <HeaderIconButton label="History" muted>
+          <History className="size-3.5" strokeWidth={1.75} />
+        </HeaderIconButton>
+        <HeaderIconButton label="More" muted>
+          <MoreHorizontal className="size-3.5" strokeWidth={1.75} />
+        </HeaderIconButton>
+        <HeaderIconButton label="Toggle panel" onClick={onClose} muted={!onClose}>
+          <PanelRight className="size-3.5" strokeWidth={1.75} />
+        </HeaderIconButton>
       </div>
     </header>
   );
@@ -102,7 +90,6 @@ export function WorkspacePanelHeader({
 
 export function AnalystPanelHeader({
   contextLabel,
-  onDismiss,
   onClose,
   onNewChat,
 }: {
@@ -115,9 +102,8 @@ export function AnalystPanelHeader({
     <WorkspacePanelHeader
       icon={MessageSquare}
       title={contextLabel?.trim() || ANALYST_NAME}
-      onDismiss={onDismiss}
       onClose={onClose}
-      onPrimaryAction={onNewChat || onDismiss}
+      onPrimaryAction={onNewChat}
       primaryActionLabel="New chat"
     />
   );
@@ -134,7 +120,6 @@ export function EngineTraceHeader({
     <WorkspacePanelHeader
       icon={Terminal}
       title="Engine Trace"
-      onDismiss={onClear}
       onClose={onClose}
       onPrimaryAction={onClear}
       primaryActionLabel="Clear trace"

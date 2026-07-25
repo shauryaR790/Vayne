@@ -101,7 +101,6 @@ export function VaneAnalystPanel({
     >
       <AnalystPanelHeader
         contextLabel={contextLabel}
-        onDismiss={onClearChat}
         onNewChat={onClearChat}
         onClose={onClose}
       />
