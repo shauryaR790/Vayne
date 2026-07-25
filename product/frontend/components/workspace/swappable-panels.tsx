@@ -123,7 +123,8 @@ export function SwappablePanelRow({
         className,
       )}
       style={{
-        gridTemplateColumns: "minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr)",
+        // Equal columns — matches the balanced dock the user wants.
+        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)",
       }}
     >
       {order.map((id) => (
