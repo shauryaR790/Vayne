@@ -79,9 +79,9 @@ export function InvestigationWorkspaceHome({
         <div className="flex min-h-0 flex-1 flex-col bg-[#141414]">
           <InvestigationEngineHeader />
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <div className="bg-[#141414] py-1 text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
+          <div className="border border-white/[0.1] bg-[#141414] px-4 py-4 text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
             <pre className="overflow-x-auto whitespace-pre text-white/90">{BANNER}</pre>
-            <div className="mt-4 pt-3">
+            <div className="mt-4 border-t border-white/[0.08] pt-3">
               <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
               <MetaRow label="Version" value="0.2.0" />
               <MetaRow label="Created By" value="Shaurya" />
@@ -130,13 +130,18 @@ export function InvestigationWorkspaceHome({
             ) : null}
           </div>
 
-          <div className="mt-8 flex min-h-[160px] flex-1 items-center justify-center px-2 text-center">
-            <p className="max-w-[320px] font-sans text-[14px] leading-relaxed text-vx-muted">
-              Empty until the run finishes. After completion you will see up to six cards here —
-              ranked by engine priority, not severity labels alone. Each card shows confidence,
-              host, source file, and why it needs attention, with Open Investigation → into the
-              full report.
+          <div className="mt-6">
+            <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-white/45">
+              Priority findings
             </p>
+            <div className="border border-dashed border-white/[0.12] px-4 py-8 text-[12px] leading-relaxed text-white/40">
+              <p className="text-white/60">Empty until the run finishes.</p>
+              <p className="mt-3">
+                After completion you will see up to six cards here — ranked by engine priority, not
+                severity labels alone. Each card shows confidence, host, source file, and why it
+                needs attention, with Open Investigation → into the full report.
+              </p>
+            </div>
           </div>
           </div>
         </div>

@@ -85,7 +85,7 @@ function ProgressBar({ pct, phase }: { pct: number; phase: string }) {
   const filled = Math.round((clamped / 100) * 28);
   const bar = "█".repeat(filled) + "░".repeat(28 - filled);
   return (
-    <div className="py-1 font-mono text-[12px] text-white/75">
+    <div className="border border-white/[0.1] px-4 py-3 font-mono text-[12px] text-white/75">
       <p className="tracking-wide text-white/90">{bar}</p>
       <div className="mt-2 flex items-baseline justify-between gap-3">
         <span className="tabular-nums text-white">{clamped}%</span>
@@ -197,9 +197,9 @@ export function EngineWorkstation({
         <div className="flex min-h-0 flex-1 flex-col bg-[#141414]">
           <InvestigationEngineHeader />
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <div className="bg-[#141414] py-1 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
+          <div className="border border-white/[0.1] bg-[#141414] px-4 py-4 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
             <pre className="overflow-x-auto whitespace-pre text-white/90">{BANNER}</pre>
-            <div className="mt-4 pt-3">
+            <div className="mt-4 border-t border-white/[0.08] pt-3">
               <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
               <MetaRow label="Version" value={phase.version} />
               <MetaRow label="Created By" value={phase.createdBy} />
