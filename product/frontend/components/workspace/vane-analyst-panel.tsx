@@ -118,7 +118,7 @@ export function VaneAnalystPanel({
       >
         {empty ? (
           <div className="flex h-full min-h-[200px] items-center justify-center px-2 text-center">
-            <p className="max-w-[240px] text-[14px] leading-relaxed text-vx-muted">
+            <p className="max-w-[240px] font-sans text-[14px] leading-relaxed text-vx-muted">
               {!bundle && !activeBundles.length
                 ? "Ask about cybersecurity — or upload scanner evidence to run correlation, prioritization, and investigation generation."
                 : activeBundles.length > 1
