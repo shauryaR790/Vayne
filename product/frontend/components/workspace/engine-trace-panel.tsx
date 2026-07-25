@@ -8,20 +8,18 @@ import {
 } from "@/lib/engine-trace";
 import { cn } from "@/lib/utils";
 
-const LINE_INTERVAL_MS = 12;
-
-/** Match CLI / Rich terminal palette from the proof stream screenshots. */
+/**
+ * CLI-accurate palette (Rich / Windows Terminal look from proof mode).
+ * Mostly white — accents only on IPs (green) and ports/CVE/versions (cyan).
+ */
 const C = {
   bg: "#141414",
-  fg: "#D4D4D4",
-  dim: "#8A8A8A",
+  fg: "#CCCCCC",
+  white: "#E6E6E6",
+  dim: "#9A9A9A",
+  green: "#6A9955",
   cyan: "#4EC9B0",
-  green: "#98C379",
-  yellow: "#DCDCAA",
-  gold: "#D7BA7D",
-  teal: "#6A9B9B",
-  amber: "#E5C07B",
-  white: "#E8E8E8",
+  reject: "#CE9178",
 } as const;
 
 function formatValue(value: unknown): string {
@@ -41,7 +39,6 @@ function formatValue(value: unknown): string {
   return String(value);
 }
 
-/** Map engine events into terminal lines (backend text only — no invented values). */
 function eventsToLines(events: EngineTraceEvent[]): string[] {
   const lines: string[] = [];
   let lastStage = "";
@@ -96,127 +93,99 @@ function eventsToLines(events: EngineTraceEvent[]): string[] {
 
 type Seg = { text: string; color: string };
 
-function pushPlain(out: Seg[], text: string, color: string) {
+function push(out: Seg[], text: string, color: string) {
   if (!text) return;
   const last = out[out.length - 1];
   if (last && last.color === color) last.text += text;
   else out.push({ text, color });
 }
 
-function colorizeLine(line: string): Seg[] {
+/**
+ * Sparse highlighting only — default is plain white/gray like a real terminal.
+ * Green = IPv4. Cyan = tcp|udp ports, CVE ids, CANDIDATE/VERIFIED, software versions.
+ */
+function colorize(line: string): Seg[] {
   if (!line.trim()) return [{ text: "\u00a0", color: C.fg }];
 
-  if (line.startsWith("===") || (line.startsWith("[ ") && line.endsWith(" ]"))) {
-    return [{ text: line, color: C.white }];
-  }
   if (line.startsWith("REJECTED")) {
-    return colorizeGeneric(line, C.amber);
-  }
-  if (line.startsWith("ATTACK CATEGORY")) {
-    return colorizeGeneric(line, C.white);
-  }
-  if (line.startsWith("NODE ")) {
-    return colorizeGeneric(line, C.fg, { emphasizeVersions: true });
-  }
-  if (line.startsWith("EDGE ")) {
-    return colorizeEdgeLine(line);
+    return [{ text: line, color: C.reject }];
   }
 
-  const trimmed = line.trimStart();
-  const indent = line.slice(0, line.length - trimmed.length);
+  // evidence: label dim, rest white + rare accents
+  const evMatch = line.match(/^(\s*)(evidence:|Evidence:)(\s*)(.*)$/);
+  if (evMatch) {
+    const out: Seg[] = [];
+    push(out, evMatch[1] + evMatch[2] + evMatch[3], C.dim);
+    out.push(...paintAccents(evMatch[4], C.white));
+    return out;
+  }
 
-  const field = trimmed.match(
-    /^(evidence:|Evidence:|Tool:|Artifact:|Tier:|Confidence:|Validation:|DISCOVERED FROM|Execution:|Formula:|Result:)(.*)$/i,
+  // Field labels stay dim; values stay white (not gold/cyan dumps)
+  const field = line.match(
+    /^(\s*)(Tool:|Artifact:|Tier:|Confidence:|Validation:|DISCOVERED FROM|Execution:|Formula:|Result:)(.*)$/i,
   );
   if (field) {
-    const segs: Seg[] = [];
-    pushPlain(segs, indent, C.dim);
-    pushPlain(segs, field[1], C.dim);
-    segs.push(...colorizeGeneric(field[2], C.gold));
-    return segs;
+    const out: Seg[] = [];
+    push(out, field[1] + field[2], C.dim);
+    out.push(...paintAccents(field[3], C.white));
+    return out;
   }
 
-  if (trimmed.startsWith("- ")) {
-    const segs: Seg[] = [];
-    pushPlain(segs, indent, C.dim);
-    pushPlain(segs, "- ", C.dim);
-    segs.push(...colorizeGeneric(trimmed.slice(2), C.gold));
-    return segs;
-  }
-
-  if (trimmed.startsWith("WHY THIS") || trimmed.startsWith("MATCHED ") || trimmed.startsWith("MITRE ")) {
-    return colorizeGeneric(line, C.cyan);
-  }
-  if (trimmed.startsWith("+ ")) {
-    return colorizeGeneric(line, C.green);
-  }
-
-  return colorizeGeneric(line, C.fg);
+  return paintAccents(line, C.fg);
 }
 
-function colorizeEdgeLine(line: string): Seg[] {
-  const segs: Seg[] = [];
-  pushPlain(segs, "EDGE ", C.fg);
-  const rest = line.slice(5);
-  const parts = rest.split(/\s*(->|→)\s*/);
-  if (parts.length >= 3) {
-    segs.push(...colorizeEntityRef(parts[0]));
-    pushPlain(segs, ` ${parts[1]} `, C.dim);
-    segs.push(...colorizeEntityRef(parts[2]));
-    for (let i = 3; i < parts.length; i++) {
-      segs.push(...colorizeGeneric(parts[i], C.fg));
-    }
-    return segs;
-  }
-  return [...segs, ...colorizeGeneric(rest, C.gold)];
-}
-
-function colorizeEntityRef(ref: string): Seg[] {
-  const m = ref.match(/^([a-z_]+):(.+)$/i);
-  if (m) {
-    const segs: Seg[] = [];
-    pushPlain(segs, `${m[1]}:`, C.teal);
-    segs.push(...colorizeGeneric(m[2], C.gold));
-    return segs;
-  }
-  return colorizeGeneric(ref, C.gold);
-}
-
-function colorizeGeneric(
-  text: string,
-  base: string,
-  opts?: { emphasizeVersions?: boolean },
-): Seg[] {
+function paintAccents(text: string, base: string): Seg[] {
   if (!text) return [];
-  const segs: Seg[] = [];
-  const patterns: Array<{ re: RegExp; color: string }> = [
-    { re: /\bCVE-\d{4}-\d+\b/g, color: C.cyan },
-    { re: /\b(?:CANDIDATE|VERIFIED)\b/g, color: C.cyan },
-    { re: /\b(?:TIER[123]|TIER\s*[123])\b/gi, color: C.gold },
-    { re: /\b\d{1,3}(?:\.\d{1,3}){3}\b/g, color: C.green },
-    { re: /\b[A-Z][A-Z0-9_]{2,}=/g, color: C.gold },
-    { re: /\b\d{1,3}%\b/g, color: C.gold },
-    { re: /(?<=(?:tcp|udp)\/)\d{1,5}\b/gi, color: C.cyan },
-    { re: /(?<=:)\d{2,5}\b(?!\.\d)/g, color: C.cyan },
-  ];
-  if (opts?.emphasizeVersions) {
-    patterns.push({
-      re: /\b\d+\.\d+(?:\.\d+)?(?:-[A-Za-z0-9._]+)?\b/g,
-      color: C.yellow,
-    });
-  }
-
   type Hit = { start: number; end: number; color: string };
   const hits: Hit[] = [];
-  for (const { re, color } of patterns) {
+
+  const addAll = (re: RegExp, color: string) => {
     re.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
       hits.push({ start: m.index, end: m.index + m[0].length, color });
     }
-  }
-  hits.sort((a, b) => a.start - b.start || b.end - a.end);
+  };
 
+  // IPs first (green) — reserve those spans so versions can't steal octets.
+  const ipSpans: Array<{ start: number; end: number }> = [];
+  {
+    const re = /\b\d{1,3}(?:\.\d{1,3}){3}\b/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      ipSpans.push({ start: m.index, end: m.index + m[0].length });
+      hits.push({ start: m.index, end: m.index + m[0].length, color: C.green });
+    }
+  }
+
+  const overlapsIp = (start: number, end: number) =>
+    ipSpans.some((s) => start < s.end && end > s.start);
+
+  addAll(/\bCVE-\d{4}-\d+\b/g, C.cyan);
+  addAll(/\b(?:CANDIDATE|VERIFIED)\b/g, C.cyan);
+
+  // Port digits only: tcp/80 or udp/445
+  {
+    const re = /(?:tcp|udp)\/(\d{1,5})\b/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const digit = m[1];
+      const start = m.index + m[0].lastIndexOf(digit);
+      hits.push({ start, end: start + digit.length, color: C.cyan });
+    }
+  }
+
+  // Software versions like 3.0.20-Debian — never inside an IP
+  {
+    const re = /\b\d+\.\d+\.\d+(?:-[A-Za-z0-9._]+)?\b/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      if (overlapsIp(m.index, m.index + m[0].length)) continue;
+      hits.push({ start: m.index, end: m.index + m[0].length, color: C.cyan });
+    }
+  }
+
+  hits.sort((a, b) => a.start - b.start || b.end - a.end);
   const taken: Hit[] = [];
   for (const h of hits) {
     if (taken.some((t) => h.start < t.end && h.end > t.start)) continue;
@@ -224,19 +193,20 @@ function colorizeGeneric(
   }
   taken.sort((a, b) => a.start - b.start);
 
+  const out: Seg[] = [];
   let cursor = 0;
   for (const h of taken) {
-    if (h.start > cursor) pushPlain(segs, text.slice(cursor, h.start), base);
-    pushPlain(segs, text.slice(h.start, h.end), h.color);
+    if (h.start > cursor) push(out, text.slice(cursor, h.start), base);
+    push(out, text.slice(h.start, h.end), h.color);
     cursor = h.end;
   }
-  if (cursor < text.length) pushPlain(segs, text.slice(cursor), base);
-  if (!segs.length) pushPlain(segs, text, base);
-  return segs;
+  if (cursor < text.length) push(out, text.slice(cursor), base);
+  if (!out.length) push(out, text, base);
+  return out;
 }
 
 function TerminalLine({ line }: { line: string }) {
-  const segs = useMemo(() => colorizeLine(line), [line]);
+  const segs = useMemo(() => colorize(line), [line]);
   return (
     <div className="whitespace-pre-wrap break-all">
       {segs.map((s, i) => (
@@ -262,47 +232,15 @@ export function EngineTracePanel({
   const scrollerRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   const [manualScroll, setManualScroll] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(0);
-  const wasRunning = useRef(false);
 
   const lines = useMemo(() => eventsToLines(events), [events]);
 
-  useEffect(() => {
-    if (events.length === 0) {
-      wasRunning.current = false;
-      setVisibleCount(0);
-    }
-  }, [events.length]);
-
-  useEffect(() => {
-    if (running) {
-      if (!wasRunning.current) {
-        setVisibleCount(0);
-      }
-      wasRunning.current = true;
-      return;
-    }
-    if (!wasRunning.current && lines.length > 0) {
-      setVisibleCount(lines.length);
-    }
-  }, [running, lines.length]);
-
-  useEffect(() => {
-    if (visibleCount >= lines.length) return;
-    const id = window.setTimeout(() => {
-      setVisibleCount((n) => Math.min(n + 1, lines.length));
-    }, LINE_INTERVAL_MS);
-    return () => window.clearTimeout(id);
-  }, [visibleCount, lines.length]);
-
+  // No artificial drip — show lines as soon as events arrive (real terminal buffer).
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el || !stickToBottom.current) return;
     el.scrollTop = el.scrollHeight;
-  }, [visibleCount]);
-
-  const shown = lines.slice(0, visibleCount);
-  const catchingUp = visibleCount < lines.length;
+  }, [lines.length]);
 
   return (
     <section
@@ -310,63 +248,57 @@ export function EngineTracePanel({
       style={{ backgroundColor: C.bg }}
     >
       <header
-        className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-3"
+        className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 py-2"
         style={{ backgroundColor: C.bg }}
       >
-        <div>
-          <p
-            className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em]"
-            style={{ color: C.white }}
-          >
-            Engine Trace
-          </p>
-          <p className="mt-1 font-mono text-[12px]" style={{ color: C.dim }}>
-            Deterministic engine output — same proof stream as the CLI
-          </p>
-        </div>
-        <p className="font-mono text-[11px] tabular-nums" style={{ color: C.cyan }}>
-          {running || catchingUp ? "RUNNING" : "COMPLETE"} · {shown.length}/{lines.length}
+        <p
+          className="font-mono text-[11px] uppercase tracking-[0.14em]"
+          style={{ color: C.dim }}
+        >
+          Engine Trace
+        </p>
+        <p className="font-mono text-[11px] tabular-nums" style={{ color: C.dim }}>
+          {running ? "RUNNING" : "COMPLETE"} · {lines.length}
         </p>
       </header>
 
       <div
         ref={scrollerRef}
-        className="min-h-0 flex-1 overflow-y-auto px-5 py-4 font-mono text-[12.5px] leading-[1.55] antialiased"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-2 font-mono text-[13px] leading-[1.35]"
         style={{
           backgroundColor: C.bg,
           color: C.fg,
-          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          fontFamily: "Consolas, 'Courier New', ui-monospace, monospace",
+          scrollBehavior: "auto",
         }}
         onScroll={() => {
           const el = scrollerRef.current;
           if (!el) return;
-          const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+          const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
           stickToBottom.current = atBottom;
           setManualScroll(!atBottom);
         }}
       >
-        {shown.length === 0 ? (
+        {lines.length === 0 ? (
           <p style={{ color: C.dim }}>Waiting for engine events…</p>
         ) : null}
 
-        {shown.map((line, index) => (
-          <TerminalLine key={`${index}-${line.slice(0, 24)}`} line={line} />
+        {lines.map((line, index) => (
+          <TerminalLine key={index} line={line} />
         ))}
 
-        {running || catchingUp ? (
-          <span
-            className="mt-1 inline-block h-4 w-[7px] animate-pulse"
-            style={{ backgroundColor: C.cyan }}
-            aria-hidden
-          />
+        {running ? (
+          <span style={{ color: C.fg }} aria-hidden>
+            ▌
+          </span>
         ) : null}
       </div>
 
       {manualScroll ? (
         <button
           type="button"
-          className="shrink-0 border-t border-white/10 px-5 py-2 text-left font-mono text-[11px] hover:opacity-100"
-          style={{ color: C.dim, backgroundColor: C.bg }}
+          className="shrink-0 border-t border-white/[0.08] px-4 py-1.5 text-left font-mono text-[12px]"
+          style={{ color: C.white, backgroundColor: C.bg }}
           onClick={() => {
             stickToBottom.current = true;
             setManualScroll(false);
@@ -378,19 +310,19 @@ export function EngineTracePanel({
         </button>
       ) : null}
 
-      {!running && !catchingUp && onViewFullReport ? (
+      {!running && onViewFullReport ? (
         <div
-          className="flex shrink-0 items-center justify-between gap-3 border-t border-white/10 px-5 py-3"
+          className="flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] px-4 py-2"
           style={{ backgroundColor: C.bg }}
         >
           <p className="font-mono text-[11px]" style={{ color: C.dim }}>
-            Engine panel stays open until you continue
+            Panel stays open until you continue
           </p>
           <button
             type="button"
             onClick={onViewFullReport}
-            className="font-mono text-[11px] uppercase tracking-[0.14em] hover:opacity-100"
-            style={{ color: C.cyan }}
+            className="font-mono text-[11px] uppercase tracking-[0.12em]"
+            style={{ color: C.white }}
           >
             View full report
           </button>
