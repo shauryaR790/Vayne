@@ -303,7 +303,7 @@ export function EngineTraceLive({
   return (
     <aside
       className={cn(
-        "flex h-full min-h-0 w-full flex-col border-l border-white/[0.08] bg-[#141414]",
+        "flex h-full min-h-0 w-full min-w-0 flex-col overflow-x-hidden border-l border-white/[0.08] bg-[#141414]",
         className,
       )}
     >
@@ -315,7 +315,7 @@ export function EngineTraceLive({
         <>
           <div
             ref={scrollerRef}
-            className="min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-[11.5px] leading-[1.45]"
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 font-mono text-[11.5px] leading-[1.45]"
             onScroll={() => {
               const el = scrollerRef.current;
               if (!el) return;
@@ -328,30 +328,34 @@ export function EngineTraceLive({
               chunk.kind === "proof" ? (
                 <div
                   key={chunk.id}
-                  className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
+                  className={cn("min-w-0", idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
                 >
                   <p className="mb-2 tracking-[0.12em] text-white/50">=== VAYNE PROOF MODE ===</p>
-                  <pre className="whitespace-pre-wrap break-words text-white/75">{chunk.text}</pre>
+                  <pre className="max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-white/75">
+                    {chunk.text}
+                  </pre>
                 </div>
               ) : (
                 <div
                   key={chunk.id}
-                  className={cn(idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
+                  className={cn("min-w-0", idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
                 >
                   <p className="mb-2 tracking-[0.12em] text-white/85">[{chunk.title}]</p>
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     {chunk.lines.map((line, i) => (
-                      <div key={i}>
+                      <div key={i} className="min-w-0">
                         {line.arrow ? <p className="text-white/25">↓</p> : null}
                         {line.label && line.muted ? (
-                          <p className="text-white/45">{line.label}</p>
+                          <p className="break-words text-white/45">{line.label}</p>
                         ) : line.label ? (
-                          <div className="flex justify-between gap-4 text-white/65">
-                            <span>{line.label}</span>
-                            <span className="tabular-nums text-white/90">{line.value}</span>
+                          <div className="flex min-w-0 justify-between gap-3 text-white/65">
+                            <span className="min-w-0 break-words">{line.label}</span>
+                            <span className="shrink-0 tabular-nums text-white/90">{line.value}</span>
                           </div>
                         ) : (
-                          <p className="whitespace-pre-wrap text-white/70">{line.value}</p>
+                          <p className="max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-white/70">
+                            {line.value}
+                          </p>
                         )}
                       </div>
                     ))}

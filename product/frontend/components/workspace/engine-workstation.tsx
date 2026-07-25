@@ -201,12 +201,12 @@ export function EngineWorkstation({
     <section className={cn("flex h-full min-h-0 w-full flex-col", className)} style={{ backgroundColor: BG }}>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Center: Engine Status Dashboard */}
-        <div className="flex min-h-0 flex-1 flex-col bg-[#141414]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden bg-[#141414]">
           <InvestigationEngineHeader />
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-4">
           <div className="shrink-0 py-1 font-mono text-[11px] leading-[1.35] text-white/90 sm:text-[12px]">
-            <pre className="overflow-x-auto whitespace-pre">{BANNER}</pre>
-            <pre className="mt-3 overflow-x-auto whitespace-pre">{ENGINE_MARK}</pre>
+            <pre className="max-w-full overflow-x-hidden whitespace-pre">{BANNER}</pre>
+            <pre className="mt-3 max-w-full overflow-x-hidden whitespace-pre">{ENGINE_MARK}</pre>
           </div>
 
           <div className="mt-auto flex flex-col pt-10">
@@ -258,8 +258,8 @@ export function EngineWorkstation({
         </div>
 
         {/* Right-center: ENGINE TRACE */}
-        <div className="flex h-[42vh] min-h-0 shrink-0 flex-col border-t border-white/[0.08] lg:h-auto lg:w-[360px] lg:self-stretch lg:border-t-0 xl:w-[400px]">
-          <EngineTraceLive events={events} running={running} className="h-full min-h-0 flex-1" />
+        <div className="flex h-[42vh] min-h-0 w-full min-w-0 shrink-0 flex-col overflow-x-hidden border-t border-white/[0.08] lg:h-auto lg:w-[360px] lg:self-stretch lg:border-t-0 xl:w-[400px]">
+          <EngineTraceLive events={events} running={running} className="h-full min-h-0 min-w-0 flex-1" />
         </div>
       </div>
 
