@@ -72,11 +72,6 @@ export function InvestigationWorkspaceHome({
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
     >
-      <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 py-2">
-        <p className="text-[13px] text-white/70">Investigation Engine</p>
-        <p className="text-[12px] tabular-nums text-white/55">IDLE · AWAITING ARTIFACTS</p>
-      </header>
-
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Center: Engine Status Dashboard (preview) */}
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">

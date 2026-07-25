@@ -191,14 +191,6 @@ export function EngineWorkstation({
 
   return (
     <section className={cn("flex h-full min-h-0 w-full flex-col", className)} style={{ backgroundColor: BG }}>
-      <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-4 py-2">
-        <p className="font-mono text-[13px] text-white/70">Investigation Engine</p>
-        <p className="font-mono text-[12px] tabular-nums text-white/55">
-          {statusLabel.toUpperCase()}
-          {phase.elapsedS != null ? ` · ${phase.elapsedS.toFixed(2)} s` : ""}
-        </p>
-      </header>
-
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Center: Engine Status Dashboard */}
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
