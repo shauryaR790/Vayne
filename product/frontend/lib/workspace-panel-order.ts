@@ -66,18 +66,19 @@ export function swapWorkspacePanels(
 }
 
 /**
- * Desktop dock widths only — this row is gated behind isLgUp, so do not use
- * `w-full` / `lg:` toggles here (they can crush flex siblings to 0 width).
+ * Desktop dock widths only — this row is gated behind isLgUp.
+ * Trace + Analyst share space with Engine (closer to the old ~55/45 engine/trace split),
+ * not fixed narrow side columns.
  */
 export function panelSlotClass(id: WorkspacePanelId): string {
   switch (id) {
     case "engine":
-      return "flex min-h-0 min-w-[280px] flex-1 flex-col";
+      return "flex min-h-0 min-w-[300px] flex-[1.2] flex-col";
     case "trace":
-      return "flex min-h-0 w-[360px] shrink-0 flex-col xl:w-[400px]";
+      return "flex min-h-0 min-w-[360px] flex-1 flex-col";
     case "analyst":
-      return "flex min-h-0 w-[min(28%,420px)] min-w-[300px] shrink-0 flex-col";
+      return "flex min-h-0 min-w-[340px] flex-1 flex-col";
     default:
-      return "flex min-h-0 min-w-[280px] flex-1 flex-col";
+      return "flex min-h-0 min-w-[300px] flex-1 flex-col";
   }
 }

@@ -95,8 +95,8 @@ export function VaneAnalystPanel({
   return (
     <aside
       className={cn(
-        "flex h-full w-full flex-col bg-vx-analyst",
-        onClose ? "border-l border-vx-border" : "min-w-[300px]",
+        "flex h-full w-full min-w-0 flex-col bg-vx-analyst",
+        onClose && "border-l border-vx-border",
       )}
     >
       <AnalystPanelHeader
