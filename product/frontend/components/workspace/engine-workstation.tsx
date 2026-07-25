@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { InvestigationEngineHeader } from "@/components/workspace/analyst/analyst-panel-header";
 import { EngineTraceLive } from "@/components/workspace/engine-trace-live";
 import type { EngineTraceEvent } from "@/lib/engine-trace";
 import { cn } from "@/lib/utils";
@@ -193,7 +194,9 @@ export function EngineWorkstation({
     <section className={cn("flex h-full min-h-0 w-full flex-col", className)} style={{ backgroundColor: BG }}>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Center: Engine Status Dashboard */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div className="flex min-h-0 flex-1 flex-col bg-[#141414]">
+          <InvestigationEngineHeader />
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           <div className="border border-white/[0.1] bg-[#141414] px-4 py-4 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
             <pre className="overflow-x-auto whitespace-pre text-white/90">{BANNER}</pre>
             <div className="mt-4 border-t border-white/[0.08] pt-3">
@@ -239,6 +242,7 @@ export function EngineWorkstation({
                 ))}
               </div>
             )}
+          </div>
           </div>
         </div>
 

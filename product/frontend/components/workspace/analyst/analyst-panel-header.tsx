@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
+  Cpu,
   History,
   MessageSquare,
   MoreHorizontal,
@@ -123,6 +124,16 @@ export function EngineTraceHeader({
       onClose={onClose}
       onPrimaryAction={onClear}
       primaryActionLabel="Clear trace"
+    />
+  );
+}
+
+export function InvestigationEngineHeader({ onClose }: { onClose?: () => void } = {}) {
+  return (
+    <WorkspacePanelHeader
+      icon={Cpu}
+      title="Investigation Engine"
+      onClose={onClose}
     />
   );
 }

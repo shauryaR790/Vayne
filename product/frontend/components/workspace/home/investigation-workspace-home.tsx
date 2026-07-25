@@ -3,7 +3,7 @@
 import type { DragEvent } from "react";
 import { useCallback, useState } from "react";
 
-import { EngineTraceHeader } from "@/components/workspace/analyst/analyst-panel-header";
+import { EngineTraceHeader, InvestigationEngineHeader } from "@/components/workspace/analyst/analyst-panel-header";
 import { EngineTraceStandby } from "@/components/workspace/engine-trace-standby";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +76,9 @@ export function InvestigationWorkspaceHome({
     >
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Center: Engine Status Dashboard (preview) */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div className="flex min-h-0 flex-1 flex-col bg-[#141414]">
+          <InvestigationEngineHeader />
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           <div className="border border-white/[0.1] bg-[#141414] px-4 py-4 text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
             <pre className="overflow-x-auto whitespace-pre text-white/90">{BANNER}</pre>
             <div className="mt-4 border-t border-white/[0.08] pt-3">
@@ -150,6 +152,7 @@ export function InvestigationWorkspaceHome({
                 needs attention, with Open Investigation → into the full report.
               </p>
             </div>
+          </div>
           </div>
         </div>
 
