@@ -123,8 +123,7 @@ export function SwappablePanelRow({
         className,
       )}
       style={{
-        // ~40% / 30% / 30% — Engine slightly wider, Trace + Analyst share the rest.
-        gridTemplateColumns: "minmax(0, 4fr) minmax(0, 3fr) minmax(0, 3fr)",
+        gridTemplateColumns: "minmax(0, 39fr) minmax(0, 29fr) minmax(0, 31fr)",
       }}
     >
       {order.map((id) => (
