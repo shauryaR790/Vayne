@@ -31,11 +31,14 @@ type AttentionFinding = {
   finding_id: string;
   title: string;
   host: string;
+  host_count?: number;
   severity: string;
   priority: number;
   confidence: number;
   reason: string;
   cve?: string | null;
+  source_file?: string | null;
+  on_attack_path?: boolean;
 };
 
 function latestPhase(events: EngineTraceEvent[]): PhaseState {
@@ -107,11 +110,19 @@ function PriorityCard({
   finding: AttentionFinding;
   onOpen?: () => void;
 }) {
+  const confLabel =
+    finding.confidence > 0 ? `${Math.round(finding.confidence)}%` : "unscored";
+  const hostLabel =
+    finding.host_count && finding.host_count > 1
+      ? `${finding.host} (+${finding.host_count - 1} more)`
+      : finding.host || "—";
+
   return (
     <article className="border border-white/[0.1] bg-white/[0.02] px-4 py-3 font-mono text-[12px]">
       <div className="flex items-start justify-between gap-3">
         <p className="text-[11px] uppercase tracking-[0.12em] text-white/45">
           {finding.severity || "FINDING"}
+          {finding.on_attack_path ? " · PATH" : ""}
         </p>
         <p className="tabular-nums text-white/55">P {formatPriority(finding.priority)}</p>
       </div>
@@ -119,12 +130,20 @@ function PriorityCard({
       <div className="mt-3 space-y-1 text-white/55">
         <div className="flex justify-between gap-3">
           <span>Confidence</span>
-          <span className="tabular-nums text-white/85">{Math.round(finding.confidence)}%</span>
+          <span className="tabular-nums text-white/85">{confLabel}</span>
         </div>
         <div className="flex justify-between gap-3">
           <span>Affected Host</span>
-          <span className="text-right text-white/85">{finding.host || "—"}</span>
+          <span className="text-right text-white/85">{hostLabel}</span>
         </div>
+        {finding.source_file ? (
+          <div className="flex justify-between gap-3">
+            <span>Source File</span>
+            <span className="max-w-[60%] truncate text-right text-white/85" title={finding.source_file}>
+              {finding.source_file}
+            </span>
+          </div>
+        ) : null}
         <div className="pt-1">
           <p className="text-white/40">Reason</p>
           <p className="mt-0.5 text-white/70">{finding.reason}</p>

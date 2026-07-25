@@ -106,43 +106,221 @@ def emit_phase(
     )
 
 
+_SEV_ATTENTION_BOOST = {
+    "critical": 45,
+    "high": 32,
+    "medium": 16,
+    "low": 4,
+    "info": 0,
+    "none": 0,
+}
+
+
+def _finding_confidence(item: Any, quality: dict | None = None) -> float:
+    """Best available confidence reading for dashboard cards."""
+    val = getattr(item, "validation", None)
+    corr = getattr(item, "correlated", None)
+    candidates: list[float] = []
+    if val is not None:
+        for attr in (
+            "overall_confidence",
+            "confidence",
+            "observation_confidence",
+            "reliability_confidence",
+            "exploit_confidence",
+        ):
+            candidates.append(float(getattr(val, attr, 0) or 0))
+    if corr is not None:
+        candidates.append(float(getattr(corr, "confidence", 0) or 0))
+    if quality:
+        candidates.append(float(quality.get("confidence") or 0))
+    intel = getattr(item, "intelligence", None) or {}
+    conf_blob = intel.get("confidence") if isinstance(intel, dict) else None
+    if isinstance(conf_blob, dict):
+        candidates.append(float(conf_blob.get("overall") or 0))
+    return float(max(candidates) if candidates else 0.0)
+
+
+def _path_finding_ids(attack_paths: list | None) -> set[str]:
+    ids: set[str] = set()
+    for path in attack_paths or []:
+        for node in getattr(path, "nodes", None) or []:
+            nid = str(getattr(node, "id", "") or "")
+            if nid.startswith("vuln:"):
+                ids.add(nid[5:])
+            for fid in getattr(node, "source_finding_ids", None) or []:
+                if fid:
+                    ids.add(str(fid))
+        for fid in getattr(path, "source_finding_ids", None) or []:
+            if fid:
+                ids.add(str(fid))
+    return ids
+
+
+def _title_key(title: str) -> list[str]:
+    return "".join(ch.lower() if ch.isalnum() else " " for ch in (title or "")).split()
+
+
+def _normalize_title_key(title: str) -> str:
+    parts = _title_key(title)
+    return " ".join(parts) if parts else "finding"
+
+
+def _attention_score(
+    priority: float,
+    item: Any,
+    quality: dict,
+    *,
+    on_path: bool,
+) -> float:
+    corr = item.correlated
+    conf = _finding_confidence(item, quality)
+    sev = str(corr.severity or "info").lower()
+    score = float(priority)
+    score += _SEV_ATTENTION_BOOST.get(sev, 0)
+    score += conf * 0.2
+    if corr.cve:
+        score += 28
+    if on_path:
+        score += 40
+    if quality.get("exploitability", 0) >= 60:
+        score += 12
+    if quality.get("internet_exposure", 0) >= 60:
+        score += 10
+    # Pure INFO noise with no confidence/CVE/path sinks to the bottom.
+    if sev in ("info", "none", "") and not corr.cve and not on_path and conf < 20:
+        score -= 35
+    return score
+
+
+def _attention_reason(
+    item: Any,
+    quality: dict,
+    *,
+    on_path: bool,
+    host_count: int,
+) -> str:
+    corr = item.correlated
+    val = item.validation
+    conf = _finding_confidence(item, quality)
+    if on_path:
+        return "On a surviving attack path"
+    if corr.cve:
+        cve = str(corr.cve)
+        return f"{cve if cve.upper().startswith('CVE') else f'CVE {cve}'} — validate exploitability"
+    breakdown = list(getattr(val, "confidence_breakdown", None) or [])
+    if breakdown:
+        return str(breakdown[0])[:140]
+    reasoning = list(getattr(val, "reasoning", None) or [])
+    if reasoning:
+        return str(reasoning[0])[:140]
+    if quality.get("internet_exposure", 0) >= 60:
+        return "Internet-facing exposure"
+    if quality.get("exploitability", 0) >= 60:
+        return "Elevated exploitability signal"
+    if host_count > 1:
+        return f"Repeated across {host_count} hosts — review source artifacts"
+    evidence = list(getattr(corr, "evidence", None) or [])
+    if evidence:
+        return str(evidence[0])[:140]
+    if conf > 0:
+        return f"Engine confidence {int(conf)}%"
+    sources = list(getattr(corr, "source_files", None) or [])
+    if sources:
+        return f"Review scan artifact: {sources[0]}"
+    return "Needs analyst review — low evidence strength"
+
+
+def _source_file_for(item: Any) -> str | None:
+    corr = item.correlated
+    files = list(getattr(corr, "source_files", None) or [])
+    if files:
+        return str(files[0])
+    for raw in getattr(corr, "findings", None) or []:
+        sf = getattr(raw, "source_file", None) or ""
+        if sf:
+            return str(sf)
+    return None
+
+
 def emit_attention_findings(
     emitter: EngineTraceEmitter,
     *,
     samples: list[tuple[float, Any, dict, list]],
+    attack_paths: list | None = None,
 ) -> None:
-    """Top priority findings for the Engine Status dashboard (max 6)."""
-    cards = []
-    for priority, item, q, _contributions in samples[:6]:
+    """Top distinct findings needing analyst attention (max 6).
+
+    Ranks by attention value (paths, CVE, severity, confidence) — not raw
+    severity labels alone — and deduplicates repetitive titles so the dashboard
+    points at different investigations, not six clones of the same signal.
+    """
+    path_ids = _path_finding_ids(attack_paths)
+
+    # Group clones by title so we can pick the strongest host + report breadth.
+    by_title: dict[str, list[tuple[float, float, Any, dict]]] = {}
+    for priority, item, q, _contrib in samples:
         corr = item.correlated
-        val = item.validation
-        conf = float(getattr(val, "overall_confidence", 0) or 0)
-        reasons = []
-        if q.get("internet_exposure", 0) >= 60:
-            reasons.append("Internet-facing exposure")
-        if q.get("exploitability", 0) >= 70:
-            reasons.append("High exploitability")
-        if corr.cve:
-            reasons.append(f"CVE {corr.cve}")
-        if q.get("business_impact", 0) >= 70:
-            reasons.append("High business impact")
-        if not reasons:
-            if conf >= 70:
-                reasons.append(f"High confidence ({int(conf)}%)")
-            else:
-                reasons.append(corr.severity or "Prioritized by engine score")
+        key = _normalize_title_key(corr.title)
+        on_path = corr.id in path_ids
+        rank = _attention_score(priority, item, q, on_path=on_path)
+        by_title.setdefault(key, []).append((rank, float(priority), item, q))
+
+    ranked_groups: list[tuple[float, float, Any, dict, int, bool]] = []
+    for group in by_title.values():
+        group.sort(key=lambda row: row[0], reverse=True)
+        best_rank, best_priority, best_item, best_q = group[0]
+        hosts = {
+            str(getattr(row[2].correlated, "host", "") or "").strip()
+            for row in group
+            if getattr(row[2].correlated, "host", None)
+        }
+        hosts.discard("")
+        on_path = best_item.correlated.id in path_ids or any(
+            row[2].correlated.id in path_ids for row in group
+        )
+        # Prefer groups that are not pure noise when stronger signal exists later.
+        ranked_groups.append(
+            (best_rank, best_priority, best_item, best_q, max(1, len(hosts) or len(group)), on_path)
+        )
+
+    ranked_groups.sort(key=lambda row: row[0], reverse=True)
+
+    # Drop pure INFO/0-conf noise if we have stronger signal elsewhere.
+    strong = [
+        row
+        for row in ranked_groups
+        if row[5]
+        or row[2].correlated.cve
+        or str(row[2].correlated.severity or "").lower() in ("critical", "high", "medium")
+        or _finding_confidence(row[2], row[3]) >= 35
+        or row[1] >= 45
+    ]
+    pool = strong if strong else ranked_groups
+
+    cards = []
+    for _rank, priority, item, q, host_count, on_path in pool[:6]:
+        corr = item.correlated
+        conf = _finding_confidence(item, q)
+        source_file = _source_file_for(item)
         cards.append(
             {
                 "finding_id": corr.id,
                 "title": corr.title,
                 "host": corr.host or "—",
+                "host_count": host_count,
                 "severity": (corr.severity or "info").upper(),
                 "priority": priority,
                 "confidence": conf,
-                "reason": reasons[0],
+                "reason": _attention_reason(
+                    item, q, on_path=on_path, host_count=host_count
+                ),
                 "cve": corr.cve or None,
+                "source_file": source_file,
+                "on_attack_path": on_path,
             }
         )
+
     emitter.emit_stage(
         STAGE_PRIORITY,
         "attention",
@@ -518,7 +696,7 @@ def emit_priority_samples(
             },
         )
     if samples:
-        emit_attention_findings(emitter, samples=samples)
+        emit_attention_findings(emitter, samples=samples, attack_paths=paths)
     return float(samples[0][0]) if samples else None
 
 
