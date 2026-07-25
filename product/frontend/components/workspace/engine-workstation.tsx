@@ -17,6 +17,13 @@ const BANNER = `██╗   ██╗ █████╗ ██╗   ██╗�
  ╚████╔╝ ██║  ██║   ██║   ██║ ╚████║███████╗
   ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═══╝╚══════╝`;
 
+const ENGINE_MARK = `███████╗███╗   ██╗ ██████╗ ██╗███╗   ██╗███████╗
+██╔════╝████╗  ██║██╔════╝ ██║████╗  ██║██╔════╝
+█████╗  ██╔██╗ ██║██║  ███╗██║██╔██╗ ██║█████╗  
+██╔══╝  ██║╚██╗██║██║   ██║██║██║╚██╗██║██╔══╝  
+███████╗██║ ╚████║╚██████╔╝██║██║ ╚████║███████╗
+╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝`;
+
 type PhaseState = {
   phase: string;
   progressPct: number;
@@ -51,7 +58,7 @@ function latestPhase(events: EngineTraceEvent[]): PhaseState {
     elapsedS: null,
     status: "idle",
     version: "0.2.0",
-    createdBy: "Shaurya",
+    createdBy: "Nemzyi",
   };
   for (const ev of events) {
     if (ev.event !== "phase" || !ev.fields) continue;
@@ -197,10 +204,14 @@ export function EngineWorkstation({
         <div className="flex min-h-0 flex-1 flex-col bg-[#141414]">
           <InvestigationEngineHeader />
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
-          <div className="bg-[#141414] py-1 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
-            <pre className="overflow-x-auto whitespace-pre text-white/90">{BANNER}</pre>
-            <div className="mt-4 pt-3">
-              <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
+          <div className="shrink-0 py-1 font-mono text-[11px] leading-[1.35] text-white/90 sm:text-[12px]">
+            <pre className="overflow-x-auto whitespace-pre">{BANNER}</pre>
+            <pre className="mt-3 overflow-x-auto whitespace-pre">{ENGINE_MARK}</pre>
+          </div>
+
+          <div className="mt-auto flex flex-col pt-10">
+          <div className="py-1 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
+            <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
               <MetaRow label="Version" value={phase.version} />
               <MetaRow label="Created By" value={phase.createdBy} />
               <MetaRow label="Current Phase" value={phase.phase} />
@@ -214,14 +225,13 @@ export function EngineWorkstation({
                 label="Execution Time"
                 value={phase.elapsedS != null ? `${phase.elapsedS.toFixed(2)} s` : "—"}
               />
-            </div>
           </div>
 
           <div className="mt-4">
             <ProgressBar pct={phase.progressPct} phase={phase.phase} />
           </div>
 
-          <div className="mt-auto pt-8 pb-1">
+          <div className="pt-8 pb-1">
             <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
               Priority findings
             </p>
@@ -242,6 +252,7 @@ export function EngineWorkstation({
                 ))}
               </div>
             )}
+          </div>
           </div>
           </div>
         </div>

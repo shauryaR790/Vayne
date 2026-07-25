@@ -17,6 +17,13 @@ const BANNER = `██╗   ██╗ █████╗ ██╗   ██╗�
  ╚████╔╝ ██║  ██║   ██║   ██║ ╚████║███████╗
   ╚═══╝  ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═══╝╚══════╝`;
 
+const ENGINE_MARK = `███████╗███╗   ██╗ ██████╗ ██╗███╗   ██╗███████╗
+██╔════╝████╗  ██║██╔════╝ ██║████╗  ██║██╔════╝
+█████╗  ██╔██╗ ██║██║  ███╗██║██╔██╗ ██║█████╗  
+██╔══╝  ██║╚██╗██║██║   ██║██║██║╚██╗██║██╔══╝  
+███████╗██║ ╚████║╚██████╔╝██║██║ ╚████║███████╗
+╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝`;
+
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-6 border-b border-white/[0.06] py-1.5">
@@ -79,18 +86,21 @@ export function InvestigationWorkspaceHome({
         <div className="flex min-h-0 flex-1 flex-col bg-[#141414]">
           <InvestigationEngineHeader />
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
-          <div className="bg-[#141414] py-1 text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
-            <pre className="overflow-x-auto whitespace-pre text-white/90">{BANNER}</pre>
-            <div className="mt-4 pt-3">
-              <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
-              <MetaRow label="Version" value="0.2.0" />
-              <MetaRow label="Created By" value="Shaurya" />
-              <MetaRow label="Current Phase" value="Idle — ingest to start" />
-              <MetaRow label="Files Ingested" value="0" />
-              <MetaRow label="Files Processed" value="0 / 0" />
-              <MetaRow label="Engine Status" value="Idle" />
-              <MetaRow label="Execution Time" value="—" />
-            </div>
+          <div className="shrink-0 py-1 text-[11px] leading-[1.35] text-white/90 sm:text-[12px]">
+            <pre className="overflow-x-auto whitespace-pre">{BANNER}</pre>
+            <pre className="mt-3 overflow-x-auto whitespace-pre">{ENGINE_MARK}</pre>
+          </div>
+
+          <div className="mt-auto flex flex-col pt-10">
+          <div className="py-1 text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
+            <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
+            <MetaRow label="Version" value="0.2.0" />
+            <MetaRow label="Created By" value="Nemzyi" />
+            <MetaRow label="Current Phase" value="Idle — ingest to start" />
+            <MetaRow label="Files Ingested" value="0" />
+            <MetaRow label="Files Processed" value="0 / 0" />
+            <MetaRow label="Engine Status" value="Idle" />
+            <MetaRow label="Execution Time" value="—" />
 
             <div
               className={cn(
@@ -139,7 +149,7 @@ export function InvestigationWorkspaceHome({
             </div>
           </div>
 
-          <div className="mt-auto pt-8 pb-1">
+          <div className="pt-8 pb-1">
             <p className="mb-3 font-sans text-[11px] uppercase tracking-[0.14em] text-white/45">
               Priority findings
             </p>
@@ -151,6 +161,7 @@ export function InvestigationWorkspaceHome({
                 needs attention, with Open Investigation → into the full report.
               </p>
             </div>
+          </div>
           </div>
           </div>
         </div>

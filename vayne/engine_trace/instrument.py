@@ -100,7 +100,7 @@ def emit_phase(
             "files_processed": files_processed if files_processed is not None else files_ingested,
             "elapsed_s": round(elapsed_s, 3) if elapsed_s is not None else None,
             "status": status,
-            "created_by": "Shaurya",
+            "created_by": "Nemzyi",
             "version": __import__("vayne").__version__,
         },
     )
