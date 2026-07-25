@@ -927,12 +927,12 @@ export function VaneWorkspace({
   const beginInvestigationSession = useCallback(
     (prompt?: string) => {
       setInvestigationSessionActive(true);
-      window.setTimeout(() => focusAnalyst(), 200);
-
+      // Keep focus on the engine workstation — not the analyst chat.
       const queued = [...filesRef.current];
       if (queued.length > 0) {
         void handleAnalyze(queued);
       } else if (prompt?.trim()) {
+        window.setTimeout(() => focusAnalyst(), 200);
         void streamReply(prompt.trim());
       }
     },

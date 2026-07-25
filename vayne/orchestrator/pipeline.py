@@ -11,7 +11,8 @@ from vayne.analyst.engine import generate_brief
 from vayne.attack_paths.discovery import discover_attack_paths
 from vayne.correlator.engine import correlate_assets, correlate_findings
 from vayne.engine_trace.emitter import EngineTraceEmitter
-from vayne.engine_trace.events import STAGE_CONSOLE, STAGE_PARSER, STAGE_PROOF
+from vayne.engine_trace.events import STAGE_CONSOLE, STAGE_PARSER, STAGE_PROOF, STAGE_SUMMARY
+from vayne.engine_trace.formulas import formula_catalog
 from vayne.engine_trace.instrument import (
     emit_ai_boundary,
     emit_correlation,
@@ -144,6 +145,12 @@ class Orchestrator:
         self.on_stage(1, STAGES[0], "Reading scanner outputs")
         self._think("Initializing investigation workspace...")
         trace.mark_stage_start(STAGE_PARSER)
+        trace.emit_stage(
+            STAGE_SUMMARY,
+            "formula_catalog",
+            message="Active formulas (implemented)",
+            fields={"formulas": formula_catalog()},
+        )
         trace.emit_stage(
             STAGE_PARSER,
             "start",

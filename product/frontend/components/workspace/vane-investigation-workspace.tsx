@@ -2,7 +2,7 @@
 
 import type { RefObject } from "react";
 
-import { EngineTracePanel } from "@/components/workspace/engine-trace-panel";
+import { EngineWorkstation } from "@/components/workspace/engine-workstation";
 import {
   InvestigationInlineReport,
   MultiInvestigationInlineReport,
@@ -48,7 +48,7 @@ export function VaneInvestigationWorkspace({
   if (showTrace) {
     return (
       <div ref={scrollRef} className="flex h-full min-h-0 flex-col bg-[#141414]">
-        <EngineTracePanel
+        <EngineWorkstation
           events={engineTraceEvents}
           running={enginePhase === "running"}
           className="min-h-0 flex-1"
@@ -99,7 +99,7 @@ export function VaneInvestigationWorkspace({
             onClick={onViewEngineTrace}
             className="font-mono text-[11px] uppercase tracking-[0.12em] text-white/55 transition-colors hover:text-white"
           >
-            View Engine Trace
+            View Engine Session
           </button>
         ) : null}
       </header>

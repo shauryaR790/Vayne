@@ -1,6 +1,6 @@
 "use client";
 
-import { InvestigationComposer } from "@/components/workspace/home/investigation-composer";
+import { EngineInputPanel } from "@/components/workspace/engine-input-panel";
 import { RecentInvestigationList } from "@/components/workspace/home/recent-investigation-list";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 
@@ -32,15 +32,9 @@ export function InvestigationWorkspaceHome({
   onOpenInvestigation: (id: string) => void;
 }) {
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-y-auto bg-vx-app [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col justify-center px-4 py-10 sm:px-6 sm:py-16">
-        <div className="mb-8 text-center">
-          <h1 className="text-[28px] font-medium tracking-[-0.02em] text-white/95 sm:text-[32px]">
-            What would you like to investigate?
-          </h1>
-        </div>
-
-        <InvestigationComposer
+    <div className="flex h-full min-h-0 w-full flex-col overflow-y-auto bg-[#141414] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col justify-center px-4 py-10 sm:px-6 sm:py-14">
+        <EngineInputPanel
           disabled={disabled}
           busy={busy}
           stagedFiles={stagedFiles}
@@ -54,7 +48,7 @@ export function InvestigationWorkspaceHome({
           onUploadFolder={onUploadFolder}
         />
 
-        <div className="mt-8">
+        <div className="mt-10">
           <RecentInvestigationList onOpen={onOpenInvestigation} />
         </div>
       </div>
