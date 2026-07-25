@@ -135,8 +135,11 @@ export function InvestigationWorkspaceHome({
               Priority findings
             </p>
             <div className="flex min-h-[120px] items-center justify-center px-2 text-center">
-              <p className="max-w-[280px] font-sans text-[14px] leading-relaxed text-vx-muted">
-                Empty until the run finishes.
+              <p className="max-w-[320px] font-sans text-[14px] leading-relaxed text-vx-muted">
+                Empty until the run finishes. After completion you will see up to six cards here —
+                ranked by engine priority, not severity labels alone. Each card shows confidence,
+                host, source file, and why it needs attention, with Open Investigation → into the
+                full report.
               </p>
             </div>
           </div>
