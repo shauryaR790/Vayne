@@ -1,30 +1,33 @@
 "use client";
 
 import type { RefObject } from "react";
-import { AnimatePresence, motion } from "motion/react";
 
-import { EngineProgress } from "@/components/conversation/engine-progress";
+import { EngineTracePanel } from "@/components/workspace/engine-trace-panel";
 import {
   InvestigationInlineReport,
   MultiInvestigationInlineReport,
 } from "@/components/conversation/investigation-inline-report";
 import type { StoredChatMessage } from "@/lib/conversation-session";
+import type { EngineTraceEvent } from "@/lib/engine-trace";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 import { ensureEngineMessages } from "@/lib/engine-messages";
 
 export function VaneInvestigationWorkspace({
   scrollRef,
   enginePhase,
+  engineTraceEvents = [],
   messages,
   investigationIds,
   investigationGroupId,
   investigationMode,
   sourceLabels,
-  evidenceFileCount,
   error,
+  onViewEngineTrace,
+  onCloseEngineTrace,
 }: {
   scrollRef: RefObject<HTMLDivElement>;
   enginePhase: "idle" | "running" | "complete";
+  engineTraceEvents?: EngineTraceEvent[];
   messages: StoredChatMessage[];
   investigationIds: string[];
   investigationGroupId?: string | null;
@@ -32,11 +35,43 @@ export function VaneInvestigationWorkspace({
   sourceLabels?: string[];
   evidenceFileCount?: number;
   error?: string;
+  onViewEngineTrace?: () => void;
+  onCloseEngineTrace?: () => void;
 }) {
   const engineMessages = ensureEngineMessages(messages, investigationIds, {
     investigationGroupId,
     sourceLabels,
   });
+
+  const showTrace = enginePhase === "running" || enginePhase === "complete";
+
+  if (showTrace) {
+    return (
+      <div ref={scrollRef} className="flex h-full min-h-0 flex-col bg-[#0a0a0a]">
+        {enginePhase !== "running" && onCloseEngineTrace ? (
+          <div className="flex shrink-0 items-center justify-end border-b border-white/10 px-5 py-2">
+            <button
+              type="button"
+              onClick={onCloseEngineTrace}
+              className="font-mono text-[11px] uppercase tracking-[0.12em] text-white/55 hover:text-white"
+            >
+              Continue to report
+            </button>
+          </div>
+        ) : null}
+        <EngineTracePanel
+          events={engineTraceEvents}
+          running={enginePhase === "running"}
+          className="min-h-0 flex-1"
+        />
+        {error ? (
+          <p className="shrink-0 border-t border-white/10 px-5 py-3 font-mono text-[12px] text-red-400/80">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   const renderedReports = engineMessages.flatMap((msg) => {
     if (msg.kind === "investigation" && msg.investigationId) {
@@ -66,32 +101,20 @@ export function VaneInvestigationWorkspace({
       ref={scrollRef}
       className="h-full overflow-y-auto bg-vx-app [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <header className="sticky top-0 z-10 border-b border-vx-border bg-vx-section-body px-6 py-3">
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-vx-border bg-vx-section-body px-6 py-3">
         <h1 className="text-[13px] font-medium text-vx-secondary">Investigation Workspace</h1>
+        {onViewEngineTrace && (engineTraceEvents.length > 0 || investigationIds.length > 0) ? (
+          <button
+            type="button"
+            onClick={onViewEngineTrace}
+            className="font-mono text-[11px] uppercase tracking-[0.12em] text-white/55 transition-colors hover:text-white"
+          >
+            View Engine Trace
+          </button>
+        ) : null}
       </header>
 
       <div className="mx-auto w-full min-w-0 max-w-[1080px]">
-        <AnimatePresence initial={false}>
-          {enginePhase !== "idle" ? (
-            <motion.div
-              key="engine-progress"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
-              className="overflow-hidden border-b border-vx-border"
-            >
-              <div className="px-6 py-5">
-                <EngineProgress
-                  active={enginePhase === "running"}
-                  complete={enginePhase === "complete"}
-                  fileCount={evidenceFileCount}
-                />
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-
         {renderedReports.length > 0 ? (
           renderedReports
         ) : investigationIds.length > 0 ? (

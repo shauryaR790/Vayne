@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 from product.backend.config import cors_allow_origin_regex, expose_error_details, public_error_message
 from product.backend.db.session import init_db
 from product.backend.logging_config import configure_logging
-from product.backend.routes import analyst_chat, attack_paths, auth, dev, investigations, jobs, proof, upload
+from product.backend.routes import analyst_chat, attack_paths, auth, dev, engine_trace, investigations, jobs, proof, upload
 from product.backend.security import RateLimitMiddleware, SecurityHeadersMiddleware, validate_security_config
 
 logger = configure_logging()
@@ -88,6 +88,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 
 app.include_router(upload.router)
+app.include_router(engine_trace.router)
 app.include_router(jobs.router)
 app.include_router(investigations.router)
 app.include_router(attack_paths.router)

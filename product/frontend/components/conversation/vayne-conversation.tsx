@@ -6,6 +6,11 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { analyzeFiles, checkHealth } from "@/lib/api";
 import {
+  fetchEngineTrace,
+  streamAnalyzeWithTrace,
+  type EngineTraceEvent,
+} from "@/lib/engine-trace";
+import {
   ANALYST_OFFLINE_MESSAGE,
   ANALYST_QUOTA_MESSAGE,
   FREE_TIER_CHAT_LIMIT,
@@ -39,7 +44,6 @@ import {
   sessionStorageKeyFromState,
   setActiveInvestigationId,
 } from "@/lib/investigation-session";
-import { ENGINE_MIN_DURATION_MS, ENGINE_COMPLETE_MS } from "@/components/conversation/engine-progress";
 import {
   defaultInvestigationMode,
   resolveInvestigationMode,
@@ -113,6 +117,8 @@ export function VaneWorkspace({
   const [investigationIds, setInvestigationIds] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [enginePhase, setEnginePhase] = useState<"idle" | "running" | "complete">("idle");
+  const [engineTraceEvents, setEngineTraceEvents] = useState<EngineTraceEvent[]>([]);
+  const [engineTraceOpen, setEngineTraceOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [investigationSessionActive, setInvestigationSessionActive] = useState(false);
@@ -682,8 +688,9 @@ export function VaneWorkspace({
 
     setBusy(true);
     setEnginePhase("running");
+    setEngineTraceEvents([]);
+    setEngineTraceOpen(false);
     setError("");
-    const engineStartedAt = Date.now();
 
     setMessages((prev) => [
       ...prev,
@@ -697,10 +704,34 @@ export function VaneWorkspace({
           : fileNames.length <= 3
             ? fileNames.join(", ")
             : `${fileNames[0]} + ${fileNames.length - 1} more files`;
-      const result = await analyzeFiles(validation.files, label, {
-        mode: resolvedMode,
-        prompt,
-      });
+
+      let result: Awaited<ReturnType<typeof analyzeFiles>> | null = null;
+      try {
+        for await (const event of streamAnalyzeWithTrace(validation.files, label, {
+          mode: resolvedMode,
+          prompt,
+        })) {
+          if (event.type === "engine_event") {
+            setEngineTraceEvents((prev) => [...prev, event.event]);
+          } else if (event.type === "error") {
+            throw new Error(event.message || "Analysis failed");
+          } else if (event.type === "complete") {
+            result = event.result;
+          }
+        }
+      } catch (streamErr) {
+        // Fallback to classic analyze if streaming endpoint is unavailable.
+        console.warn(`${LOG_PREFIX} Engine trace stream failed — falling back`, streamErr);
+        result = await analyzeFiles(validation.files, label, {
+          mode: resolvedMode,
+          prompt,
+        });
+      }
+
+      if (!result) {
+        throw new Error("Analysis returned no result");
+      }
+
       if (result.warnings?.length) {
         console.warn(
           `${LOG_PREFIX} Investigation completed with warnings — ` +
@@ -717,17 +748,9 @@ export function VaneWorkspace({
       setFiles([]);
 
       const finishEngineAnimation = async () => {
-        const engineElapsed = Date.now() - engineStartedAt;
-        const engineRemain = Math.min(
-          ENGINE_MIN_DURATION_MS,
-          Math.max(0, ENGINE_MIN_DURATION_MS - engineElapsed),
-        );
-        if (engineRemain > 0) {
-          await new Promise((r) => window.setTimeout(r, engineRemain));
-        }
         setEnginePhase("complete");
-        await new Promise((r) => window.setTimeout(r, ENGINE_COMPLETE_MS));
-        setEnginePhase("idle");
+        await new Promise((r) => window.setTimeout(r, 1600));
+        setEnginePhase((phase) => (phase === "complete" ? "idle" : phase));
       };
 
       if (result.mode === "separate" && result.investigations.length > 1) {
@@ -1034,7 +1057,23 @@ export function VaneWorkspace({
             analystOnline={analystOnline}
             error={error}
             files={files}
-            enginePhase={enginePhase}
+            enginePhase={engineTraceOpen ? "complete" : enginePhase}
+            engineTraceEvents={engineTraceEvents}
+            onViewEngineTrace={() => {
+              const id =
+                investigationIds[0] ||
+                (bundle ? bundle.detail.summary.id : null);
+              if (id && engineTraceEvents.length === 0) {
+                void fetchEngineTrace(id).then((events) => {
+                  if (events.length) setEngineTraceEvents(events);
+                });
+              }
+              setEngineTraceOpen(true);
+            }}
+            onCloseEngineTrace={() => {
+              setEngineTraceOpen(false);
+              setEnginePhase((phase) => (phase === "complete" ? "idle" : phase));
+            }}
             messages={messages}
             investigationIds={
               investigationIds.length

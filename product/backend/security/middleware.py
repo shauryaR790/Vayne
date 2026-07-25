@@ -33,6 +33,8 @@ _EXACT_RULES: dict[tuple[str, str], tuple[int, int]] = {
 _PATTERN_RULES: list[tuple[str, re.Pattern[str], int, int]] = [
     ("POST", re.compile(r"^/api/investigation/[^/]+/chat$"), 8, 60),
     ("GET", re.compile(r"^/api/investigation/[^/]+/brief$"), 6, 60),
+    ("POST", re.compile(r"^/api/analyze/stream$"), 10, 60),
+    ("GET", re.compile(r"^/api/investigation/[^/]+/engine-trace$"), 30, 60),
 ]
 
 

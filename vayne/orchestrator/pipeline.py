@@ -1,4 +1,4 @@
-"""7-stage investigation orchestrator."""
+﻿"""7-stage investigation orchestrator."""
 
 from __future__ import annotations
 
@@ -10,6 +10,20 @@ from typing import Callable
 from vayne.analyst.engine import generate_brief
 from vayne.attack_paths.discovery import discover_attack_paths
 from vayne.correlator.engine import correlate_assets, correlate_findings
+from vayne.engine_trace.emitter import EngineTraceEmitter
+from vayne.engine_trace.events import STAGE_PARSER
+from vayne.engine_trace.instrument import (
+    emit_ai_boundary,
+    emit_correlation,
+    emit_export,
+    emit_graph,
+    emit_investigation_build,
+    emit_normalization,
+    emit_parser_complete,
+    emit_priority_samples,
+    emit_summary,
+    emit_validation,
+)
 from vayne.exploitability.scorer import score_exploitability
 from vayne.false_positive.classifier import build_stats
 from vayne.intelligence import build_finding_intelligence
@@ -17,13 +31,11 @@ from vayne.models import Classification, InvestigatedFinding, InvestigationRepor
 from vayne.parsers.loader import load_scan_files
 from vayne.remediation.engine import generate_timeline
 from vayne.production.exporter import enrich_report, export_production_artifacts
-from vayne.reporting.generator import export_report
 from vayne.validator.engine import format_analyst_status, validate_finding
 
 StageCallback = Callable[[int, str, str], None]
 ThinkingCallback = Callable[[str], None]
 
-# Above this many correlated findings, skip the demo-pacing sleep entirely.
 _PACE_THRESHOLD = 200
 _DEFAULT_MAX_FULL = 750
 
@@ -38,11 +50,6 @@ def _max_full_investigations() -> int:
 
 
 def _prioritized_ids(correlated: list, validation_map: dict, limit: int) -> set[str]:
-    """IDs that receive the full investigation, ranked by severity then confidence.
-
-    Below the limit every finding qualifies; above it, the highest-priority
-    findings are chosen deterministically so results are stable across runs.
-    """
     if len(correlated) <= limit:
         return {item.id for item in correlated}
 
@@ -54,6 +61,7 @@ def _prioritized_ids(correlated: list, validation_map: dict, limit: int) -> set[
 
     ranked = sorted(correlated, key=score, reverse=True)
     return {item.id for item in ranked[:limit]}
+
 
 STAGES = [
     "Loading scans",
@@ -75,6 +83,7 @@ class Orchestrator:
         on_thinking: ThinkingCallback | None = None,
         proof: bool = False,
         cache_dir: Path | None = None,
+        trace: EngineTraceEmitter | None = None,
     ):
         self.name = name
         self.paths = paths
@@ -82,6 +91,7 @@ class Orchestrator:
         self.on_thinking = on_thinking or (lambda _: None)
         self.proof = proof
         self.cache_dir = cache_dir
+        self.trace = trace or EngineTraceEmitter()
         self.parse_manifest: dict | None = None
         self.thinking_log: list[str] = []
         self.proof_log: list[str] = []
@@ -94,12 +104,45 @@ class Orchestrator:
 
     def run(self, export_dir: Path | None = None) -> InvestigationReport:
         self._start = time.perf_counter()
+        trace = self.trace
 
         self.on_stage(1, STAGES[0], "Reading scanner outputs")
         self._think("Initializing investigation workspace...")
+        trace.mark_stage_start(STAGE_PARSER)
+        trace.emit_stage(
+            STAGE_PARSER,
+            "start",
+            message="Reading scanner outputs",
+            fields={"files": [str(p.name) for p in self.paths]},
+        )
+        t0 = time.perf_counter()
         load_result = load_scan_files(self.paths, cache_dir=self.cache_dir)
         raw_findings, raw_assets = load_result
         self.parse_manifest = load_result.manifest
+        hosts = {getattr(a, "host", None) or getattr(a, "ip", None) for a in raw_assets}
+        hosts.discard(None)
+        hosts.update(getattr(f, "host", None) for f in raw_findings if getattr(f, "host", None))
+        ports = {
+            getattr(f, "port", None)
+            for f in raw_findings
+            if getattr(f, "port", None) not in (None, 0, "")
+        }
+        services = {
+            getattr(f, "service", None) or getattr(f, "product", None)
+            for f in raw_findings
+            if getattr(f, "service", None) or getattr(f, "product", None)
+        }
+        emit_parser_complete(
+            trace,
+            paths=[str(p.name) for p in self.paths],
+            raw_findings=len(raw_findings),
+            raw_assets=len(raw_assets),
+            manifest=self.parse_manifest if isinstance(self.parse_manifest, dict) else None,
+            execution_ms=(time.perf_counter() - t0) * 1000,
+            hosts=len(hosts),
+            ports=len(ports),
+            services=len(services),
+        )
         if not raw_findings and not raw_assets:
             self._think("No parseable findings in uploaded files — check for empty or skipped files.")
         if self.parse_manifest.get("cache_hits"):
@@ -111,16 +154,31 @@ class Orchestrator:
 
         self.on_stage(2, STAGES[1], f"Normalized {len(raw_findings)} findings")
         self._think("Parsing and normalizing to common schema...")
+        t_norm = time.perf_counter()
+        emit_normalization(
+            trace,
+            raw_findings=len(raw_findings),
+            execution_ms=(time.perf_counter() - t_norm) * 1000,
+        )
 
         self.on_stage(3, STAGES[2], "Merging duplicate signals")
+        t_corr = time.perf_counter()
         correlated = correlate_findings(raw_findings)
         assets = correlate_assets(raw_assets)
+        emit_correlation(
+            trace,
+            raw_findings=len(raw_findings),
+            correlated=correlated,
+            assets=assets,
+            execution_ms=(time.perf_counter() - t_corr) * 1000,
+        )
         self._think(f"Correlated into {len(correlated)} unique investigation targets.")
 
         self.on_stage(4, STAGES[3], "Validating each finding")
         investigated: list[InvestigatedFinding] = []
         validations: list = []
         validation_map: dict = {}
+        t_val = time.perf_counter()
 
         for item in correlated:
             self._think(f"Validating {item.title} on {item.host}...")
@@ -152,6 +210,13 @@ class Orchestrator:
                 for line in validation.confidence_breakdown[:6]:
                     self._think(f"  {line}")
 
+        emit_validation(
+            trace,
+            validations=validations,
+            correlated=correlated,
+            execution_ms=(time.perf_counter() - t_val) * 1000,
+        )
+
         fp_count = sum(
             1 for v in validations if v.classification == Classification.FALSE_POSITIVE
         )
@@ -162,8 +227,15 @@ class Orchestrator:
         )
 
         self.on_stage(5, STAGES[4], "Discovering attack chains")
+        t_graph = time.perf_counter()
         attack_paths, graph_proof = discover_attack_paths(
             raw_findings, assets, correlated, validation_map
+        )
+        emit_graph(
+            trace,
+            graph_proof=graph_proof,
+            attack_paths=attack_paths,
+            execution_ms=(time.perf_counter() - t_graph) * 1000,
         )
         from vayne.models import DiscoveredAsset
 
@@ -178,9 +250,7 @@ class Orchestrator:
             in (Classification.CONFIRMED, Classification.LIKELY_EXPLOITABLE)
         )
         if validated == 0 and not attack_paths:
-            self._think(
-                "Zero validated findings — no attack paths can be proven."
-            )
+            self._think("Zero validated findings — no attack paths can be proven.")
         elif validated == 0:
             self._think(
                 "No scanner-validated findings — only CVE-enriched or tier-2 derived paths retained."
@@ -226,14 +296,11 @@ class Orchestrator:
         else:
             self._think("NO ATTACK PATH DISCOVERED - graph traversal found no entry->target chain.")
 
-        # Scale guard: the full per-finding investigation is the heaviest work.
-        # For large runs we run it for the highest-priority findings and defer it
-        # for the long tail (bounded, deterministic, configurable). The cheaper
-        # facts/confidence/reasoning bundle is always produced for every finding.
         max_full = _max_full_investigations()
         full_ids = _prioritized_ids(correlated, validation_map, max_full)
         pace = len(correlated) <= _PACE_THRESHOLD
 
+        t_inv = time.perf_counter()
         for item in correlated:
             validation = validation_map[item.id]
             item_paths = [
@@ -265,6 +332,14 @@ class Orchestrator:
             )
             if pace:
                 time.sleep(0.05)
+
+        emit_investigation_build(
+            trace,
+            investigated=len(investigated),
+            full_investigations=len(full_ids),
+            execution_ms=(time.perf_counter() - t_inv) * 1000,
+        )
+        highest_priority = emit_priority_samples(trace, investigated=investigated)
 
         self.on_stage(6, STAGES[5], "Scoring exploitability")
         self._think("Calculating exploitability from validation signals...")
@@ -300,10 +375,50 @@ class Orchestrator:
         )
 
         if export_dir:
+            t_exp = time.perf_counter()
             export_production_artifacts(
                 report, graph_proof, export_dir, parse_manifest=self.parse_manifest
             )
             report = enrich_report(report, graph_proof)
+            emit_export(
+                trace,
+                export_dir=str(export_dir),
+                execution_ms=(time.perf_counter() - t_exp) * 1000,
+            )
             self._think(f"Reports exported to {export_dir}")
+
+        confidences = [
+            float(getattr(v, "overall_confidence", 0) or 0) for v in validations if v
+        ]
+        avg_conf = round(sum(confidences) / len(confidences), 2) if confidences else None
+        accepted_edges = sum(1 for e in graph_proof.edges if getattr(e, "accepted", True))
+        emit_summary(
+            trace,
+            duration_seconds=duration,
+            raw_findings=len(raw_findings),
+            correlated=len(correlated),
+            duplicates_removed=max(0, len(raw_findings) - len(correlated)),
+            validations_retained=retained,
+            attack_paths=len(attack_paths),
+            nodes=len(graph_proof.nodes),
+            edges=accepted_edges,
+            investigations=len(investigated),
+            avg_confidence=avg_conf,
+            highest_priority=highest_priority,
+            files_processed=len(self.paths),
+            assets=len(assets),
+        )
+        emit_ai_boundary(
+            trace,
+            deterministic_ms=duration * 1000,
+            investigations=len(investigated),
+            avg_confidence=avg_conf,
+        )
+
+        if export_dir:
+            try:
+                trace.persist(export_dir)
+            except OSError:
+                pass
 
         return report

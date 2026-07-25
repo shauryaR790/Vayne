@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { RefObject } from "react";
 
@@ -6,6 +6,7 @@ import { InvestigationNoEvidence } from "@/components/workspace/home/investigati
 import { VaneEngineEmpty } from "@/components/workspace/vane-engine-empty";
 import { VaneInvestigationWorkspace } from "@/components/workspace/vane-investigation-workspace";
 import type { StoredChatMessage } from "@/lib/conversation-session";
+import type { EngineTraceEvent } from "@/lib/engine-trace";
 import type { InvestigationMode } from "@/lib/investigation-mode";
 import { OPEN_EVIDENCE_EVENT, dispatchWorkspaceEvent } from "@/lib/workspace-shortcuts";
 import { USER_MESSAGES } from "@/lib/user-messages";
@@ -22,6 +23,9 @@ export function VaneEnginePanel({
   investigationMode,
   onInvestigationModeChange,
   enginePhase,
+  engineTraceEvents,
+  onViewEngineTrace,
+  onCloseEngineTrace,
   messages,
   investigationIds,
   investigationGroupId,
@@ -45,6 +49,9 @@ export function VaneEnginePanel({
   investigationMode?: InvestigationMode;
   onInvestigationModeChange?: (mode: InvestigationMode) => void;
   enginePhase: "idle" | "running" | "complete";
+  engineTraceEvents?: EngineTraceEvent[];
+  onViewEngineTrace?: () => void;
+  onCloseEngineTrace?: () => void;
   messages: StoredChatMessage[];
   investigationIds: string[];
   investigationGroupId?: string | null;
@@ -58,6 +65,7 @@ export function VaneEnginePanel({
   onNewInvestigation: () => void;
 }) {
   const offlineError = !backendOnline ? USER_MESSAGES.serviceOfflineShort : undefined;
+  void analystOnline;
 
   if (!sessionActive) {
     return (
@@ -76,14 +84,25 @@ export function VaneEnginePanel({
     );
   }
 
-  if (!hasInvestigationData) {
-    const analyzingLabel =
-      enginePhase === "running"
-        ? "Analyzing evidence…"
-        : busy
-          ? "Working…"
-          : "Analyzing evidence…";
+  if (enginePhase === "running" || enginePhase === "complete") {
+    return (
+      <VaneInvestigationWorkspace
+        scrollRef={scrollRef}
+        enginePhase={enginePhase}
+        engineTraceEvents={engineTraceEvents}
+        messages={messages}
+        investigationIds={investigationIds}
+        investigationGroupId={investigationGroupId}
+        investigationMode={investigationMode}
+        sourceLabels={sourceLabels}
+        evidenceFileCount={files.length || undefined}
+        error={error || offlineError}
+        onCloseEngineTrace={onCloseEngineTrace}
+      />
+    );
+  }
 
+  if (!hasInvestigationData) {
     return (
       <div
         ref={scrollRef}
@@ -94,8 +113,8 @@ export function VaneEnginePanel({
           onFocusAnalyst={onFocusAnalyst}
           onNewInvestigation={onNewInvestigation}
           onOpenInvestigation={onOpenInvestigation}
-          busy={busy || enginePhase === "running"}
-          analyzingLabel={analyzingLabel}
+          busy={busy}
+          analyzingLabel={busy ? "Working…" : "Analyzing evidence…"}
         />
         {error || offlineError ? (
           <p className="px-8 pb-8 text-center text-[13px] text-red-400/80">{error || offlineError}</p>
@@ -108,6 +127,9 @@ export function VaneEnginePanel({
     <VaneInvestigationWorkspace
       scrollRef={scrollRef}
       enginePhase={enginePhase}
+      engineTraceEvents={engineTraceEvents}
+      onViewEngineTrace={onViewEngineTrace}
+      onCloseEngineTrace={onCloseEngineTrace}
       messages={messages}
       investigationIds={investigationIds}
       investigationGroupId={investigationGroupId}

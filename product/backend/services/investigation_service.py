@@ -32,6 +32,7 @@ from product.backend.services.investigation_key import (
 )
 from product.backend.services.investigation_mode import resolve_investigation_mode
 from product.backend.services.vayne_runner import analyze
+from vayne.engine_trace.emitter import EngineTraceEmitter, EventCallback
 from vayne.models import InvestigationReport
 
 EXPORT_ARTIFACTS = (
@@ -83,6 +84,7 @@ class InvestigationService:
         investigation_group_id: str | None = None,
         mode: str = "combined",
         group_index: int = 0,
+        on_event: EventCallback | None = None,
     ) -> InvestigationORM:
         source = source_filename or _derive_source_filename(uploaded_paths, name)
         display_name = compact_investigation_name(
@@ -94,6 +96,7 @@ class InvestigationService:
         cleanup_dir: Path | None = work_dir
 
         stage_clock = {"last": time.perf_counter()}
+        trace = EngineTraceEmitter(on_event=on_event)
 
         def _on_stage(index: int, label: str, detail: str) -> None:
             now = time.perf_counter()
@@ -118,7 +121,9 @@ class InvestigationService:
                 work_dir,
                 proof=proof,
                 on_stage=_on_stage,
+                on_event=on_event,
                 cache_dir=parse_cache_dir,
+                trace=trace,
             )
             logger.info(
                 "Engine run finished for %s in %.0f ms",
@@ -215,6 +220,7 @@ class InvestigationService:
         prompt: str | None = None,
         explicit_mode: str | None = None,
         proof: bool = True,
+        on_event: EventCallback | None = None,
     ) -> AnalysisBatchResult:
         """Run combined or per-file investigations before any cross-file correlation."""
         if not uploads:
@@ -238,6 +244,7 @@ class InvestigationService:
                     investigation_group_id=group_id,
                     mode=mode,
                     group_index=index,
+                    on_event=on_event,
                 )
                 investigations.append(inv)
         else:
@@ -251,6 +258,7 @@ class InvestigationService:
                 investigation_group_id=group_id,
                 mode=mode,
                 group_index=0,
+                on_event=on_event,
             )
             investigations.append(inv)
 
