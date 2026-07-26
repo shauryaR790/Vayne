@@ -1,12 +1,22 @@
+import type { CSSProperties } from "react";
+
 import { renderAnsiShadow, renderAnsiShadowTitle } from "@/lib/ansi-shadow";
 import { ENGINE_ASCII, VAYNE_ASCII } from "@/lib/vayne-ascii";
 import { cn } from "@/lib/utils";
 
-/** Page / section title rendered in ANSI Shadow block typography. */
+const ASCII_PRE_CLASS =
+  "max-w-full overflow-x-auto whitespace-pre text-[10px] leading-[1.35] text-white/90 sm:text-[11px] md:text-[12px]";
+
+const ASCII_PRE_STYLE: CSSProperties = {
+  fontFamily: '"Courier New", Courier, ui-monospace, monospace',
+  fontVariantLigatures: "none",
+  letterSpacing: 0,
+};
+
+/** Page title in the same ANSI Shadow typography as the VAYNE brand mark. */
 export function AsciiPageTitle({
   text,
   className,
-  /** When true, each word becomes its own stacked banner (better for long titles). */
   stackWords = true,
 }: {
   text: string;
@@ -17,20 +27,7 @@ export function AsciiPageTitle({
   return (
     <div className={cn("min-w-0", className)}>
       <h1 className="sr-only">{text}</h1>
-      {/*
-        Courier New keeps box-drawing glyphs equal-width. Variable monospace
-        fonts (Geist, etc.) crush ANSI Shadow titles into overlapping mush.
-      */}
-      <pre
-        aria-hidden
-        className="max-w-full overflow-x-auto whitespace-pre text-[10px] leading-[1.15] text-white sm:text-[11px] md:text-[12px] lg:text-[13px]"
-        style={{
-          fontFamily: '"Courier New", Courier, ui-monospace, monospace',
-          fontVariantLigatures: "none",
-          letterSpacing: 0,
-          tabSize: 1,
-        }}
-      >
+      <pre aria-hidden className={ASCII_PRE_CLASS} style={ASCII_PRE_STYLE}>
         {art}
       </pre>
     </div>
@@ -46,20 +43,14 @@ export function VayneAsciiTitle({
   showEngine?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "font-mono text-[10px] leading-[1.35] text-white/90 sm:text-[11px] md:text-[12px]",
-        className,
-      )}
-      aria-label="VAYNE Engine"
-      style={{
-        fontFamily: '"Courier New", Courier, ui-monospace, monospace',
-        fontVariantLigatures: "none",
-      }}
-    >
-      <pre className="max-w-full overflow-x-hidden whitespace-pre">{VAYNE_ASCII}</pre>
+    <div className={cn(className)} aria-label="VAYNE Engine">
+      <pre className={ASCII_PRE_CLASS} style={ASCII_PRE_STYLE}>
+        {VAYNE_ASCII}
+      </pre>
       {showEngine ? (
-        <pre className="mt-3 max-w-full overflow-x-hidden whitespace-pre">{ENGINE_ASCII}</pre>
+        <pre className={cn(ASCII_PRE_CLASS, "mt-3")} style={ASCII_PRE_STYLE}>
+          {ENGINE_ASCII}
+        </pre>
       ) : null}
     </div>
   );
