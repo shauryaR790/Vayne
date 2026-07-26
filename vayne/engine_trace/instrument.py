@@ -284,15 +284,10 @@ def _is_high_signal(
 
 
 def _source_file_for(item: Any) -> str | None:
-    corr = item.correlated
-    files = list(getattr(corr, "source_files", None) or [])
-    if files:
-        return str(files[0])
-    for raw in getattr(corr, "findings", None) or []:
-        sf = getattr(raw, "source_file", None) or ""
-        if sf:
-            return str(sf)
-    return None
+    from vayne.investigation.analyst_reasons import collect_source_files
+
+    files = collect_source_files(item)
+    return files[0] if files else None
 
 
 def emit_attention_findings(
@@ -301,27 +296,33 @@ def emit_attention_findings(
     samples: list[tuple[float, Any, dict, list]],
     attack_paths: list | None = None,
 ) -> None:
-    """Top distinct findings needing analyst attention (max 6).
+    """Top investigations needing analyst attention (max 6).
 
-    Ranks by attention value (paths, CVE, severity, confidence) — not raw
-    severity labels alone — and deduplicates repetitive titles so the dashboard
-    points at different investigations, not six clones of the same signal.
+    Correlate related evidence first (same host+CVE / product+theme), then emit
+    one Attention Queue card per actionable investigation — not one card per
+    scanner finding. Ranked by investigation priority, not severity labels alone.
     """
+    from vayne.investigation.analyst_reasons import (
+        attention_group_key,
+        build_attention_card_fields,
+    )
+
     path_ids = _path_finding_ids(attack_paths)
 
-    # Group clones by title so we can pick the strongest host + report breadth.
-    by_title: dict[str, list[tuple[float, float, Any, dict]]] = {}
+    # Group related evidence into investigations before ranking.
+    by_key: dict[str, list[tuple[float, float, Any, dict]]] = {}
     for priority, item, q, _contrib in samples:
         corr = item.correlated
-        key = _normalize_title_key(corr.title)
+        key = attention_group_key(item)
         on_path = corr.id in path_ids
         rank = _attention_score(priority, item, q, on_path=on_path)
-        by_title.setdefault(key, []).append((rank, float(priority), item, q))
+        by_key.setdefault(key, []).append((rank, float(priority), item, q))
 
-    ranked_groups: list[tuple[float, float, Any, dict, int, bool]] = []
-    for group in by_title.values():
+    ranked_groups: list[tuple[float, float, Any, dict, list, int, bool]] = []
+    for group in by_key.values():
         group.sort(key=lambda row: row[0], reverse=True)
         best_rank, best_priority, best_item, best_q = group[0]
+        peers = [row[2] for row in group[1:]]
         hosts = {
             str(getattr(row[2].correlated, "host", "") or "").strip()
             for row in group
@@ -332,7 +333,15 @@ def emit_attention_findings(
             row[2].correlated.id in path_ids for row in group
         )
         ranked_groups.append(
-            (best_rank, best_priority, best_item, best_q, max(1, len(hosts) or len(group)), on_path)
+            (
+                best_rank,
+                best_priority,
+                best_item,
+                best_q,
+                peers,
+                max(1, len(hosts) or len(group)),
+                on_path,
+            )
         )
 
     ranked_groups.sort(key=lambda row: row[0], reverse=True)
@@ -340,44 +349,31 @@ def emit_attention_findings(
     strong = [
         row
         for row in ranked_groups
-        if _is_high_signal(row[2], row[3], on_path=row[5], priority=row[1])
+        if _is_high_signal(row[2], row[3], on_path=row[6], priority=row[1])
     ]
     # Prefer high-signal only; if the whole run is weak, still surface top 3
-    # distinct titles so the dashboard never lies about "nothing found".
+    # so the inbox never pretends the upload produced nothing.
     pool = strong if strong else ranked_groups[:3]
 
     cards = []
-    for _rank, priority, item, q, host_count, on_path in pool[:6]:
-        corr = item.correlated
+    for _rank, priority, item, q, peers, host_count, on_path in pool[:6]:
         conf = _finding_confidence(item, q)
-        source_file = _source_file_for(item)
-        reasons = _attention_reasons(
-            item, q, on_path=on_path, host_count=host_count
+        card = build_attention_card_fields(
+            item,
+            peers=peers,
+            quality=q,
+            on_path=on_path,
+            host_count=host_count,
+            priority=priority,
+            confidence=conf,
         )
-        cards.append(
-            {
-                "finding_id": corr.id,
-                "title": corr.title,
-                "host": corr.host or "—",
-                "host_count": host_count,
-                "severity": (corr.severity or "info").upper(),
-                "priority": priority,
-                "confidence": conf,
-                "reason": _attention_reason(
-                    item, q, on_path=on_path, host_count=host_count
-                ),
-                "reasons": reasons,
-                "cve": corr.cve or None,
-                "source_file": source_file,
-                "on_attack_path": on_path,
-            }
-        )
+        cards.append(card)
 
     emitter.emit_stage(
         STAGE_PRIORITY,
         "attention",
-        message="Highest priority findings requiring analyst attention",
-        fields={"findings": cards, "count": len(cards)},
+        message="Attention Queue — investigations requiring analyst action",
+        fields={"findings": cards, "count": len(cards), "queue": "attention"},
     )
 
 

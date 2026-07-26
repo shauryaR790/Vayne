@@ -5,7 +5,7 @@ import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
 
 const TOC = [
   { id: "first", label: "First Investigation" },
-  { id: "cards", label: "Working Priority Cards" },
+  { id: "cards", label: "Working the Attention Queue" },
   { id: "trace", label: "Trace Triage Pass" },
   { id: "ask", label: "Spending Ask Budget" },
   { id: "modes", label: "Combined vs Separate" },
@@ -39,27 +39,26 @@ export function PlaybooksContent() {
           </P>
           <P>
             Do not leave the live session early. Watch Trace until stages settle and AI Boundary
-            appears. Skim Priority findings as they land. Only then click View full report. Read Start
-            Here and Why We Ignored the Rest before you expand Attack Graph or open Ask VAYNE. That
-            order keeps you from spending free-tier asks on questions the Brief already answers.
+            appears. Skim the Attention Queue as cards land. Only then click View full report. Read
+            Start Here and Why We Ignored the Rest before you expand Attack Graph or open Ask VAYNE.
+            That order keeps you from spending free-tier asks on questions the Brief already answers.
           </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="cards">
-        <KnowledgeSection id="cards-body" title="Working Priority Cards">
+        <KnowledgeSection id="cards-body" title="Working the Attention Queue">
           <P>
-            Treat the six-or-fewer Priority findings as the engine’s attention queue. Read the Reason
-            lines before the title drama. “Corroborated by Nuclei, Burp” and “Internet-facing” change
-            triage posture more than a Critical label alone. Note whether PATH is present — that badge
-            means the finding participates in an accepted attack path, not merely that a CVE string
-            exists.
+            Treat the six-or-fewer Attention Queue cards as an inbox, not a vulnerability list. One
+            card is one action. Read Attention Required, Files, Why this matters, and Recommended
+            Action in that order. Multi-scanner Evidence rows and an explicit file list change triage
+            posture more than a Critical label alone. PATH means the investigation sits on an accepted
+            attack path — not merely that a CVE string exists.
           </P>
           <P>
-            Compare confidence percent to priority rank deliberately. A medium-confidence
-            internet-facing foothold can outrank a high-confidence informational finding; that is the
-            point of composite priority. Use Open Investigation → when you are ready to jump into the
-            report context for that card, then return to Trace if you need to defend the math.
+            Related scanner outputs for the same root cause are merged before ranking, so you should
+            not see separate Apache / Directory Traversal / CVE cards for one incident. Use Open
+            Investigation → when you are ready for the full report context; leave raw findings there.
           </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>

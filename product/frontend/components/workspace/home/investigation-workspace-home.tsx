@@ -140,15 +140,15 @@ export function InvestigationWorkspaceHome({
             </div>
 
             <div className="pt-8 pb-1">
-              <p className="mb-3 font-sans text-[11px] uppercase tracking-[0.14em] text-white/45">
-                Priority findings
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
+                Attention Queue
               </p>
-              <div className="py-2 font-sans text-[14px] leading-relaxed text-vx-muted">
+              <div className="py-2 font-mono text-[12px] leading-relaxed text-white/45">
                 <p>Empty until the run finishes.</p>
                 <p className="mt-3">
-                  After completion you will see up to six cards here — ranked by engine priority, not
-                  severity labels alone. Each card shows confidence, host, source file, and why it
-                  needs attention, with Open Investigation → into the full report.
+                  After completion you will see a short inbox of actionable investigations — not a
+                  dump of scanner findings. Each card answers what needs attention, which uploaded
+                  file(s) produced the evidence, why it matters, and what to do next.
                 </p>
               </div>
             </div>

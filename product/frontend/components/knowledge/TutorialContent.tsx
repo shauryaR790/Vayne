@@ -10,7 +10,7 @@ const TOC = [
   { id: "ingest", label: "Ingesting Evidence" },
   { id: "live", label: "Watching a Live Run" },
   { id: "trace", label: "Reading Engine Trace" },
-  { id: "priority", label: "Priority Findings" },
+  { id: "priority", label: "Attention Queue" },
   { id: "report", label: "After View Full Report" },
   { id: "ask", label: "Ask VAYNE" },
   { id: "panels", label: "Swapping Panels" },
@@ -74,7 +74,7 @@ export function TutorialContent() {
             Investigation Engine is the status dashboard: the ASCII VAYNE / ENGINE wordmark, metadata
             rows (Version 0.2.0, Created By Nemzyi, current phase, files ingested and processed,
             engine status, execution time), ingest controls when idle, a progress bar while running,
-            and Priority findings cards when the Priority Engine has something to say. Engine Trace
+            and the Attention Queue when the Priority Engine has something that needs you. Engine Trace
             is the proof console — stage telemetry, formula evaluations, and PATH DISCOVERY dumps.
             VAYNE Analyst is the explanation chat with a free-tier remaining count in the dock.
           </P>
@@ -169,22 +169,27 @@ export function TutorialContent() {
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="priority">
-        <KnowledgeSection id="priority-body" title="Priority Findings">
+        <KnowledgeSection id="priority-body" title="Attention Queue">
           <P>
-            The Priority Engine emits at most six attention cards onto the Investigation Engine
-            dashboard. Ranking uses composite priority, not severity labels alone. Each card carries
-            severity, an optional PATH badge when the finding sits on an accepted attack path,
-            priority P n, title, confidence percent, affected host (and +N when more hosts share it),
-            source file, and a Reason list written for analysts — lines such as Observed by Nmap,
-            Corroborated by Nuclei and Burp, Internet-facing, No exploit evidence, or Single-source
-            observation. Opaque internals like <code className="text-white/70">model=</code> strings
-            are filtered out of what you see.
+            VAYNE is an investigation operating system, not a scanner dump. The Attention Queue on the
+            Investigation Engine dashboard is the inbox: at most six cards, each representing one
+            actionable investigation after related evidence has been merged. Ranking uses composite
+            investigation priority — not severity labels alone — so the first card is the issue most
+            likely to deserve immediate analyst attention.
           </P>
           <P>
-            Open Investigation → is the bridge into the full report context for that finding. If the
-            cards area stays empty while status is Complete, the Priority Engine simply had nothing
-            above the emission bar for that run — check Trace for priority evaluations and the Brief
-            later for Why We Ignored the Rest.
+            Each card answers four questions only. What needs attention (subject, host, and a short
+            Attention Required claim). Which uploaded file(s) produced the evidence (exact filenames —
+            never make the analyst hunt through uploads). Why it matters (one short paragraph, e.g.
+            multi-scanner corroboration or single-source with no exploit evidence). What to do next
+            (a deterministic Recommended Action such as Upgrade Apache, Disable anonymous FTP, or
+            Validate manually). Evidence rows name the scanner and the key observation. Open
+            Investigation → opens the full report; raw findings stay there, not on the homepage.
+          </P>
+          <P>
+            If the queue stays empty while status is Complete, nothing crossed the emission bar for
+            that run — check Trace for priority evaluations and the Brief later for Why We Ignored the
+            Rest.
           </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>

@@ -20,18 +20,31 @@ type PhaseState = {
   createdBy: string;
 };
 
-type AttentionFinding = {
+type AttentionEvidence = {
+  scanner: string;
+  detail: string;
+};
+
+/** One Attention Queue card = one actionable investigation. */
+type AttentionItem = {
   finding_id: string;
   title: string;
+  subject?: string;
   host: string;
   host_count?: number;
   severity: string;
-  priority: number;
-  confidence: number;
-  reason: string;
+  priority?: number;
+  confidence?: number;
+  attention_required?: string;
+  evidence?: AttentionEvidence[];
+  files?: string[];
+  source_file?: string | null;
+  source_files?: string[];
+  why_this_matters?: string;
+  recommended_action?: string;
+  reason?: string;
   reasons?: string[];
   cve?: string | null;
-  source_file?: string | null;
   on_attack_path?: boolean;
 };
 
@@ -63,13 +76,32 @@ function latestPhase(events: EngineTraceEvent[]): PhaseState {
   return state;
 }
 
-function attentionFindings(events: EngineTraceEvent[]): AttentionFinding[] {
+function attentionQueue(events: EngineTraceEvent[]): AttentionItem[] {
   for (let i = events.length - 1; i >= 0; i--) {
     const ev = events[i];
     if (ev.event === "attention" && Array.isArray(ev.fields?.findings)) {
-      return (ev.fields.findings as AttentionFinding[]).slice(0, 6);
+      return (ev.fields.findings as AttentionItem[]).slice(0, 6);
     }
   }
+  return [];
+}
+
+function sourceFiles(item: AttentionItem): string[] {
+  const fromList = [...(item.files ?? []), ...(item.source_files ?? [])]
+    .map((f) => String(f || "").trim())
+    .filter(Boolean);
+  if (fromList.length) {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const name of fromList) {
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(name);
+    }
+    return out;
+  }
+  if (item.source_file) return [item.source_file];
   return [];
 }
 
@@ -97,76 +129,104 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PriorityCard({
-  finding,
+function AttentionCard({
+  item,
   onOpen,
 }: {
-  finding: AttentionFinding;
+  item: AttentionItem;
   onOpen?: () => void;
 }) {
-  const confLabel =
-    finding.confidence > 0 ? `${Math.round(finding.confidence)}%` : "unscored";
+  const subject = item.subject || item.title || "Investigation";
   const hostLabel =
-    finding.host_count && finding.host_count > 1
-      ? `${finding.host} (+${finding.host_count - 1} more)`
-      : finding.host || "—";
+    item.host_count && item.host_count > 1
+      ? `${item.host} (+${item.host_count - 1} more)`
+      : item.host || "—";
+  const files = sourceFiles(item);
+  const attentionRequired =
+    item.attention_required ||
+    item.reasons?.[0] ||
+    item.reason ||
+    "Needs analyst review";
+  const why =
+    item.why_this_matters ||
+    item.reason ||
+    (item.reasons?.length ? item.reasons.join(" ") : "Evidence indicates analyst review is required.");
+  const action = item.recommended_action || "Validate manually.";
+  const evidence = item.evidence?.length
+    ? item.evidence
+    : item.cve
+      ? [{ scanner: "Engine", detail: item.cve }]
+      : [];
 
   return (
-    <article className="border border-white/[0.1] bg-white/[0.02] px-4 py-3 font-mono text-[12px]">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[11px] uppercase tracking-[0.12em] text-white/45">
-          {finding.severity || "FINDING"}
-          {finding.on_attack_path ? " · PATH" : ""}
-        </p>
-        <p className="tabular-nums text-white/55">P {formatPriority(finding.priority)}</p>
-      </div>
-      <p className="mt-2 text-[13px] text-white">{finding.title}</p>
-      <div className="mt-3 space-y-1 text-white/55">
-        <div className="flex justify-between gap-3">
-          <span>Confidence</span>
-          <span className="tabular-nums text-white/85">{confLabel}</span>
+    <article className="border border-white/[0.1] bg-white/[0.02] px-4 py-3.5 font-mono text-[12px]">
+      <p className="text-[11px] uppercase tracking-[0.12em] text-white/45">
+        {item.severity || "MEDIUM"}
+        {item.on_attack_path ? " · PATH" : ""}
+      </p>
+
+      <p className="mt-2 text-[13px] leading-snug text-white">{subject}</p>
+      <p className="mt-0.5 text-white/55">{hostLabel}</p>
+
+      <div className="mt-3 space-y-3 text-white/55">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">Attention Required</p>
+          <p className="mt-1 text-white/85">{attentionRequired}</p>
         </div>
-        <div className="flex justify-between gap-3">
-          <span>Affected Host</span>
-          <span className="text-right text-white/85">{hostLabel}</span>
-        </div>
-        {finding.source_file ? (
-          <div className="flex justify-between gap-3">
-            <span>Source File</span>
-            <span className="max-w-[60%] truncate text-right text-white/85" title={finding.source_file}>
-              {finding.source_file}
-            </span>
+
+        {evidence.length > 0 ? (
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">Evidence</p>
+            <ul className="mt-1 space-y-0.5">
+              {evidence.map((row) => (
+                <li key={`${row.scanner}-${row.detail}`} className="flex gap-2 text-white/75">
+                  <span className="shrink-0 text-white/45">{row.scanner}</span>
+                  <span className="min-w-0 break-words text-white/80">{row.detail}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
-        <div className="pt-1">
-          <p className="text-white/40">Reason</p>
-          <ul className="mt-0.5 space-y-0.5 text-white/70">
-            {(finding.reasons?.length
-              ? finding.reasons
-              : finding.reason
-                ? finding.reason.split(/\s·\s|\n+/).map((r) => r.trim()).filter(Boolean)
-                : []
-            ).map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
+
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">
+            {files.length === 1 ? "Source File" : "Files"}
+          </p>
+          {files.length > 0 ? (
+            <ul className="mt-1 space-y-0.5 text-white/80">
+              {files.map((name) => (
+                <li key={name} className="truncate" title={name}>
+                  {name}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-white/40">Unattributed in this run</p>
+          )}
+        </div>
+
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">Why this matters</p>
+          <p className="mt-1 leading-relaxed text-white/70">{why}</p>
+        </div>
+
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">Recommended Action</p>
+          <p className="mt-1 leading-relaxed text-white/85">{action}</p>
         </div>
       </div>
+
       {onOpen ? (
         <button
           type="button"
           onClick={onOpen}
-          className="mt-3 text-left text-white/70 transition-colors hover:text-white"
+          className="mt-3.5 text-left text-white/70 transition-colors hover:text-white"
         >
           Open Investigation →
         </button>
       ) : null}
     </article>
   );
-}
-
-function formatPriority(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 export function EngineWorkstation({
@@ -181,7 +241,7 @@ export function EngineWorkstation({
   className?: string;
 }) {
   const phase = useMemo(() => latestPhase(events), [events]);
-  const findings = useMemo(() => attentionFindings(events), [events]);
+  const queue = useMemo(() => attentionQueue(events), [events]);
   const statusLabel = running
     ? phase.status === "complete"
       ? "Complete"
@@ -224,21 +284,28 @@ export function EngineWorkstation({
             </div>
 
             <div className="pt-8 pb-1">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
-                Priority findings
-              </p>
-              {findings.length === 0 ? (
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
+                  Attention Queue
+                </p>
+                {queue.length > 0 ? (
+                  <p className="font-mono text-[11px] tabular-nums text-white/35">
+                    {queue.length} need{queue.length === 1 ? "s" : ""} attention
+                  </p>
+                ) : null}
+              </div>
+              {queue.length === 0 ? (
                 <p className="font-mono text-[12px] text-white/35">
                   {running
-                    ? "Awaiting priority engine…"
-                    : "No priority findings emitted for this run"}
+                    ? "Correlating evidence into the Attention Queue…"
+                    : "No investigations required attention for this run"}
                 </p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {findings.map((finding) => (
-                    <PriorityCard
-                      key={finding.finding_id}
-                      finding={finding}
+                  {queue.map((item) => (
+                    <AttentionCard
+                      key={item.finding_id}
+                      item={item}
                       onOpen={onViewFullReport}
                     />
                   ))}
