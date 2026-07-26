@@ -264,11 +264,11 @@ export function EngineWorkstation({
       <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden bg-[#141414]">
         <InvestigationEngineHeader />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-4">
-          <div className="shrink-0 py-1">
+          <div className="shrink-0">
             <VayneAsciiTitle />
           </div>
 
-          <div className="mt-auto flex flex-col pt-10">
+          <div className="mt-6 flex flex-col pb-2">
             <div className="py-1 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
               <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
               <MetaRow label="Version" value={phase.version} />

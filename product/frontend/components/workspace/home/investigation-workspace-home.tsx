@@ -77,11 +77,11 @@ export function InvestigationWorkspaceHome({
       <div className="flex min-h-0 flex-1 flex-col bg-[#141414]">
         <InvestigationEngineHeader />
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
-          <div className="shrink-0 py-1">
+          <div className="shrink-0">
             <VayneAsciiTitle />
           </div>
 
-          <div className="mt-auto flex flex-col pt-10">
+          <div className="mt-6 flex flex-col pb-2">
             <div className="py-1 text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
               <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
               <MetaRow label="Version" value="0.2.0" />
