@@ -885,6 +885,8 @@ export function VaneWorkspace({
       setThinking(false);
       setActivityFeed(null);
       setEnginePhase("idle");
+      setEngineTraceEvents([]);
+      setEngineTraceOpen(false);
       setError("");
       setBriefingPrompt(null);
       setInvestigationSessionActive(false);
