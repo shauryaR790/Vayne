@@ -15,14 +15,22 @@ export function AsciiPageTitle({
 }) {
   const art = stackWords ? renderAnsiShadowTitle(text) : renderAnsiShadow(text);
   return (
-    <div
-      className={cn(
-        "font-mono text-[9px] leading-[1.3] text-white/90 sm:text-[10px] md:text-[11px] lg:text-[12px]",
-        className,
-      )}
-    >
+    <div className={cn("min-w-0", className)}>
       <h1 className="sr-only">{text}</h1>
-      <pre className="max-w-full overflow-x-auto whitespace-pre" aria-hidden>
+      {/*
+        Courier New keeps box-drawing glyphs equal-width. Variable monospace
+        fonts (Geist, etc.) crush ANSI Shadow titles into overlapping mush.
+      */}
+      <pre
+        aria-hidden
+        className="max-w-full overflow-x-auto whitespace-pre text-[10px] leading-[1.15] text-white sm:text-[11px] md:text-[12px] lg:text-[13px]"
+        style={{
+          fontFamily: '"Courier New", Courier, ui-monospace, monospace',
+          fontVariantLigatures: "none",
+          letterSpacing: 0,
+          tabSize: 1,
+        }}
+      >
         {art}
       </pre>
     </div>
@@ -44,6 +52,10 @@ export function VayneAsciiTitle({
         className,
       )}
       aria-label="VAYNE Engine"
+      style={{
+        fontFamily: '"Courier New", Courier, ui-monospace, monospace',
+        fontVariantLigatures: "none",
+      }}
     >
       <pre className="max-w-full overflow-x-hidden whitespace-pre">{VAYNE_ASCII}</pre>
       {showEngine ? (

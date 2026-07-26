@@ -324,20 +324,53 @@ export const ANSI_SHADOW: Record<string, string[]> = {
 
 const ROWS = 6;
 
-const FALLBACK = ["?", "?", "?", "?", "?", "?"];
+const FALLBACK = ["?     ", "?     ", "?     ", "?     ", "?     ", "?     "];
 const SPACE = ANSI_SHADOW[" "] ?? ["  ", "  ", "  ", "  ", "  ", "  "];
+
+/** Pad every row of a glyph to the same width so letters don't drift. */
+function normalizeGlyph(rows: string[]): string[] {
+  const width = Math.max(1, ...rows.map((row) => Array.from(row).length));
+  return Array.from({ length: ROWS }, (_, i) => {
+    const chars = Array.from(rows[i] ?? "");
+    while (chars.length < width) chars.push(" ");
+    return chars.join("");
+  });
+}
+
+const GAP = normalizeGlyph([" ", " ", " ", " ", " ", " "]);
 
 /** Render one line of text as ANSI Shadow ASCII art. */
 export function renderAnsiShadow(text: string): string {
-  const chars = [...text.toUpperCase()].map((ch) => {
-    if (ch === " ") return SPACE;
-    return ANSI_SHADOW[ch] ?? FALLBACK;
+  const upper = text.toUpperCase();
+  const glyphs = [...upper].map((ch) => {
+    if (ch === " ") return normalizeGlyph(SPACE);
+    return normalizeGlyph(ANSI_SHADOW[ch] ?? FALLBACK);
   });
+
+  // Insert a 1-column gap between letters (not before/after spaces).
+  const spaced: string[][] = [];
+  for (let i = 0; i < glyphs.length; i++) {
+    spaced.push(glyphs[i]);
+    const cur = upper[i];
+    const next = upper[i + 1];
+    if (cur && next && cur !== " " && next !== " ") {
+      spaced.push(GAP);
+    }
+  }
+
   const lines: string[] = [];
   for (let r = 0; r < ROWS; r++) {
-    lines.push(chars.map((g) => g[r] ?? "").join(""));
+    lines.push(spaced.map((g) => g[r] ?? "").join(""));
   }
-  return lines.join("\n");
+  // Final safety: pad all banner rows to equal length
+  const bannerWidth = Math.max(0, ...lines.map((line) => Array.from(line).length));
+  return lines
+    .map((line) => {
+      const chars = Array.from(line);
+      while (chars.length < bannerWidth) chars.push(" ");
+      return chars.join("");
+    })
+    .join("\n");
 }
 
 /** Stack each word as its own banner so long titles stay readable. */
