@@ -1,27 +1,24 @@
 "use client";
 
-import {
-  BulletGrid,
-  CompareBlock,
-  FlowDiagram,
-  KnowledgeLead,
-  KnowledgeSection,
-  TerminalBlock,
-} from "./primitives";
+import { KnowledgeLead, KnowledgeSection, TerminalBlock } from "./primitives";
 import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
 
 const TOC = [
   { id: "doctrine", label: "Doctrine" },
-  { id: "pipeline", label: "Pipeline" },
-  { id: "evidence", label: "Evidence Classes" },
-  { id: "correlation", label: "Correlation" },
-  { id: "validation", label: "Validation" },
-  { id: "confidence", label: "Confidence" },
-  { id: "graph", label: "Attack Graph" },
-  { id: "priority", label: "Priority" },
-  { id: "ai-boundary", label: "AI Boundary" },
-  { id: "ui-mapping", label: "UI Mapping" },
+  { id: "observe", label: "Observation vs Judgment" },
+  { id: "pipeline", label: "Pipeline Narrative" },
+  { id: "correlation", label: "Correlation Doctrine" },
+  { id: "validation", label: "Validation Doctrine" },
+  { id: "confidence", label: "Confidence Doctrine" },
+  { id: "graph", label: "Graph Doctrine" },
+  { id: "priority", label: "Priority Doctrine" },
+  { id: "boundary", label: "AI Boundary" },
+  { id: "ui", label: "How the UI Honors This" },
 ];
+
+function P({ children }: { children: React.ReactNode }) {
+  return <p className="text-[14px] leading-[1.75] text-white/90">{children}</p>;
+}
 
 export function MethodologyContent() {
   return (
@@ -29,151 +26,148 @@ export function MethodologyContent() {
       <KnowledgeSectionWrap id="doctrine">
         <KnowledgeSection id="doctrine-body" title="Doctrine">
           <KnowledgeLead>
-            VAYNE v0.2.0 (Nemzyi) answers “what matters?” not merely “what exists?”. Scanners emit
-            observations; the deterministic engine decides retention, confidence, paths, and
-            priority. The product UI (Investigation Engine, Engine Trace, VAYNE Analyst) is a live
-            instrument panel over that engine — not a chatbot wrapper.
+            VAYNE’s methodology is intentionally narrow. Version 0.2.0 exists to turn noisy scanner
+            observation into defended attack reasoning. Created By Nemzyi, the engine line prefers
+            explicit rejects and ranked attention over exhaustive severity lists. Humans still decide
+            what to fix; VAYNE decides what deserves the room’s oxygen first and why.
           </KnowledgeLead>
-          <CompareBlock
-            left={{
-              label: "Traditional tools",
-              body: "Enumerate vulns / ports / alerts. Severity labels dominate attention.",
-            }}
-            right={{
-              label: "VAYNE",
-              body: "Correlate → validate → graph → prioritize. Attention ranked by composite priority with explicit reasons.",
-            }}
-          />
+          <P>
+            Traditional tooling answers “what exists?” — open ports, matching templates, plugin
+            hits, issue trackers. VAYNE answers “what matters?” by requiring correlation,
+            validation, path viability, and composite priority before a finding earns a Priority
+            card or an accepted edge. That doctrine is why the workstation shows three panels of
+            proof rather than a single infinite table of Criticals.
+          </P>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="observe">
+        <KnowledgeSection id="observe-body" title="Observation vs Judgment">
+          <P>
+            Parsers observe. They lift structured and semi-structured exports into normalized
+            findings, hosts, ports, services, and evidence pointers. Judgment begins afterward:
+            deduplication collapses clones, correlation merges overlapping stories, validation
+            tests whether exploitability claims survive host/port/service/version/reachability
+            checks, confidence mixes observation quality with exploit and impact dimensions, and
+            the graph refuses edges that cannot clear minimum confidence thresholds.
+          </P>
+          <P>
+            Keeping observation and judgment separate is what makes Engine Trace auditable. You can
+            see that a parser extracted four findings and that validation later retained two. An LLM
+            paraphrase cannot blur that ledger if you read Trace honestly.
+          </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="pipeline">
-        <KnowledgeSection id="pipeline-body" title="Pipeline">
-          <FlowDiagram
-            lines={[
-              "Parser (Nmap, Nuclei, Burp, Nessus, OpenVAS, Httpx, Naabu, Katana, …)",
-              "↓ Normalizer → Deduplicator",
-              "↓ Correlation Engine",
-              "↓ Validation Engine",
-              "↓ Confidence Engine (finding_confidence)",
-              "↓ Attack Graph Builder",
-              "↓ Priority Engine (priority_score) → ≤6 attention cards",
-              "↓ Investigation Generator → Export → Engine Summary",
-              "↓ AI Boundary (LLM may explain; cannot change scores)",
-            ]}
-          />
-        </KnowledgeSection>
-      </KnowledgeSectionWrap>
-
-      <KnowledgeSectionWrap id="evidence">
-        <KnowledgeSection id="evidence-body" title="Evidence Classes">
-          <KnowledgeLead>
-            Parsers map tool exports into normalized findings, assets, hosts, ports, and services.
-            Observation strength depends on evidence class (banner, version, CPE, reproduced
-            request/response, multi-scanner corroboration). Weak single-source noise is expected to
-            lose to corroborated paths.
-          </KnowledgeLead>
+        <KnowledgeSection id="pipeline-body" title="Pipeline Narrative">
+          <P>
+            The live UI phases follow the instrumented engine: Parser, Normalizer, Deduplicator,
+            Correlation Engine, Validation Engine, Confidence Engine, Attack Graph Builder, Priority
+            Engine, Investigation Generator, Export, Engine Summary, AI Boundary. Progress percent
+            advances when stages complete for real. Priority attention cards emit from the Priority
+            Engine with analyst-facing reasons. Investigation export produces the artifacts the Brief
+            and Optional Details render after View full report.
+          </P>
+          <P>
+            Contributors should treat this order as a contract. Inserting an LLM call before
+            validation or letting chat mutate retention would violate the product’s public claim that
+            AI explains engine conclusions only.
+          </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="correlation">
-        <KnowledgeSection id="correlation-body" title="Correlation">
-          <KnowledgeLead>
-            Correlation merges duplicate/overlapping observations (host, port, CVE, title affinity)
-            and computes scanner_agreement = |agreed_tools| / max(|capable_tools|, 1). Trace shows
-            sample merges; UI Reason lines surface corroboration in plain language.
-          </KnowledgeLead>
+        <KnowledgeSection id="correlation-body" title="Correlation Doctrine">
+          <P>
+            Correlation assumes scanners are partial witnesses. Agreement across tools that are
+            capable of seeing the same class of issue raises trust; disagreement and single-source
+            flashes do not. The ratio scanner_agreement = |agreed_tools| / max(|capable_tools|, 1)
+            is the quantitative spine, but the UI translates outcomes into Reason lines humans can
+            read without opening correlator source.
+          </P>
+          <P>
+            Combined multi-file ingest is how you give correlation enough witnesses. Separate mode
+            is how you refuse a false shared narrative. Methodology favors combined when the estate
+            is truly shared, and separate when politics or scope would make fusion misleading.
+          </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="validation">
-        <KnowledgeSection id="validation-body" title="Validation">
-          <KnowledgeLead>
-            validate_finding() separates observation from exploitability: host alive, port open,
-            service identified/fingerprinted, version, CVE applicability, auth, prerequisites,
-            reachability, reproducibility (≥2 sources, no auth), privilege escalation, lateral
-            movement. Failures feed FP / reject paths — visible in Trace and Why We Ignored the Rest.
-          </KnowledgeLead>
+        <KnowledgeSection id="validation-body" title="Validation Doctrine">
+          <P>
+            Validation asks whether the world implied by the finding is actually constrained enough
+            to talk about exploitation. Host alive, port open, service identified or fingerprinted,
+            version evidence, CVE applicability, authentication requirements, prerequisites,
+            reachability, reproducibility across sources, privilege escalation, and lateral movement
+            each contribute checks. Failing checks do not merely “lower a vibe score” — they feed
+            false-positive / reject paths that later show up in Trace and in Why We Ignored the Rest.
+          </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="confidence">
-        <KnowledgeSection id="confidence-body" title="Confidence">
-          <TerminalBlock>{`finding_confidence()
-  overall = Σ(dimension_score × dim_weight) / Σ(dim_weight)
-  dimension_score = clamp(Σ feature_deltas, 0, 100)
-
-  Weights (present dimensions only):
-    observation   0.34
-    reliability   0.24
-    exploit       0.24
-    impact        0.18
-
-  Source: vayne/confidence/finding_confidence.py
-  No hardcoded base scores (no fixed 85/75/60).`}</TerminalBlock>
+        <KnowledgeSection id="confidence-body" title="Confidence Doctrine">
+          <P>
+            finding_confidence() refuses hardcoded prestige numbers. Dimensions without evidence
+            drop out of the weighted mix. Observation, reliability, exploit, and impact carry
+            weights 0.34, 0.24, 0.24, and 0.18 when present. Feature deltas inside each dimension
+            encode evidence class, banners, versions, CPE, agreement, conflicts, FP penalties,
+            reliability tiers, CVE/EPSS/KEV signals, and exposure-style impact cues. The Trace
+            formula lines are the public diary of that mix for a given finding.
+          </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="graph">
-        <KnowledgeSection id="graph-body" title="Attack Graph">
-          <KnowledgeLead>
-            Edges require validation checks; edge_confidence / path_confidence use contribution
-            formulas with MIN_PATH_CONFIDENCE and MIN_EDGE_CONFIDENCE at 50. Rejected edges/paths
-            appear in Trace with reasons (e.g. no validated finding or verified exploit intelligence
-            on path). PATH DISCOVERY proof dumps land at the bottom of Engine Trace after later
-            stages.
-          </KnowledgeLead>
-          <BulletGrid
-            items={[
-              "edge_confidence from checks + sources + validation",
-              "path_confidence = mean edge contributions",
-              "attacker_effort by hop count bands",
-              "risk_score combines CVSS × maturity × access × … (capped)",
-            ]}
-          />
+        <KnowledgeSection id="graph-body" title="Graph Doctrine">
+          <P>
+            Graphs are earned. Edges need validation contribution and clear minimum confidence;
+            paths average edge contributions and must clear MIN_PATH_CONFIDENCE. Rejected paths are
+            first-class teaching artifacts — especially when PATH DISCOVERY at the bottom of Trace
+            explains missing exploit intelligence or missing validated findings on the chain.
+            Attacker effort bands by hop count keep “interesting” from being confused with
+            “practical.”
+          </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="priority">
-        <KnowledgeSection id="priority-body" title="Priority">
-          <TerminalBlock>{`priority_score / composite_priority_score
-  priority = clamp(round(Σ(quality_dimension × weight)), 0, 99)
-
-  Weights:
-    business_impact              0.18
-    exploitability               0.16
-    internet_exposure            0.12
-    confidence                   0.14
-    blast_radius                 0.10
-    data_sensitivity             0.10
-    identity_exposure            0.08
-    investigation_completeness   0.12
-
-  UI emits ≤6 attention cards sorted by this score.
-  Source: vayne/investigation/quality_score.py`}</TerminalBlock>
+        <KnowledgeSection id="priority-body" title="Priority Doctrine">
+          <P>
+            Priority is how VAYNE rations analyst time. Composite weights emphasize business impact
+            and exploitability alongside exposure, confidence, blast radius, data sensitivity,
+            identity exposure, and investigation completeness. Emitting at most six cards is a
+            methodological choice: attention is finite, so the engine must commit. Severity labels
+            remain visible on cards but do not own the sort.
+          </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="ai-boundary">
-        <KnowledgeSection id="ai-boundary-body" title="AI Boundary">
-          <KnowledgeLead>
-            After Engine Summary the Trace shows AI Boundary: deterministic complete; AI not invoked
-            to score. Ask VAYNE / briefing / section asks may run afterward in the product shell via
-            OpenAI-compatible config — always as explanation over frozen engine artifacts.
-          </KnowledgeLead>
+      <KnowledgeSectionWrap id="boundary">
+        <KnowledgeSection id="boundary-body" title="AI Boundary">
+          <P>
+            After Engine Summary, Trace records AI Boundary. Deterministic scoring is closed. Any
+            subsequent Ask VAYNE briefing or section question is explanation over frozen artifacts.
+            If product configuration points at an OpenAI-compatible model, that model still cannot
+            lawfully rewrite retention in this architecture — and operators should not pretend
+            otherwise in writeups.
+          </P>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="ui-mapping">
-        <KnowledgeSection id="ui-mapping-body" title="UI Mapping">
-          <BulletGrid
-            items={[
-              "Investigation Engine — phase, progress, priority cards",
-              "Engine Trace — stage proof + formulas + PATH DISCOVERY",
-              "VAYNE Analyst — explanation only (4 free msgs default)",
-              "View full report — Brief + Optional Details sections",
-            ]}
-          />
+      <KnowledgeSectionWrap id="ui">
+        <KnowledgeSection id="ui-body" title="How the UI Honors This">
+          <P>
+            Investigation Engine externalizes phase and priority. Engine Trace externalizes proof.
+            VAYNE Analyst externalizes explanation under quota. The Brief externalizes Start Here and
+            explicit ignores. Panel width identity (39/29/31) keeps proof and judgment from being
+            crushed by a single dominant chat column. Logo resume preserving Trace is part of the
+            methodology too: proof should survive a trip through documentation pages.
+          </P>
+          <TerminalBlock>{`Doctrine in one line:
+  Scanners observe → VAYNE judges → humans decide → LLMs explain.`}</TerminalBlock>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
     </KnowledgeShell>
