@@ -50,10 +50,10 @@ export function PlaybooksContent() {
         <KnowledgeSection id="cards-body" title="Working the Attention Queue">
           <P>
             Treat the six-or-fewer Attention Queue cards as an inbox, not a vulnerability list. One
-            card is one action. Read Attention Required, Files, Why this matters, and Recommended
-            Action in that order. Multi-scanner Evidence rows and an explicit file list change triage
-            posture more than a Critical label alone. PATH means the investigation sits on an accepted
-            attack path — not merely that a CVE string exists.
+            card is one action. Read Attention Required, Files, Why this matters, Potential Impact,
+            and Recommended Action in that order. Multi-scanner Evidence rows and an explicit file list
+            change triage posture more than a Critical label alone. PATH means the investigation sits
+            on an accepted attack path — not merely that a CVE string exists.
           </P>
           <P>
             Related scanner outputs for the same root cause are merged before ranking, so you should

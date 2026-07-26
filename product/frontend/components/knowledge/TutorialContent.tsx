@@ -178,13 +178,10 @@ export function TutorialContent() {
             likely to deserve immediate analyst attention.
           </P>
           <P>
-            Each card answers four questions only. What needs attention (subject, host, and a short
-            Attention Required claim). Which uploaded file(s) produced the evidence (exact filenames —
-            never make the analyst hunt through uploads). Why it matters (one short paragraph, e.g.
-            multi-scanner corroboration or single-source with no exploit evidence). What to do next
-            (a deterministic Recommended Action such as Upgrade Apache, Disable anonymous FTP, or
-            Validate manually). Evidence rows name the scanner and the key observation. Open
-            Investigation → opens the full report; raw findings stay there, not on the homepage.
+            Each card answers what needs attention, which uploaded file(s) produced the evidence,
+            why it matters, what happens if ignored (Potential Impact), and what to do next. Evidence
+            rows name the scanner and the key observation. Open Investigation → opens the full report;
+            raw findings stay there, not on the homepage.
           </P>
           <P>
             If the queue stays empty while status is Complete, nothing crossed the emission bar for

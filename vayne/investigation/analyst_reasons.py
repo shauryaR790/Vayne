@@ -562,6 +562,65 @@ def build_why_this_matters(
     return "Evidence indicates a condition that deserves analyst disposition."
 
 
+def build_potential_impact(
+    *,
+    title: str = "",
+    service: str = "",
+    subject: str = "",
+    cve: str = "",
+    evidence: list[str] | None = None,
+    theme: str = "",
+    on_path: bool = False,
+    exploit_evidence: bool = False,
+    host_count: int = 1,
+) -> str:
+    """Short answer to: what happens if the analyst ignores this?"""
+    blob = f"{title} {service} {subject} {cve} {' '.join(str(e) for e in (evidence or []))}".lower()
+    theme = theme or attention_theme(title, cve, evidence)
+
+    if theme == "traversal" or "traversal" in blob or "lfi" in blob:
+        return "Remote file disclosure possible."
+    if theme == "rce" or "remote code" in blob or "command inject" in blob:
+        return "Remote code execution possible."
+    if theme == "sqli" or "sql injection" in blob:
+        return "Database compromise or data theft possible."
+    if theme == "xss" or "cross-site" in blob:
+        return "Session hijacking or account takeover possible."
+    if theme == "credential" or any(
+        k in blob for k in ("password", "api key", "secret", "private key", "token leak")
+    ):
+        return "Credential abuse and unauthorized access possible."
+    if theme == "mfa" or "mfa" in blob or "multi-factor" in blob:
+        return "Account takeover risk rises without MFA."
+    if theme == "anon_ftp" or re.search(r"anonymous.?ftp", blob):
+        return "Anonymous file upload or disclosure possible."
+    if theme == "cloud_exposure" or "s3" in blob or "public bucket" in blob:
+        return "Public data exposure possible."
+    if theme == "iam" or "iam" in blob or "assume role" in blob:
+        return "Privilege escalation across cloud resources possible."
+    if theme == "jenkins" or "jenkins" in blob:
+        return "CI/CD takeover and secret theft possible."
+    if "redis" in blob:
+        return "Unauthenticated data access or remote abuse possible."
+    if "openssl" in blob:
+        return "Cryptographic weakness may enable interception or downgrade."
+    if "openssh" in blob or ("ssh" in blob and theme in ("outdated", "cve", "general")):
+        return "Unauthorized shell access more likely if credentials are weak."
+    if theme == "unauth" or "unauth" in blob or "no auth" in blob:
+        return "Unauthenticated access to a sensitive service possible."
+    if on_path:
+        return "Attack path can continue toward higher-value targets."
+    if exploit_evidence:
+        return "Successful exploitation more likely if left unaddressed."
+    if cve:
+        return "Known exploit paths against this CVE may apply."
+    if host_count > 1:
+        return "Impact can spread across every host sharing this condition."
+    if theme == "outdated":
+        return "Future exploitability rises while the service stays unpatched."
+    return "Residual risk remains until the condition is validated or closed."
+
+
 def build_recommended_action(
     *,
     title: str = "",
@@ -714,6 +773,17 @@ def build_attention_card_fields(
         exploit_evidence=exploit_evidence,
         theme=theme,
     )
+    impact = build_potential_impact(
+        title=title_blob,
+        service=str(getattr(corr, "service", "") or ""),
+        subject=subject,
+        cve=cve_blob,
+        evidence=evidence_text,
+        theme=theme,
+        on_path=on_path,
+        exploit_evidence=exploit_evidence,
+        host_count=host_count,
+    )
     action = build_recommended_action(
         title=title_blob,
         service=str(getattr(corr, "service", "") or ""),
@@ -743,6 +813,7 @@ def build_attention_card_fields(
         "source_file": files[0] if files else None,
         "source_files": files,
         "why_this_matters": why,
+        "potential_impact": impact,
         "recommended_action": action,
         "reason": why,
         "reasons": reasons,

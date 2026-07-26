@@ -171,10 +171,17 @@ def test_attention_card_answers_four_questions():
     assert card["files"][0] == "nmap_scan.xml"
     assert len(card["evidence"]) >= 2
     assert "Multiple scanners" in card["why_this_matters"]
+    assert card["potential_impact"] == "Remote file disclosure possible."
     assert "Upgrade Apache" in card["recommended_action"]
 
 
-def test_single_source_outdated_ssh_action():
+def test_potential_impact_rce():
+    from vayne.investigation.analyst_reasons import build_potential_impact
+
+    assert (
+        build_potential_impact(title="Remote Code Execution via CGI", theme="rce")
+        == "Remote code execution possible."
+    )
     action = build_recommended_action(
         title="OpenSSH 7.2p2",
         subject="OpenSSH 7.2p2",

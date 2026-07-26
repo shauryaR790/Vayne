@@ -41,6 +41,7 @@ type AttentionItem = {
   source_file?: string | null;
   source_files?: string[];
   why_this_matters?: string;
+  potential_impact?: string;
   recommended_action?: string;
   reason?: string;
   reasons?: string[];
@@ -151,6 +152,7 @@ function AttentionCard({
     item.why_this_matters ||
     item.reason ||
     (item.reasons?.length ? item.reasons.join(" ") : "Evidence indicates analyst review is required.");
+  const impact = item.potential_impact || "Residual risk remains until validated or closed.";
   const action = item.recommended_action || "Validate manually.";
   const evidence = item.evidence?.length
     ? item.evidence
@@ -208,6 +210,11 @@ function AttentionCard({
         <div>
           <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">Why this matters</p>
           <p className="mt-1 leading-relaxed text-white/70">{why}</p>
+        </div>
+
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">Potential Impact</p>
+          <p className="mt-1 leading-relaxed text-white/80">{impact}</p>
         </div>
 
         <div>
