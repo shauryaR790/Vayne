@@ -29,6 +29,7 @@ import { saveRecentInvestigation, recentEntryFromBundle } from "@/lib/recent-inv
 import { createRhythmStreamBatcher } from "@/lib/stream-buffer";
 import {
   clearConversationSession,
+  OPEN_INVESTIGATION_EVENT,
   saveConversationSession,
   serializeMessages,
   type StoredChatMessage,
@@ -906,6 +907,28 @@ export function VaneWorkspace({
   }, [router]);
 
   useEffect(() => {
+    const onOpenInvestigation = (event: Event) => {
+      const id = String((event as CustomEvent<{ id?: string }>).detail?.id || "").trim();
+      if (!id) return;
+      setInvestigationSessionActive(true);
+      if (loadedResumeIdRef.current === id) {
+        setEnginePhase("complete");
+        setEngineTraceOpen(true);
+        void fetchEngineTrace(id).then((events) => {
+          if (loadedResumeIdRef.current !== id) return;
+          if (events.length) setEngineTraceEvents(events);
+        });
+        syncUrl(id);
+        return;
+      }
+      void switchToInvestigation(id);
+    };
+    window.addEventListener(OPEN_INVESTIGATION_EVENT, onOpenInvestigation as EventListener);
+    return () =>
+      window.removeEventListener(OPEN_INVESTIGATION_EVENT, onOpenInvestigation as EventListener);
+  }, [switchToInvestigation, syncUrl]);
+
+  useEffect(() => {
     return () => {
       streamAbortRef.current?.abort();
       briefingAbortRef.current?.abort();
@@ -981,9 +1004,23 @@ export function VaneWorkspace({
   const handleOpenInvestigation = useCallback(
     (id: string) => {
       setInvestigationSessionActive(true);
+      // Re-selecting the active history row should return to the Engine session
+      // (Attention Queue), not stay stuck on the full Investigation Workspace.
+      if (loadedResumeIdRef.current === id) {
+        setEnginePhase("complete");
+        setEngineTraceOpen(true);
+        if (engineTraceEvents.length === 0) {
+          void fetchEngineTrace(id).then((events) => {
+            if (loadedResumeIdRef.current !== id) return;
+            if (events.length) setEngineTraceEvents(events);
+          });
+        }
+        syncUrl(id);
+        return;
+      }
       void switchToInvestigation(id);
     },
-    [switchToInvestigation],
+    [engineTraceEvents.length, switchToInvestigation, syncUrl],
   );
 
   const engineSourceLabels = useMemo(() => {

@@ -9,7 +9,7 @@ import { VaneSidebarBrand } from "@/components/brand/vane-logo";
 import { DeveloperMenu } from "@/components/dev/developer-menu";
 import { WorkspaceHomeLink } from "@/components/workspace/workspace-home-link";
 import { ANALYST_RESOURCE_NAV, type AnalystNavItem } from "@/lib/analyst-panel-nav";
-import { resetConversationToHome } from "@/lib/conversation-session";
+import { resetConversationToHome, openInvestigationInEngine } from "@/lib/conversation-session";
 import {
   HISTORY_MAX,
   RECENT_INVESTIGATIONS_UPDATED,
@@ -140,6 +140,7 @@ function SidebarPanel({
 
   const openInvestigation = (id: string) => {
     onNavigate?.();
+    openInvestigationInEngine(id);
     router.push(`/?id=${id}`);
   };
 

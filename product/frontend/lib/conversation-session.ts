@@ -65,6 +65,8 @@ export function clearConversationSession() {
 }
 
 export const NEW_CHAT_EVENT = "vayne:new-chat";
+/** Open / resume an investigation into the Engine workstation (history rows). */
+export const OPEN_INVESTIGATION_EVENT = "vayne:open-investigation";
 
 /** Same key as investigation-session — avoid circular import. */
 const ACTIVE_INVESTIGATION_KEY = "vayne-active-investigation-id";
@@ -78,6 +80,12 @@ export function resetConversationToHome() {
     localStorage.removeItem(ACTIVE_INVESTIGATION_KEY);
     window.dispatchEvent(new Event(NEW_CHAT_EVENT));
   }
+}
+
+/** Ask the home workspace to open an investigation in the Engine session view. */
+export function openInvestigationInEngine(id: string) {
+  if (typeof window === "undefined" || !id) return;
+  window.dispatchEvent(new CustomEvent(OPEN_INVESTIGATION_EVENT, { detail: { id } }));
 }
 
 export function serializeMessages(

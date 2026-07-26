@@ -17,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 
-import { resetConversationToHome } from "@/lib/conversation-session";
+import { openInvestigationInEngine, resetConversationToHome } from "@/lib/conversation-session";
 import {
   RECENT_INVESTIGATIONS_UPDATED,
   SIDEBAR_RECENTS_MAX,
@@ -258,6 +258,7 @@ export function Sidebar({
 
   const openConversation = (id: string) => {
     onMobileClose?.();
+    openInvestigationInEngine(id);
     router.push(`/?id=${id}`);
   };
 
