@@ -27,6 +27,7 @@ import {
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
 import { DeveloperMenu } from "@/components/dev/developer-menu";
+import { WorkspaceHomeLink } from "@/components/workspace/workspace-home-link";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -264,13 +265,12 @@ export function Sidebar({
     <>
       <div className="shrink-0 px-3 pb-2 pt-4">
         <div className="flex items-center justify-between gap-2">
-          <Link
-            href="/"
-            onClick={onMobileClose}
+          <WorkspaceHomeLink
+            onNavigate={onMobileClose}
             className="inline-block text-[15px] font-semibold tracking-[0.16em] text-white transition-colors hover:text-white"
           >
             VAYNE
-          </Link>
+          </WorkspaceHomeLink>
           {mobile && onMobileClose ? (
             <button
               type="button"

@@ -7,6 +7,7 @@ import { Plus, X } from "lucide-react";
 
 import { VaneSidebarBrand } from "@/components/brand/vane-logo";
 import { DeveloperMenu } from "@/components/dev/developer-menu";
+import { WorkspaceHomeLink } from "@/components/workspace/workspace-home-link";
 import { ANALYST_RESOURCE_NAV, type AnalystNavItem } from "@/lib/analyst-panel-nav";
 import { resetConversationToHome } from "@/lib/conversation-session";
 import {
@@ -146,9 +147,9 @@ function SidebarPanel({
     <>
       <div className="shrink-0 px-3 pb-3 pt-4">
         <div className="flex items-start justify-between gap-2">
-          <Link href="/" onClick={onNavigate} className="block px-2">
+          <WorkspaceHomeLink onNavigate={onNavigate} className="block px-2">
             <VaneSidebarBrand />
-          </Link>
+          </WorkspaceHomeLink>
           {showClose && onClose ? (
             <button
               type="button"

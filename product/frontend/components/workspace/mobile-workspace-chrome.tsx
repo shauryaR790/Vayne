@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { Menu, Sparkles } from "lucide-react";
 
 import { PRODUCT_NAME } from "@/lib/brand";
+import { WorkspaceHomeLink } from "@/components/workspace/workspace-home-link";
 import { cn } from "@/lib/utils";
 
 /** Fixed top bar for workspace routes below `lg`. */
@@ -34,12 +34,9 @@ export function MobileWorkspaceHeader({
         <Menu className="size-5" strokeWidth={1.75} aria-hidden />
       </button>
 
-      <Link
-        href="/"
-        className="truncate text-[13px] font-bold uppercase tracking-[0.18em] text-white"
-      >
+      <WorkspaceHomeLink className="truncate text-[13px] font-bold uppercase tracking-[0.18em] text-white">
         {PRODUCT_NAME}
-      </Link>
+      </WorkspaceHomeLink>
 
       {showAnalyst && onOpenAnalyst ? (
         <button

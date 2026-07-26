@@ -66,10 +66,16 @@ export function clearConversationSession() {
 
 export const NEW_CHAT_EVENT = "vayne:new-chat";
 
+/** Same key as investigation-session — avoid circular import. */
+const ACTIVE_INVESTIGATION_KEY = "vayne-active-investigation-id";
+
 /** Clear stored conversation and notify the home view to reset. */
 export function resetConversationToHome() {
   clearConversationSession();
   if (typeof window !== "undefined") {
+    // Clear active id here so New Investigation works even when the home
+    // workspace (event listener) is not mounted — e.g. from Tutorial / docs.
+    localStorage.removeItem(ACTIVE_INVESTIGATION_KEY);
     window.dispatchEvent(new Event(NEW_CHAT_EVENT));
   }
 }
