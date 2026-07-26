@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 
-import { VayneAsciiTitle } from "@/components/brand/vayne-ascii-title";
+import { AsciiPageTitle } from "@/components/brand/vayne-ascii-title";
 import { cn } from "@/lib/utils";
 
 export function KnowledgeShell({
@@ -37,11 +37,8 @@ export function KnowledgeShell({
           {classification}
         </p>
         <div className="mt-4">
-          <VayneAsciiTitle />
+          <AsciiPageTitle text={title} />
         </div>
-        <h1 className="mt-5 font-mono text-[13px] font-bold uppercase tracking-[0.18em] text-white">
-          {title}
-        </h1>
         <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-white">{subtitle}</p>
       </header>
 
