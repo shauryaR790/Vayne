@@ -295,6 +295,7 @@ export function VaneWorkspace({
       if (analyzingRef.current) return;
       if (switchingRef.current === invId) return;
       switchingRef.current = invId;
+      loadedResumeIdRef.current = invId;
 
       streamAbortRef.current?.abort();
       briefingAbortRef.current?.abort();
@@ -306,9 +307,11 @@ export function VaneWorkspace({
       setInvestigationMode("combined");
       setModeExplicit(false);
       setThinking(false);
-      setEnginePhase("idle");
+      // History / resume always lands on the Engine workstation (Attention Queue),
+      // not the full Investigation Workspace report. Trace events fill in async.
+      setEnginePhase("complete");
       setEngineTraceEvents([]);
-      setEngineTraceOpen(false);
+      setEngineTraceOpen(true);
       setError("");
       setBriefingPrompt(null);
       setInvestigationSessionActive(true);
@@ -350,6 +353,8 @@ export function VaneWorkspace({
         setHydrated(true);
         notifyInvestigationLoaded(session.id);
         setBusy(false);
+        setEnginePhase("complete");
+        setEngineTraceOpen(true);
 
         skipAutoScrollRef.current = true;
         requestAnimationFrame(() => {
@@ -361,19 +366,19 @@ export function VaneWorkspace({
           skipAutoScrollRef.current = false;
         });
 
-        // Restore Engine Trace telemetry — without this the Trace panel is empty
-        // after navigating away to Tutorial/docs and returning via the logo.
+        // Restore Engine Trace telemetry for the dock + Attention Queue cards.
         void Promise.all(bundleIds.map((id) => fetchEngineTrace(id)))
           .then((traces) => {
             if (loadedResumeIdRef.current !== invId) return;
             const merged = traces.flat();
-            if (!merged.length) return;
-            setEngineTraceEvents(merged);
+            if (merged.length) setEngineTraceEvents(merged);
             setEnginePhase("complete");
             setEngineTraceOpen(true);
           })
           .catch(() => {
-            /* Trace endpoint may be unavailable; report view still works. */
+            if (loadedResumeIdRef.current !== invId) return;
+            setEnginePhase("complete");
+            setEngineTraceOpen(true);
           });
 
         void Promise.all(bundleIds.map((id) => loadInvestigationBundle(id)))
@@ -405,6 +410,8 @@ export function VaneWorkspace({
         setAnalystMessages([]);
         setBundle(null);
         setEngineTraceEvents([]);
+        setEnginePhase("idle");
+        setEngineTraceOpen(false);
         setError(sanitizeUserMessage(e instanceof Error ? e.message : String(e)));
         setBusy(false);
       } finally {
