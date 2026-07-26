@@ -2,177 +2,121 @@
 
 import {
   BulletGrid,
-  CaseStudy,
-  FlowDiagram,
   KnowledgeLead,
   KnowledgeSection,
-  KnowledgeSeeAlso,
   TerminalBlock,
 } from "./primitives";
 import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
 
 const TOC = [
-  { id: "threat-research", label: "Threat Research" },
-  { id: "case-studies", label: "Case Studies" },
-  { id: "graph-examples", label: "Graph Examples" },
-  { id: "false-positives", label: "False Positives" },
+  { id: "purpose", label: "Purpose" },
+  { id: "noise", label: "Scanner Noise" },
+  { id: "chains", label: "Attack Chains" },
+  { id: "fp", label: "False Positives" },
+  { id: "agreement", label: "Multi-scanner" },
+  { id: "ui", label: "How UI Surfaces Research" },
+  { id: "contribute", label: "Contribute" },
 ];
 
 export function ResearchContent() {
   return (
-    <KnowledgeShell
-      title="Research"
-      subtitle="Threat intelligence, historical attack chain analysis, and reference models demonstrating how real-world compromises map to VAYNE reasoning."
-      classification="INTEL // THREAT RESEARCH"
-      sections={TOC}
-    >
-      <div className="mb-10">
-        <KnowledgeSeeAlso />
-      </div>
-      <KnowledgeSectionWrap id="threat-research">
-        <KnowledgeSection id="threat-intel" title="Threat Research">
+    <KnowledgeShell title="Research" sections={TOC}>
+      <KnowledgeSectionWrap id="purpose">
+        <KnowledgeSection id="purpose-body" title="Purpose">
           <KnowledgeLead>
-            VAYNE research tracks active threat patterns to inform attack graph construction and
-            validation thresholds.
+            Research notes for operators and contributors of VAYNE v0.2.0. The product is not a
+            vulnerability database UI — it studies how real scanner exports become (or fail to
+            become) validated attack reasoning. Use Engine Trace + Priority reasons as the live
+            laboratory; this page captures the standing hypotheses.
+          </KnowledgeLead>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="noise">
+        <KnowledgeSection id="noise-body" title="Scanner Noise">
+          <KnowledgeLead>
+            Modern pipelines produce volume: Nuclei templates, Nessus plugins, Burp issues, Nmap
+            scripts. Severity inflation and duplicate titles across tools create false urgency.
+            VAYNE’s Priority Engine re-ranks with business_impact, exploitability, exposure, and
+            confidence weights so the Investigation Engine shows ≤6 attention cards instead of a
+            raw finding dump.
           </KnowledgeLead>
           <BulletGrid
             items={[
-              "Recent CVE weaponization",
-              "Ransomware initial access trends",
-              "Lateral movement techniques",
-              "Credential theft patterns",
-              "Cloud identity abuse",
-              "Supply chain exploitation",
+              "Severity ≠ attention",
+              "Single-source observations stay weak",
+              "Informational findings belong in Why We Ignored the Rest",
+              "Re-ingest after adding a corroborating scanner",
             ]}
           />
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="case-studies">
-        <KnowledgeSection id="attack-studies" title="Attack Chain Case Studies">
+      <KnowledgeSectionWrap id="chains">
+        <KnowledgeSection id="chains-body" title="Attack Chains">
           <KnowledgeLead>
-            Historical compromises decomposed into VAYNE reasoning phases — initial access,
-            exploitation, lateral movement, impact.
+            Chains require validated edges (host/port/service/version/CVE/prereq/reachability).
+            Trace rejects paths without validated findings or exploit intelligence — those reasons
+            appear in PATH DISCOVERY at the bottom of Engine Trace. Graph view in Optional Details
+            is the analyst diagram; Trace is the proof log.
           </KnowledgeLead>
-          <div className="space-y-4">
-            <CaseStudy
-              name="Log4Shell"
-              stages={[
-                { phase: "Initial Access", detail: "JNDI injection via exposed Java services" },
-                { phase: "Exploitation", detail: "Remote code execution via Log4j lookup" },
-                { phase: "Lateral Movement", detail: "Credential harvesting, cloud metadata abuse" },
-                { phase: "Impact", detail: "Ransomware deployment, data exfiltration" },
-              ]}
-            />
-            <CaseStudy
-              name="SolarWinds"
-              stages={[
-                { phase: "Initial Access", detail: "Supply chain trojanized update" },
-                { phase: "Exploitation", detail: "Backdoor activation in trusted software" },
-                { phase: "Lateral Movement", detail: "SAML token forgery, AD compromise" },
-                { phase: "Impact", detail: "Long-term espionage across enterprise" },
-              ]}
-            />
-            <CaseStudy
-              name="MOVEit"
-              stages={[
-                { phase: "Initial Access", detail: "SQL injection in file transfer appliance" },
-                { phase: "Exploitation", detail: "Webshell deployment, data staging" },
-                { phase: "Lateral Movement", detail: "Limited — appliance-focused blast radius" },
-                { phase: "Impact", detail: "Mass data theft via managed file transfer" },
-              ]}
-            />
-            <CaseStudy
-              name="Colonial Pipeline"
-              stages={[
-                { phase: "Initial Access", detail: "Compromised VPN credentials" },
-                { phase: "Exploitation", detail: "Legacy VPN without MFA" },
-                { phase: "Lateral Movement", detail: "OT network segmentation failure" },
-                { phase: "Impact", detail: "Critical infrastructure operational shutdown" },
-              ]}
-            />
-            <CaseStudy
-              name="NotPetya / WannaCry"
-              stages={[
-                { phase: "Initial Access", detail: "EternalBlue / supply chain vectors" },
-                { phase: "Exploitation", detail: "SMB wormable RCE" },
-                { phase: "Lateral Movement", detail: "Self-propagating network traversal" },
-                { phase: "Impact", detail: "Global operational disruption" },
-              ]}
-            />
-          </div>
+          <TerminalBlock>{`Research questions to ask on every run:
+  - Which edges failed MIN_EDGE_CONFIDENCE (50)?
+  - Was version exact or fuzzy?
+  - Did lateral/privilege checks fire?
+  - Is PATH badge present on priority cards?`}</TerminalBlock>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="graph-examples">
-        <KnowledgeSection id="reference-graphs" title="Attack Graph Examples">
+      <KnowledgeSectionWrap id="fp">
+        <KnowledgeSection id="fp-body" title="False Positives">
           <KnowledgeLead>
-            Reference attack models used to calibrate VAYNE graph construction across common
-            enterprise architectures.
+            Validation separates observation from exploitability. Version mismatches, auth-gated
+            issues without proof, and unreproduced singles should fall out. If a true positive was
+            marked FP, inspect Trace validation lines and parser coverage — fix evidence, do not
+            prompt the LLM to “keep” it.
           </KnowledgeLead>
-          <div className="space-y-4">
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
-                Enterprise Compromise
-              </p>
-              <FlowDiagram
-                lines={[
-                  "Internet → Perimeter → Web App → RCE → Credentials → AD → Domain Admin",
-                ]}
-              />
-            </div>
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
-                Cloud Compromise
-              </p>
-              <FlowDiagram
-                lines={[
-                  "Internet → API Gateway → IAM Misconfig → S3 → Lambda → Data Exfil",
-                ]}
-              />
-            </div>
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
-                Active Directory
-              </p>
-              <FlowDiagram
-                lines={[
-                  "Workstation → Kerberoasting → Service Account → DCSync → Domain Controller",
-                ]}
-              />
-            </div>
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
-                Web Compromise
-              </p>
-              <FlowDiagram
-                lines={[
-                  "Internet → CDN → Origin Server → Path Traversal → RCE → Database",
-                ]}
-              />
-            </div>
-          </div>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="false-positives">
-        <KnowledgeSection id="fp-analysis" title="False Positive Analysis">
+      <KnowledgeSectionWrap id="agreement">
+        <KnowledgeSection id="agreement-body" title="Multi-scanner">
           <KnowledgeLead>
-            VAYNE research informs rejection heuristics — distinguishing scanner noise from
-            actionable attack paths.
+            scanner_agreement = |agreed_tools| / max(|capable_tools|, 1). Combined ingest of Nmap +
+            Nuclei + Burp is the intended research setup: Trace correlation samples show merges;
+            Priority reasons say “Corroborated by …”. Separate mode is for isolating engements, not
+            for maximizing agreement.
           </KnowledgeLead>
-          <TerminalBlock>{`rejected: scanner noise (unreachable service)
-rejected: low confidence exploit (no PoC)
-rejected: incomplete chain (no credential pivot)
-rejected: version mismatch (banner-only detection)`}</TerminalBlock>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="ui">
+        <KnowledgeSection id="ui-body" title="How UI Surfaces Research">
           <BulletGrid
             items={[
-              "Scanner noise filtering",
-              "Low confidence exploit rejection",
-              "Incomplete chain termination",
-              "Evidence tier validation",
+              "Investigation Engine — ranked attention",
+              "Engine Trace — formula + reject proof",
+              "Brief — Why We Ignored the Rest taxonomy",
+              "Ask VAYNE — paraphrase only (4 free msgs)",
             ]}
           />
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="contribute">
+        <KnowledgeSection id="contribute-body" title="Contribute">
+          <TerminalBlock>{`Engine package:  vayne/
+Parsers:         vayne/parsers/
+Formulas:        vayne/confidence, investigation, attack_paths
+Trace events:    vayne/engine_trace/
+Product UI:      product/frontend
+Product API:     product/backend
+
+When adding a parser or weight change:
+  1. Update engine tests / fixtures
+  2. Confirm Engine Trace stage labels
+  3. Update this Research note + Engine Documentation
+  4. Document scoring changes against version 0.2.0`}</TerminalBlock>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
     </KnowledgeShell>

@@ -10,65 +10,88 @@ import { KnowledgeSectionWrap, KnowledgeShell } from "@/components/knowledge/Kno
 
 const TOC = [
   { id: "overview", label: "Overview" },
-  { id: "confidence", label: "Confidence" },
-  { id: "priority", label: "Priority" },
-  { id: "scanner-agreement", label: "Scanner Agreement" },
+  { id: "pipeline", label: "Pipeline" },
+  { id: "parsers", label: "Parsers" },
+  { id: "confidence", label: "finding_confidence" },
+  { id: "priority", label: "priority_score" },
+  { id: "agreement", label: "scanner_agreement" },
   { id: "graph", label: "Attack Graph" },
-  { id: "glossary", label: "Glossary" },
+  { id: "validation", label: "Validation Checks" },
+  { id: "risk", label: "risk_score" },
+  { id: "trace-ui", label: "Engine Trace UI" },
+  { id: "sources", label: "Source Paths" },
 ];
 
 export function EngineDocsContent() {
   return (
-    <KnowledgeShell
-      title="Engine Documentation"
-      subtitle="Permanent reference for formulas, weights, and algorithms implemented by the deterministic investigation engine. This is documentation — not live execution."
-      classification="ENGINE // FORMULA REFERENCE"
-      sections={TOC}
-    >
+    <KnowledgeShell title="Engine Documentation" sections={TOC}>
       <KnowledgeSectionWrap id="overview">
-        <KnowledgeSection id="overview-lead" title="Deterministic Investigation Engine">
+        <KnowledgeSection id="overview-body" title="Overview">
           <KnowledgeLead>
-            VAYNE&apos;s investigation engine is a deterministic pipeline: parser → normalizer →
-            correlator → validator → confidence → attack graph → priority → investigation export.
-            Live values appear in Engine Trace only while a formula is evaluated. This page documents
-            those formulas permanently.
+            Permanent reference for VAYNE engine v0.2.0 (Created By Nemzyi). Live values appear in
+            Engine Trace while formulas evaluate; this page documents the implementation. The
+            product UI never invents scores — it renders engine telemetry and artifacts.
           </KnowledgeLead>
+          <TerminalBlock>{`Package:     vayne/  (__version__ = "0.2.0")
+Product API: product/backend (FastAPI)
+Workstation: product/frontend
+
+Deterministic path:
+  parser → normalizer → correlator → validator → confidence →
+  attack graph → priority → investigation export → AI boundary`}</TerminalBlock>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="pipeline">
+        <KnowledgeSection id="pipeline-body" title="Pipeline Stages">
           <BulletGrid
             items={[
-              "All scores originate from backend computation",
-              "Engine Trace shows formulas only when executed",
-              "AI interpretation runs after the deterministic engine completes",
-              "Weights below match the implementation in vayne.engine_trace",
+              "Parser — extract findings/assets/hosts/ports/services",
+              "Normalizer — schema mapping",
+              "Deduplicator — raw vs unique",
+              "Correlation — merges + scanner agreement",
+              "Validation — retain / FP / exploitability checks",
+              "Confidence — finding_confidence()",
+              "Attack Graph — nodes/edges/paths",
+              "Priority — priority_score() → ≤6 attention cards",
+              "Investigation Generator / Export / Summary",
+              "AI Boundary — explanation only afterward",
             ]}
           />
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="confidence">
-        <KnowledgeSection id="finding-confidence" title="finding_confidence()">
+      <KnowledgeSectionWrap id="parsers">
+        <KnowledgeSection id="parsers-body" title="Parsers">
           <KnowledgeLead>
-            Overall confidence mixes observation, reliability, exploitability, and impact. Dimensions
-            without evidence are omitted from the mix.
+            Hint map (vayne/parsers/loader.py PARSER_BY_HINT) includes nuclei, nmap, burp, nessus,
+            openvas, httpx, naabu, katana, qualys, rapid7/nexpose/insightvm, sarif, prowler,
+            scoutsuite, plus extension/content auto-detect (JSON/XML/HTML/TXT/CSV).
           </KnowledgeLead>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="confidence">
+        <KnowledgeSection id="confidence-body" title="finding_confidence()">
           <TerminalBlock>{`overall = Σ(dimension_score × dim_weight) / Σ(dim_weight)
 dimension_score = clamp(Σ feature_deltas, 0, 100)
 
-Weights:
+Weights (omit missing dimensions):
   observation   0.34
   reliability   0.24
   exploit       0.24
   impact        0.18
 
-Source: vayne.confidence.finding_confidence`}</TerminalBlock>
+Feature deltas include evidence class, banner/version/CPE,
+scanner agreement, observation count, conflicts, FP penalties,
+reliability tier, CVE/EPSS/KEV, severity, privilege/lateral/exposure.
+
+Source: vayne/confidence/finding_confidence.py`}</TerminalBlock>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="priority">
-        <KnowledgeSection id="priority-score" title="priority_score() / composite_priority_score()">
-          <KnowledgeLead>
-            Priority ranks findings for analyst attention. The Engine Status dashboard shows at most
-            six findings sorted by this score — not by severity labels alone.
-          </KnowledgeLead>
+        <KnowledgeSection id="priority-body" title="priority_score()">
           <TerminalBlock>{`priority = clamp(round(Σ(quality_dimension × weight)), 0, 99)
 
 Weights:
@@ -81,47 +104,97 @@ Weights:
   identity_exposure            0.08
   investigation_completeness   0.12
 
-Source: vayne.investigation.quality_score.composite_priority_score`}</TerminalBlock>
+Engine Status / Priority findings show at most six cards
+sorted by this score — not severity alone.
+
+Source: vayne/investigation/quality_score.py
+Analyst reasons: vayne/investigation/analyst_reasons.py`}</TerminalBlock>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="scanner-agreement">
-        <KnowledgeSection id="scanner-agreement-fn" title="scanner_agreement()">
-          <TerminalBlock>{`scanner_agreement.ratio = len(agreed_tools) / max(len(capable_tools), 1)
+      <KnowledgeSectionWrap id="agreement">
+        <KnowledgeSection id="agreement-body" title="scanner_agreement()">
+          <TerminalBlock>{`ratio = len(agreed_tools) / max(len(capable_tools), 1)
 
-Terms: agreed_tools, capable_tools
-Source: vayne.correlator.engine._scanner_agreement`}</TerminalBlock>
+Implemented in correlator; surfaced in Trace correlation samples
+and in Priority card reasons (“Corroborated by …”).`}</TerminalBlock>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="graph">
-        <KnowledgeSection id="graph-formulas" title="Attack Graph Formulas">
-          <KnowledgeLead>
-            Graph construction emits node/edge counts, rejected edges, traversal algorithm, and path
-            acceptance statistics into Engine Trace when the Attack Graph Builder runs.
-          </KnowledgeLead>
-          <TerminalBlock>{`edge_confidence() — passed_checks, source_count, validation_confidence
-path_confidence() — aggregate of edge.confidence_contribution
-risk_score() — cvss_base × maturity × access × auth × evidence × blast × privilege
-attacker_effort() — derived from path_hop_count
+        <KnowledgeSection id="graph-body" title="Attack Graph Formulas">
+          <TerminalBlock>{`edge contribution ≈
+  (passed_checks / 10) * 50
+  + min(25, source_count * 8)
+  + min(25, validation_confidence * 0.25)
+  (clamped)
 
-Source: vayne.attack_paths.formulas`}</TerminalBlock>
+path_confidence = mean(edge confidence_contribution)
+MIN_PATH_CONFIDENCE = 50
+MIN_EDGE_CONFIDENCE = 50
+
+attacker_effort():
+  1 hop trivial · 2–3 low · 4–5 moderate · 6+ high
+
+Sources: vayne/attack_paths/formulas.py`}</TerminalBlock>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="glossary">
-        <KnowledgeSection id="glossary-terms" title="Formula Glossary">
-          <BulletGrid
-            items={[
-              "Observation — scanner evidence that the finding exists on a host/service",
-              "Reliability — source/tool agreement and fingerprint strength",
-              "Exploitability — whether a viable exploit path is evidenced",
-              "Impact — business/data/identity blast if exploited",
-              "Internet Exposure — whether the asset is reachable from an internet entry node",
-              "False-positive penalty — negative deltas for spoofability / weak signals",
-              "Engine Trace — live telemetry panel (not this documentation page)",
-            ]}
-          />
+      <KnowledgeSectionWrap id="validation">
+        <KnowledgeSection id="validation-body" title="Validation Checks">
+          <TerminalBlock>{`CHECK_POINTS (indicative):
+  host alive +20 · port open +15 · service identified +15
+  fingerprinted +10 · version +15 · CVE applicable +15
+  prerequisites +10 · reproduced +10 · reachable +10
+  privilege +8 · lateral +8
+
+validate_finding() in vayne/validator/engine.py`}</TerminalBlock>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="risk">
+        <KnowledgeSection id="risk-body" title="risk_score()">
+          <TerminalBlock>{`risk = min(10,
+  cvss_base × maturity_factor × access_factor × auth_factor
+  × evidence_factor × blast_factor × privilege_factor
+  × business_criticality × data_sensitivity × identity_impact
+  × lateral_movement × persistence)
+
+maturity: weaponized=1.0 … theoretical≈0.55
+blast_factor = min(1.15, 1.0 + (blast-1)*0.004)
+lateral evidenced → ~1.40 factor
+
+Source: vayne/attack_paths/scoring.py`}</TerminalBlock>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="trace-ui">
+        <KnowledgeSection id="trace-ui-body" title="Engine Trace UI">
+          <KnowledgeLead>
+            Frontend STAGE_LABELS map stage ids to Parser, Normalization, Deduplicator, Correlation,
+            Validation, Confidence Engine, Attack Graph Builder, Priority Engine, Investigation
+            Generator, Risk Engine, Export, Engine Summary, AI Explanation, Engine Console, Proof
+            Mode. Proof lines (stage=proof) are deferred to the bottom of the Trace panel after
+            priority/export/summary/AI boundary chunks.
+          </KnowledgeLead>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="sources">
+        <KnowledgeSection id="sources-body" title="Source Paths">
+          <TerminalBlock>{`vayne/__init__.py
+vayne/orchestrator/pipeline.py
+vayne/engine_trace/instrument.py
+vayne/engine_trace/events.py
+vayne/confidence/finding_confidence.py
+vayne/investigation/quality_score.py
+vayne/investigation/analyst_reasons.py
+vayne/attack_paths/formulas.py
+vayne/attack_paths/scoring.py
+vayne/validator/engine.py
+vayne/parsers/loader.py
+product/frontend/lib/engine-trace.ts
+product/frontend/components/workspace/engine-trace-live.tsx`}</TerminalBlock>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
     </KnowledgeShell>

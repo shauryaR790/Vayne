@@ -1,97 +1,115 @@
 "use client";
 
-import { KnowledgeLead, KnowledgeSection, KnowledgeSeeAlso, ManifestoBlock, TerminalBlock } from "./primitives";
+import {
+  BulletGrid,
+  CompareBlock,
+  KnowledgeLead,
+  KnowledgeSection,
+  TerminalBlock,
+} from "./primitives";
 import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
 
 const TOC = [
-  { id: "why", label: "Why VAYNE Exists" },
-  { id: "belief", label: "Our Belief" },
-  { id: "manifesto", label: "Manifesto" },
+  { id: "what", label: "What VAYNE Is" },
+  { id: "not", label: "What It Is Not" },
+  { id: "version", label: "Version" },
+  { id: "architecture", label: "Architecture" },
+  { id: "ui", label: "Current UI" },
+  { id: "license-spirit", label: "Open Source Spirit" },
+  { id: "contact", label: "Credits" },
 ];
 
 export function AboutContent() {
   return (
-    <KnowledgeShell
-      title="About"
-      subtitle="The VAYNE manifesto — why attack reasoning exists and what the future of cybersecurity intelligence looks like."
-      classification="MANIFESTO // FOUNDING DOCTRINE"
-      sections={TOC}
-    >
-      <div className="mb-10">
-        <KnowledgeSeeAlso />
-      </div>
-      <KnowledgeSectionWrap id="why">
-        <KnowledgeSection id="why-exists" title="Why VAYNE Exists">
+    <KnowledgeShell title="About VAYNE" sections={TOC}>
+      <KnowledgeSectionWrap id="what">
+        <KnowledgeSection id="what-body" title="What VAYNE Is">
           <KnowledgeLead>
-            Traditional cybersecurity tools answer one question. VAYNE answers the question that
-            actually matters.
+            VAYNE is an investigation operating system for attack reasoning. It ingests exports from
+            security scanners, deterministically correlates and validates evidence, builds attack
+            graphs, ranks what needs human attention, and streams proof in Engine Trace. Ask VAYNE
+            explains those conclusions — it does not replace the engine.
           </KnowledgeLead>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="border border-white/20 px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">
-                Traditional Tools
-              </p>
-              <p className="mt-2 font-mono text-[14px] font-black text-white">
-                &quot;What exists?&quot;
-              </p>
-            </div>
-            <div className="border border-white px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">VAYNE</p>
-              <p className="mt-2 font-mono text-[14px] font-black text-white">
-                &quot;What matters?&quot;
-              </p>
-            </div>
-          </div>
-          <p>
-            Security analysts spend most of their time correlating evidence, validating findings,
-            rejecting false positives, building attack chains, and writing reports. VAYNE exists to
-            automate attack reasoning — not detection alone.
-          </p>
-          <BulletList />
+          <CompareBlock
+            left={{
+              label: "Question scanners answer",
+              body: "What exists? (ports, CVEs, alerts, templates)",
+            }}
+            right={{
+              label: "Question VAYNE answers",
+              body: "What matters? (validated paths, priority, explicit ignore reasons)",
+            }}
+          />
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="belief">
-        <KnowledgeSection id="our-belief" title="Our Belief">
-          <ManifestoBlock>
-            The future of cybersecurity is not more scanners, more alerts, or more dashboards.
-          </ManifestoBlock>
-          <p className="pt-4 text-[15px] font-black uppercase tracking-wider text-white">
-            The future of cybersecurity is reasoning.
-          </p>
+      <KnowledgeSectionWrap id="not">
+        <KnowledgeSection id="not-body" title="What It Is Not">
+          <BulletGrid
+            items={[
+              "Not a vulnerability scanner",
+              "Not a generic chatbot over PDFs",
+              "Not a severity-sorted ticket dump",
+              "Not an LLM that invents CVSS or retain/reject",
+            ]}
+          />
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="manifesto">
-        <KnowledgeSection id="closing" title="Manifesto">
-          <TerminalBlock>{`VAYNE
+      <KnowledgeSectionWrap id="version">
+        <KnowledgeSection id="version-body" title="Version">
+          <TerminalBlock>{`Product name:     VAYNE
+Engine version:   0.2.0   (vayne/__init__.py)
+Created By:       Nemzyi
+UI chrome shows the same Version / Created By on Investigation Engine
+(idle home and live workstation).`}</TerminalBlock>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
 
-Attack Reasoning Engine
+      <KnowledgeSectionWrap id="architecture">
+        <KnowledgeSection id="architecture-body" title="Architecture">
+          <TerminalBlock>{`product/frontend   Next.js 14 · React 18 · TypeScript · Tailwind
+product/backend    FastAPI product API
+vayne/             Deterministic investigation engine (Python)
 
-Built to think.
-Not just detect.`}</TerminalBlock>
+Wire path:
+  UI ingest → /api/analyze/stream (or /api/analyze) →
+  backend → vayne orchestrator →
+  Engine Trace events + investigation artifacts →
+  optional Ask VAYNE (OpenAI-compatible) for explanation`}</TerminalBlock>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="ui">
+        <KnowledgeSection id="ui-body" title="Current UI">
+          <KnowledgeLead>
+            Desktop workstation: sidebar + Investigation Engine (39%) + Engine Trace (29%) + VAYNE
+            Analyst (31%), tabs draggable, widths bound to panel identity. Logo resumes the active
+            investigation. Knowledge nav (Tutorial, Playbooks, Methodology, Engine Documentation,
+            Research, Roadmap, About VAYNE) documents the same surface you are using.
+          </KnowledgeLead>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="license-spirit">
+        <KnowledgeSection id="license-spirit-body" title="Open Source Spirit">
+          <KnowledgeLead>
+            Treat formulas, Trace stages, and UI contracts as public surface area: document weights,
+            keep AI behind the AI Boundary, and prefer reproducible fixtures over demo theater. If
+            you change scoring, update Engine Documentation and bump narrative version notes.
+          </KnowledgeLead>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="contact">
+        <KnowledgeSection id="contact-body" title="Credits">
+          <TerminalBlock>{`Created By:  Nemzyi
+Product:     VAYNE — Investigation Operating System
+Line:        Deterministic correlation, prioritization, and
+             investigation generation — AI explains engine
+             conclusions only.`}</TerminalBlock>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
     </KnowledgeShell>
-  );
-}
-
-function BulletList() {
-  const items = [
-    "Correlating evidence",
-    "Validating findings",
-    "Rejecting false positives",
-    "Building attack chains",
-    "Writing reports",
-  ];
-  return (
-    <ul className="space-y-2 border border-white/15 px-5 py-4">
-      {items.map((item) => (
-        <li key={item} className="flex items-center gap-3 text-[13px] text-white/65">
-          <span className="text-white/30">—</span>
-          {item}
-        </li>
-      ))}
-    </ul>
   );
 }

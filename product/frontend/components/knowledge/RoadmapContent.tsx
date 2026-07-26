@@ -1,100 +1,101 @@
 "use client";
 
-import { KnowledgeLead, KnowledgeSection, KnowledgeSeeAlso, RoadmapColumn } from "./primitives";
+import {
+  BulletGrid,
+  KnowledgeLead,
+  KnowledgeSection,
+  TerminalBlock,
+} from "./primitives";
 import { KnowledgeSectionWrap, KnowledgeShell } from "./KnowledgeShell";
 
 const TOC = [
-  { id: "shipped", label: "Shipped" },
-  { id: "building", label: "Building" },
+  { id: "now", label: "v0.2.0 Shipped" },
+  { id: "ui", label: "Workstation UI" },
+  { id: "engine", label: "Engine" },
+  { id: "building", label: "In Progress" },
   { id: "next", label: "Next" },
-  { id: "future", label: "Future" },
+  { id: "horizon", label: "Horizon" },
 ];
 
 export function RoadmapContent() {
   return (
-    <KnowledgeShell
-      title="Roadmap"
-      subtitle="Development trajectory for the VAYNE attack reasoning platform — shipped capabilities, active engineering, and strategic horizon."
-      classification="ROADMAP // STRATEGIC"
-      sections={TOC}
-    >
-      <div className="mb-10">
-        <KnowledgeSeeAlso />
-      </div>
-      <KnowledgeSectionWrap id="shipped">
-        <KnowledgeSection id="shipped-capabilities" title="Shipped">
+    <KnowledgeShell title="Roadmap" sections={TOC}>
+      <KnowledgeSectionWrap id="now">
+        <KnowledgeSection id="now-body" title="v0.2.0 Shipped">
           <KnowledgeLead>
-            Production-ready capabilities currently operational in the VAYNE platform.
+            Current released engine/UI line is VAYNE 0.2.0 (Created By Nemzyi). The product shell
+            ships a live investigation workstation over the deterministic Python engine.
           </KnowledgeLead>
-          <RoadmapColumn
-            title="Production"
-            variant="shipped"
+          <TerminalBlock>{`Shipped in 0.2.0 (product + engine):
+  • Investigation Engine dashboard (ASCII mark, phase, progress, ≤6 priority cards)
+  • Engine Trace live stages + PATH DISCOVERY deferred to bottom
+  • VAYNE Analyst chat with free-tier quota (default 4)
+  • Swappable panels 39/29/31 with persisted order
+  • Logo resume of active investigation (does not wipe session)
+  • Analyst-facing priority reasons (not opaque model= labels)
+  • Multi-file combined / separate investigation modes
+  • Parsers: nmap, nuclei, burp, nessus, openvas, httpx, naabu, katana, …
+  • finding_confidence / priority_score / attack graph / validation stack
+  • Investigation Brief + Optional Details report after View full report`}</TerminalBlock>
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="ui">
+        <KnowledgeSection id="ui-body" title="Workstation UI">
+          <BulletGrid
             items={[
-              "Attack Reasoning Engine",
-              "Graph Engine",
-              "Confidence Engine",
-              "Proof Mode",
-              "Investigation Reports",
-              "Analyst Workspace",
-              "Investigation Tutorial",
+              "Desktop three-column dock + sidebar history",
+              "Mobile: engine + trace stack, analyst overlay",
+              "Knowledge pages: Tutorial → About (this nav)",
+              "Drag tab titles to reorder Engine / Trace / Analyst",
+            ]}
+          />
+        </KnowledgeSection>
+      </KnowledgeSectionWrap>
+
+      <KnowledgeSectionWrap id="engine">
+        <KnowledgeSection id="engine-body" title="Engine">
+          <BulletGrid
+            items={[
+              "Deterministic pipeline with engine_trace instrumentation",
+              "AI Boundary after summary — scores stay engine-owned",
+              "Quality / confidence weights documented on Engine Documentation",
+              "PostgreSQL-backed product investigations + filesystem storage",
             ]}
           />
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="building">
-        <KnowledgeSection id="in-progress" title="Currently Building">
-          <KnowledgeLead>Active engineering priorities in current development cycles.</KnowledgeLead>
-          <RoadmapColumn
-            title="In Progress"
-            variant="building"
-            items={[
-              "VAYNE Analyst LLM",
-              "Memory",
-              "Conversation Engine",
-              "Executive Reports",
-              "Technical Reports",
-              "SOC Reports",
-            ]}
-          />
+        <KnowledgeSection id="building-body" title="In Progress">
+          <KnowledgeLead>
+            Active engineering focuses on deeper parser fidelity, richer Trace proof formatting,
+            tighter resume/hydration of long sessions, and analyst UX that spends free-tier asks
+            more deliberately (section-scoped context).
+          </KnowledgeLead>
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
       <KnowledgeSectionWrap id="next">
-        <KnowledgeSection id="next-phase" title="Next">
-          <KnowledgeLead>Queued capabilities for upcoming release phases.</KnowledgeLead>
-          <RoadmapColumn
-            title="Queued"
-            variant="next"
+        <KnowledgeSection id="next-body" title="Next">
+          <BulletGrid
             items={[
-              "Active Directory reasoning",
-              "Cloud attack paths",
-              "Kubernetes reasoning",
-              "Identity attack graphs",
-              "Threat intelligence fusion",
-              "Multi-agent analysis",
+              "More scanner families + fixture coverage",
+              "Stronger change-detection across reruns",
+              "Export packs aligned 1:1 with Trace proof",
+              "Collaborative investigation sharing (product)",
             ]}
           />
         </KnowledgeSection>
       </KnowledgeSectionWrap>
 
-      <KnowledgeSectionWrap id="future">
-        <KnowledgeSection id="strategic-horizon" title="Future">
+      <KnowledgeSectionWrap id="horizon">
+        <KnowledgeSection id="horizon-body" title="Horizon">
           <KnowledgeLead>
-            Long-horizon vision — autonomous security reasoning at organizational scale.
+            Long-term: keep the doctrine stable — scanners observe, VAYNE reasons, humans decide —
+            while expanding graph fidelity and enterprise deployment (async workers, richer
+            retention policies) without letting LLMs own scoring.
           </KnowledgeLead>
-          <RoadmapColumn
-            title="Horizon"
-            variant="future"
-            items={[
-              "Autonomous pentesting",
-              "Autonomous investigation",
-              "Autonomous remediation",
-              "Continuous attack simulation",
-              "Enterprise security memory",
-              "Organizational knowledge graph",
-            ]}
-          />
         </KnowledgeSection>
       </KnowledgeSectionWrap>
     </KnowledgeShell>

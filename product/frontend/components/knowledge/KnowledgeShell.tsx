@@ -8,13 +8,13 @@ import { cn } from "@/lib/utils";
 
 export function KnowledgeShell({
   title,
-  subtitle,
-  classification = "UNCLASSIFIED // OPERATIONAL",
   sections,
   children,
 }: {
   title: string;
-  subtitle: string;
+  /** @deprecated kept optional for call-site compatibility — not rendered */
+  subtitle?: string;
+  /** @deprecated kept optional for call-site compatibility — not rendered */
   classification?: string;
   sections: Array<{ id: string; label: string }>;
   children: React.ReactNode;
@@ -31,28 +31,22 @@ export function KnowledgeShell({
   }, [title]);
 
   return (
-    <div ref={ref} className="mx-auto w-full max-w-[1200px] px-5 py-8 lg:px-8">
-      <header className="mb-10 border-b border-white pb-8">
-        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-white">
-          {classification}
-        </p>
-        <div className="mt-4">
-          <AsciiPageTitle text={title} />
-        </div>
-        <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-white">{subtitle}</p>
+    <div ref={ref} className="mx-auto w-full max-w-[1280px] px-5 py-8 lg:px-8">
+      <header className="mb-10 border-b border-white/20 pb-8">
+        <AsciiPageTitle text={title} />
       </header>
 
       <div className="flex gap-10 lg:gap-14">
-        <aside className="hidden w-44 shrink-0 lg:block">
+        <aside className="hidden w-48 shrink-0 lg:block">
           <nav className="sticky top-20 space-y-1">
-            <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.18em] text-white">
+            <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.18em] text-white/50">
               Contents
             </p>
             {sections.map((s) => (
               <a
                 key={s.id}
                 href={`#${s.id}`}
-                className="block border-l border-transparent py-1.5 pl-3 text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:border-white/50"
+                className="block border-l border-transparent py-1.5 pl-3 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-white/50 hover:text-white"
               >
                 {s.label}
               </a>
@@ -60,7 +54,7 @@ export function KnowledgeShell({
           </nav>
         </aside>
 
-        <article className={cn("min-w-0 flex-1 max-w-3xl", "[&_.vx-knowledge-section]:opacity-0")}>
+        <article className={cn("min-w-0 flex-1 max-w-4xl", "[&_.vx-knowledge-section]:opacity-0")}>
           {children}
         </article>
       </div>
