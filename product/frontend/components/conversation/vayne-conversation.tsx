@@ -307,6 +307,8 @@ export function VaneWorkspace({
       setModeExplicit(false);
       setThinking(false);
       setEnginePhase("idle");
+      setEngineTraceEvents([]);
+      setEngineTraceOpen(false);
       setError("");
       setBriefingPrompt(null);
       setInvestigationSessionActive(true);
@@ -359,9 +361,24 @@ export function VaneWorkspace({
           skipAutoScrollRef.current = false;
         });
 
-        const primaryBundleId = bundleIds[0];
+        // Restore Engine Trace telemetry — without this the Trace panel is empty
+        // after navigating away to Tutorial/docs and returning via the logo.
+        void Promise.all(bundleIds.map((id) => fetchEngineTrace(id)))
+          .then((traces) => {
+            if (loadedResumeIdRef.current !== invId) return;
+            const merged = traces.flat();
+            if (!merged.length) return;
+            setEngineTraceEvents(merged);
+            setEnginePhase("complete");
+            setEngineTraceOpen(true);
+          })
+          .catch(() => {
+            /* Trace endpoint may be unavailable; report view still works. */
+          });
+
         void Promise.all(bundleIds.map((id) => loadInvestigationBundle(id)))
           .then((loadedBundles) => {
+            if (loadedResumeIdRef.current !== invId) return;
             setInvestigationBundles(loadedBundles);
             setBundle(loadedBundles[0] ?? null);
             for (const row of loadedBundles) {
@@ -387,10 +404,11 @@ export function VaneWorkspace({
         setMessages([]);
         setAnalystMessages([]);
         setBundle(null);
+        setEngineTraceEvents([]);
         setError(sanitizeUserMessage(e instanceof Error ? e.message : String(e)));
         setBusy(false);
       } finally {
-        switchingRef.current = null;
+        if (switchingRef.current === invId) switchingRef.current = null;
       }
     },
     [scrollToBottom, syncUrl, playAnalystBriefing],
