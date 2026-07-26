@@ -182,6 +182,9 @@ def test_potential_impact_rce():
         build_potential_impact(title="Remote Code Execution via CGI", theme="rce")
         == "Remote code execution possible."
     )
+
+
+def test_single_source_outdated_ssh_action():
     action = build_recommended_action(
         title="OpenSSH 7.2p2",
         subject="OpenSSH 7.2p2",
