@@ -33,6 +33,13 @@ type TraceChunk =
       lines: TraceLine[];
     };
 
+/** One terminal step — title header, field row, or proof text line. */
+type RevealItem =
+  | { kind: "stage-title"; key: string; title: string; first: boolean }
+  | { kind: "line"; key: string; line: TraceLine }
+  | { kind: "proof-banner"; key: string; first: boolean }
+  | { kind: "proof-line"; key: string; text: string };
+
 function pushField(
   lines: TraceLine[],
   label: string,
@@ -282,6 +289,54 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
   return [...chunks, ...proofChunks];
 }
 
+export function flattenTraceChunks(chunks: TraceChunk[]): RevealItem[] {
+  const items: RevealItem[] = [];
+  let stageIndex = 0;
+  let proofIndex = 0;
+
+  for (const chunk of chunks) {
+    if (chunk.kind === "proof") {
+      const first = proofIndex === 0;
+      items.push({ kind: "proof-banner", key: `${chunk.id}-banner`, first: stageIndex === 0 && first });
+      const lines = chunk.text.split("\n");
+      lines.forEach((text, i) => {
+        items.push({ kind: "proof-line", key: `${chunk.id}-L${i}`, text });
+      });
+      proofIndex += 1;
+      continue;
+    }
+
+    items.push({
+      kind: "stage-title",
+      key: `${chunk.id}-title`,
+      title: chunk.title,
+      first: stageIndex === 0 && proofIndex === 0,
+    });
+    chunk.lines.forEach((line, i) => {
+      items.push({ kind: "line", key: `${chunk.id}-line-${i}`, line });
+    });
+    stageIndex += 1;
+  }
+
+  return items;
+}
+
+function scrollElToEnd(el: HTMLElement | null) {
+  if (!el) return;
+  el.scrollTop = el.scrollHeight;
+  // Layout can settle one frame later (fonts / wrap) — pin again.
+  requestAnimationFrame(() => {
+    el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  });
+}
+
+const MIN_LINE_MS = 38;
+const MAX_LINE_MS = 90;
+const TARGET_REVEAL_MS = 2600;
+
 export function EngineTraceLive({
   events,
   running,
@@ -294,13 +349,63 @@ export function EngineTraceLive({
   const scrollerRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   const [manualScroll, setManualScroll] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(0);
+
   const chunks = useMemo(() => buildTraceChunks(events), [events]);
+  const items = useMemo(() => flattenTraceChunks(chunks), [chunks]);
+
+  // Reset reveal when a new run starts (events cleared).
+  useEffect(() => {
+    if (events.length === 0) {
+      setVisibleCount(0);
+      stickToBottom.current = true;
+      setManualScroll(false);
+    }
+  }, [events.length]);
+
+  // Line-by-line terminal reveal.
+  useEffect(() => {
+    if (visibleCount >= items.length) return;
+
+    const remaining = items.length - visibleCount;
+    const delay = running
+      ? MIN_LINE_MS
+      : Math.min(
+          MAX_LINE_MS,
+          Math.max(MIN_LINE_MS, Math.round(TARGET_REVEAL_MS / Math.max(remaining, 8))),
+        );
+
+    const timer = window.setTimeout(() => {
+      setVisibleCount((n) => Math.min(items.length, n + 1));
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [visibleCount, items.length, running]);
+
+  // Catch up when new items append during a live run.
+  useEffect(() => {
+    if (visibleCount > items.length) setVisibleCount(items.length);
+  }, [items.length, visibleCount]);
+
+  const revealing = visibleCount < items.length;
+  const showCursor = Boolean(running) || revealing;
+
+  // Keep pinned to the bottom while typing, and force end when finished.
+  useEffect(() => {
+    if (!stickToBottom.current) return;
+    scrollElToEnd(scrollerRef.current);
+  }, [visibleCount, showCursor]);
 
   useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el || !stickToBottom.current) return;
-    el.scrollTop = el.scrollHeight;
-  }, [chunks.length, events.length]);
+    if (revealing) return;
+    if (!items.length) return;
+    // Finished printing — always land on the tail (fixes mid-panel stuck scroll).
+    stickToBottom.current = true;
+    setManualScroll(false);
+    scrollElToEnd(scrollerRef.current);
+  }, [revealing, items.length]);
+
+  const visibleItems = items.slice(0, visibleCount);
 
   return (
     <aside
@@ -311,7 +416,7 @@ export function EngineTraceLive({
     >
       <EngineTraceHeader />
 
-      {chunks.length === 0 ? (
+      {items.length === 0 ? (
         <EngineTraceStandby running={running} />
       ) : (
         <>
@@ -321,51 +426,63 @@ export function EngineTraceLive({
             onScroll={() => {
               const el = scrollerRef.current;
               if (!el) return;
-              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 56;
               stickToBottom.current = atBottom;
               setManualScroll(!atBottom);
             }}
           >
-            {chunks.map((chunk, idx) =>
-              chunk.kind === "proof" ? (
-                <div
-                  key={chunk.id}
-                  className={cn("min-w-0", idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
-                >
-                  <p className="mb-2 tracking-[0.12em] text-white/50">=== VAYNE PROOF MODE ===</p>
-                  <pre className="max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-white/75">
-                    {chunk.text}
-                  </pre>
-                </div>
-              ) : (
-                <div
-                  key={chunk.id}
-                  className={cn("min-w-0", idx > 0 && "mt-4 border-t border-white/[0.08] pt-4")}
-                >
-                  <p className="mb-2 tracking-[0.12em] text-white/85">[{chunk.title}]</p>
-                  <div className="min-w-0 space-y-1">
-                    {chunk.lines.map((line, i) => (
-                      <div key={i} className="min-w-0">
-                        {line.arrow ? <p className="text-white/25">↓</p> : null}
-                        {line.label && line.muted ? (
-                          <p className="break-words text-white/45">{line.label}</p>
-                        ) : line.label ? (
-                          <div className="flex min-w-0 justify-between gap-3 text-white/65">
-                            <span className="min-w-0 break-words">{line.label}</span>
-                            <span className="shrink-0 tabular-nums text-white/90">{line.value}</span>
-                          </div>
-                        ) : (
-                          <p className="max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-white/70">
-                            {line.value}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+            {visibleItems.map((item) => {
+              if (item.kind === "stage-title") {
+                return (
+                  <div
+                    key={item.key}
+                    className={cn("min-w-0", !item.first && "mt-4 border-t border-white/[0.08] pt-4")}
+                  >
+                    <p className="mb-2 tracking-[0.12em] text-white/85">[{item.title}]</p>
                   </div>
+                );
+              }
+              if (item.kind === "proof-banner") {
+                return (
+                  <div
+                    key={item.key}
+                    className={cn("min-w-0", !item.first && "mt-4 border-t border-white/[0.08] pt-4")}
+                  >
+                    <p className="mb-2 tracking-[0.12em] text-white/50">=== VAYNE PROOF MODE ===</p>
+                  </div>
+                );
+              }
+              if (item.kind === "proof-line") {
+                return (
+                  <pre
+                    key={item.key}
+                    className="max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-white/75"
+                  >
+                    {item.text}
+                  </pre>
+                );
+              }
+
+              const line = item.line;
+              return (
+                <div key={item.key} className="min-w-0">
+                  {line.arrow ? <p className="text-white/25">↓</p> : null}
+                  {line.label && line.muted ? (
+                    <p className="break-words text-white/45">{line.label}</p>
+                  ) : line.label ? (
+                    <div className="flex min-w-0 justify-between gap-3 text-white/65">
+                      <span className="min-w-0 break-words">{line.label}</span>
+                      <span className="shrink-0 tabular-nums text-white/90">{line.value}</span>
+                    </div>
+                  ) : (
+                    <p className="max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-white/70">
+                      {line.value}
+                    </p>
+                  )}
                 </div>
-              ),
-            )}
-            {running ? <span className="mt-3 inline-block text-white/40">▌</span> : null}
+              );
+            })}
+            {showCursor ? <span className="mt-3 inline-block animate-pulse text-white/40">▌</span> : null}
           </div>
 
           {manualScroll ? (
@@ -375,8 +492,7 @@ export function EngineTraceLive({
               onClick={() => {
                 stickToBottom.current = true;
                 setManualScroll(false);
-                const el = scrollerRef.current;
-                if (el) el.scrollTop = el.scrollHeight;
+                scrollElToEnd(scrollerRef.current);
               }}
             >
               Resume auto-scroll

@@ -27,6 +27,7 @@ import {
 } from "@/lib/investigation-bundle";
 import { saveRecentInvestigation, recentEntryFromBundle } from "@/lib/recent-investigations";
 import { createRhythmStreamBatcher } from "@/lib/stream-buffer";
+import { sleep } from "@/lib/text-reveal";
 import {
   clearConversationSession,
   OPEN_INVESTIGATION_EVENT,
@@ -728,6 +729,9 @@ export function VaneWorkspace({
       { id: `user-${Date.now()}`, role: "user", content: prompt, attachments },
     ]);
 
+    const runStartedAt = performance.now();
+    const MIN_ENGINE_FEEL_MS = 2600;
+
     try {
       const label =
         fileNames.length === 1
@@ -738,18 +742,40 @@ export function VaneWorkspace({
 
       let result: Awaited<ReturnType<typeof analyzeFiles>> | null = null;
       try {
+        // Pace Trace events onto the UI so the terminal types line-by-line even
+        // when the backend finishes near-instantly.
+        const pending: EngineTraceEvent[] = [];
+        let pumpActive = true;
+        const pumpToken = { live: true };
+        const pump = (async () => {
+          while (pumpToken.live && (pumpActive || pending.length)) {
+            const next = pending.shift();
+            if (!next) {
+              await sleep(24);
+              continue;
+            }
+            setEngineTraceEvents((prev) => [...prev, next]);
+            await sleep(48);
+          }
+        })();
+
         for await (const event of streamAnalyzeWithTrace(validation.files, label, {
           mode: resolvedMode,
           prompt,
         })) {
           if (event.type === "engine_event") {
-            setEngineTraceEvents((prev) => [...prev, event.event]);
+            pending.push(event.event);
           } else if (event.type === "error") {
+            pumpActive = false;
+            pumpToken.live = false;
+            pending.length = 0;
             throw new Error(event.message || "Analysis failed");
           } else if (event.type === "complete") {
             result = event.result;
           }
         }
+        pumpActive = false;
+        await pump;
       } catch (streamErr) {
         // Fallback to classic analyze if streaming endpoint is unavailable.
         console.warn(`${LOG_PREFIX} Engine trace stream failed — falling back`, streamErr);
@@ -761,6 +787,13 @@ export function VaneWorkspace({
 
       if (!result) {
         throw new Error("Analysis returned no result");
+      }
+
+      // Keep the Engine in "running" long enough that the Trace can feel like a
+      // real terminal session (~2–3s), even on tiny uploads.
+      const elapsed = performance.now() - runStartedAt;
+      if (elapsed < MIN_ENGINE_FEEL_MS) {
+        await sleep(MIN_ENGINE_FEEL_MS - elapsed);
       }
 
       if (result.warnings?.length) {
