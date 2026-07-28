@@ -3,6 +3,7 @@
 import { PriorityInvestigationRow } from "@/components/workspace/executive-investigation-overview";
 import {
   buildInvestigationBriefingModel,
+  panelMetricsFromSummary,
   type InvestigationBriefingModel,
 } from "@/lib/investigation-briefing";
 import type { WorkbenchData } from "@/lib/types";
@@ -22,6 +23,32 @@ function BriefingSection({
       <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">{title}</h2>
       {children}
     </section>
+  );
+}
+
+function BriefingMetricsStrip({
+  metrics,
+}: {
+  metrics: Array<{ label: string; value: string; sub?: string }>;
+}) {
+  return (
+    <div className="border-b border-vx-border px-4 py-4 sm:px-6">
+      <div className="grid grid-cols-2 gap-px overflow-hidden border border-white/[0.1] bg-white/[0.1] sm:grid-cols-3 lg:grid-cols-5">
+        {metrics.map((row) => (
+          <div key={row.label} className="min-w-0 bg-vx-section-body px-3.5 py-3">
+            <p className="truncate text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+              {row.label}
+            </p>
+            <p className="mt-1.5 font-mono text-[18px] font-semibold tabular-nums leading-none tracking-tight text-white sm:text-[20px]">
+              {row.value}
+            </p>
+            {row.sub ? (
+              <p className="mt-1.5 truncate text-[11px] leading-snug text-white/40">{row.sub}</p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -93,6 +120,8 @@ export function InvestigationBriefing({
   onOpenSection?: (sectionId: string) => void;
 }) {
   const briefing = buildInvestigationBriefingModel(workbench, uploadedFileCount);
+  const panel = workbench.summary_panel;
+  const metrics = panel ? panelMetricsFromSummary(panel) : null;
 
   return (
     <div className="border-b border-vx-border bg-vx-section-body">
@@ -107,6 +136,8 @@ export function InvestigationBriefing({
           {briefing.metrics.reviewHeadline}
         </p>
       </div>
+
+      {metrics ? <BriefingMetricsStrip metrics={metrics} /> : null}
 
       <BriefingSection title="Start Here">
         {briefing.startHere ? (

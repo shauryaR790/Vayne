@@ -326,7 +326,7 @@ export function panelMetricsFromSummary(panel: WorkbenchSummaryPanel): Array<{
 }> {
   return [
     {
-      label: "Reports uploaded",
+      label: "Reports",
       value: panel.files_uploaded.toLocaleString(),
       sub: "Evidence ingested",
     },
@@ -336,24 +336,38 @@ export function panelMetricsFromSummary(panel: WorkbenchSummaryPanel): Array<{
       sub: "Before deduplication",
     },
     {
-      label: "Investigations generated",
+      label: "Investigations",
       value: panel.investigations_generated.toLocaleString(),
-      sub: "Merged problems to review",
+      sub: "Merged to review",
     },
     {
-      label: "Estimated analyst review",
+      label: "Est. review",
       value: panel.estimated_analyst_review_minutes
-        ? formatMinutes(panel.estimated_analyst_review_minutes)
+        ? formatMinutesCompact(panel.estimated_analyst_review_minutes)
         : "—",
-      sub: "Priority queue only",
+      sub: "Priority queue",
     },
     {
-      label: "Estimated time saved",
+      label: "Time saved",
       value:
         panel.estimated_analyst_hours_saved > 0
-          ? formatHours(panel.estimated_analyst_hours_saved)
+          ? formatHoursCompact(panel.estimated_analyst_hours_saved)
           : "—",
-      sub: "Manual triage eliminated",
+      sub: "Manual triage cut",
     },
   ];
+}
+
+function formatMinutesCompact(minutes: number): string {
+  if (minutes < 60) return `~${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  if (!rem) return `~${hours}h`;
+  return `~${hours}h ${rem}m`;
+}
+
+function formatHoursCompact(hours: number): string {
+  if (hours <= 0) return "—";
+  if (hours < 1) return `${Math.round(hours * 60)}m`;
+  return `${hours % 1 === 0 ? hours : hours.toFixed(1)}h`;
 }
