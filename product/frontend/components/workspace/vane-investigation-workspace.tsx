@@ -64,7 +64,7 @@ export function VaneInvestigationWorkspace({
     );
   }
 
-  const renderedReports = engineMessages.flatMap((msg, messageIndex) => {
+  const renderedReports = engineMessages.flatMap((msg) => {
     if (msg.kind === "investigation" && msg.investigationId) {
       return [
         <InvestigationInlineReport
@@ -73,7 +73,6 @@ export function VaneInvestigationWorkspace({
           sourceLabel={msg.sourceLabel}
           sourceLabels={sourceLabels}
           investigationMode={investigationMode}
-          onViewEngine={messageIndex === 0 ? onViewEngineTrace : undefined}
         />,
       ];
     }
@@ -82,12 +81,13 @@ export function VaneInvestigationWorkspace({
         <MultiInvestigationInlineReport
           key={msg.id}
           investigations={msg.investigationSources}
-          onViewEngine={messageIndex === 0 ? onViewEngineTrace : undefined}
         />,
       ];
     }
     return [];
   });
+
+  const showViewEngine = Boolean(onViewEngineTrace);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#141414]">
@@ -96,6 +96,18 @@ export function VaneInvestigationWorkspace({
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto bg-[#141414] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
+        {showViewEngine ? (
+          <div className="border-b border-vx-border px-4 py-4 sm:px-6">
+            <button
+              type="button"
+              onClick={onViewEngineTrace}
+              className="border border-white/20 px-4 py-2.5 text-[12px] uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/40 hover:text-white"
+            >
+              View Engine
+            </button>
+          </div>
+        ) : null}
+
         <div className="mx-auto w-full min-w-0 max-w-[1080px]">
           {renderedReports.length > 0 ? (
             renderedReports
@@ -108,7 +120,6 @@ export function VaneInvestigationWorkspace({
                 sourceLabels={sourceLabels}
                 investigationMode={investigationMode}
                 sequenceIndex={index + 1}
-                onViewEngine={index === 0 ? onViewEngineTrace : undefined}
               />
             ))
           ) : null}

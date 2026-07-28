@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 export function InvestigationSourceTabs({
   investigations,
   defaultIndex = 0,
-  onViewEngine,
 }: {
   investigations: Array<{ id: string; sourceLabel?: string }>;
   defaultIndex?: number;
@@ -25,7 +24,6 @@ export function InvestigationSourceTabs({
       <InvestigationInlineReport
         investigationId={investigations[0].id}
         sourceLabel={investigations[0].sourceLabel}
-        onViewEngine={onViewEngine}
       />
     );
   }
@@ -70,7 +68,6 @@ export function InvestigationSourceTabs({
           investigationId={active.id}
           sourceLabel={active.sourceLabel}
           sequenceIndex={activeIndex + 1}
-          onViewEngine={onViewEngine}
         />
       ) : null}
     </div>

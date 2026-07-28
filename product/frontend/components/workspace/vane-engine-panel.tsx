@@ -97,6 +97,7 @@ export function VaneEnginePanel({
         sourceLabels={sourceLabels}
         evidenceFileCount={files.length || undefined}
         error={error || offlineError}
+        onViewEngineTrace={onViewEngineTrace}
         onCloseEngineTrace={onCloseEngineTrace}
       />
     );

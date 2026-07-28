@@ -56,7 +56,6 @@ export function InvestigationInlineReport({
   investigationMode,
   sequenceIndex = 1,
   className,
-  onViewEngine,
 }: {
   investigationId: string;
   sourceLabel?: string;
@@ -125,17 +124,15 @@ export function InvestigationInlineReport({
       investigationMode={investigationMode}
       sequenceIndex={sequenceIndex}
       className={className}
-      onViewEngine={onViewEngine}
     />
   );
 }
 
 export function MultiInvestigationInlineReport({
   investigations,
-  onViewEngine,
 }: {
   investigations: Array<{ id: string; sourceLabel?: string }>;
   onViewEngine?: () => void;
 }) {
-  return <InvestigationSourceTabs investigations={investigations} onViewEngine={onViewEngine} />;
+  return <InvestigationSourceTabs investigations={investigations} />;
 }

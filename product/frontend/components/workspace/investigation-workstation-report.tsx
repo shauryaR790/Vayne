@@ -289,7 +289,6 @@ export function InvestigationWorkstationReport({
   investigationMode,
   sequenceIndex = 1,
   className,
-  onViewEngine,
 }: {
   bundle: InvestigationBundle;
   sourceLabel?: string;
@@ -352,7 +351,6 @@ export function InvestigationWorkstationReport({
           workbench={workbench}
           uploadedFileCount={uploadedFilenames.length || undefined}
           onOpenSection={(sectionId) => setSectionOpen(sectionId, true)}
-          onViewEngine={onViewEngine}
         />
       ) : null}
       {workbench ? (
