@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 
 import { workbenchSurfaceClasses } from "@/components/shared/workspace-card";
@@ -78,6 +78,11 @@ export function WorkstationSection({
   );
 }
 
+const panelTransition = {
+  duration: 0.32,
+  ease: [0.22, 1, 0.36, 1] as const,
+};
+
 export function CollapsibleSection({
   title,
   children,
@@ -114,6 +119,8 @@ export function CollapsibleSection({
     onOpenChange?.(next);
   };
 
+  const showAsk = forceOpen === true || isOpen;
+
   return (
     <section
       id={sectionId ? `investigation-detail-${sectionId}` : undefined}
@@ -126,7 +133,9 @@ export function CollapsibleSection({
             <span className="min-w-0 flex-1 text-[11px] font-bold uppercase tracking-[0.15em] text-white">
               {title}
             </span>
-            {aside ? <span className="flex shrink-0 items-center gap-2">{aside}</span> : null}
+            {showAsk && aside ? (
+              <span className="flex shrink-0 items-center gap-2">{aside}</span>
+            ) : null}
           </>
         ) : (
           <>
@@ -141,21 +150,34 @@ export function CollapsibleSection({
               </span>
               <ChevronDown
                 className={cn(
-                  "size-4 shrink-0 text-white/50 transition-transform duration-200",
+                  "size-4 shrink-0 text-white/50 transition-transform duration-300",
                   isOpen && "rotate-180",
                 )}
                 aria-hidden
               />
             </button>
-            {aside ? <span className="flex shrink-0 items-center gap-2">{aside}</span> : null}
+            {showAsk && aside ? (
+              <span className="flex shrink-0 items-center gap-2">{aside}</span>
+            ) : null}
           </>
         )}
       </div>
-      {isOpen ? (
-        <div className={cn("bg-vx-section-body text-white", bodyClassName ?? "px-0 py-0")}>
-          {children}
-        </div>
-      ) : null}
+      <AnimatePresence initial={false}>
+        {isOpen ? (
+          <motion.div
+            key="panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={panelTransition}
+            className="overflow-hidden"
+          >
+            <div className={cn("bg-vx-section-body text-white", bodyClassName ?? "px-0 py-0")}>
+              {children}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </section>
   );
 }

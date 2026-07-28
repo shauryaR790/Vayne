@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, Sparkles } from "lucide-react";
+import { Menu } from "lucide-react";
 
 import { PRODUCT_NAME } from "@/lib/brand";
 import { WorkspaceHomeLink } from "@/components/workspace/workspace-home-link";
@@ -42,10 +42,9 @@ export function MobileWorkspaceHeader({
         <button
           type="button"
           onClick={onOpenAnalyst}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-white/10"
+          className="inline-flex h-9 shrink-0 items-center rounded-md px-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-white/10"
           aria-label="Open Ask VAYNE"
         >
-          <Sparkles className="size-3.5 shrink-0" aria-hidden />
           Ask
         </button>
       ) : (

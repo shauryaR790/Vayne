@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { Sparkles } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -46,7 +45,7 @@ export function SectionAskVayneButton({
         ask(sectionTitle, engineContext);
       }}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-sm text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
+        "inline-flex shrink-0 items-center rounded-sm text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
         variant === "subtle" &&
           "border border-white/15 bg-white/[0.04] px-2.5 py-1 text-white/70 hover:border-white/30 hover:bg-white/[0.08] hover:text-white",
         variant === "corner" &&
@@ -56,7 +55,6 @@ export function SectionAskVayneButton({
         className,
       )}
     >
-      <Sparkles className="size-3 shrink-0 opacity-80" />
       Ask VAYNE
     </button>
   );
