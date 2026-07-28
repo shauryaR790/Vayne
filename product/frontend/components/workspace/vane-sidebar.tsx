@@ -69,14 +69,14 @@ function NavLink({
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2.5 text-[16px] transition-colors",
+        "flex items-center gap-3 rounded-md px-3 py-2.5 text-[16px] font-bold transition-colors",
         active
           ? "bg-vx-elevated text-white"
           : "text-white hover:bg-vx-panel hover:text-white",
       )}
     >
       <Icon className="size-[18px] shrink-0 opacity-85" strokeWidth={1.5} aria-hidden />
-      <span className="truncate">{item.label}</span>
+      <span className="truncate font-bold">{item.label}</span>
     </Link>
   );
 }
@@ -182,7 +182,7 @@ function SidebarPanel({
         <button
           type="button"
           onClick={startNew}
-          className="mt-3 flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left text-[16px] text-white transition-colors hover:bg-vx-panel hover:text-white"
+          className="mt-3 flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left text-[16px] font-bold text-white transition-colors hover:bg-vx-panel hover:text-white"
         >
           <Plus className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
           New Investigation
@@ -208,12 +208,12 @@ function SidebarPanel({
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-3">
         <div className="mb-2 flex shrink-0 items-center justify-between gap-2 px-3">
-          <p className="text-[13px] font-medium text-white">Investigation History</p>
+          <p className="text-[16px] font-bold text-white">Recents..</p>
           {items.length > 0 ? (
             <button
               type="button"
               onClick={clearHistory}
-              className="text-[11px] uppercase tracking-[0.08em] text-white/45 transition-colors hover:text-white/80"
+              className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/45 transition-colors hover:text-white/80"
             >
               Clear all
             </button>
@@ -229,7 +229,7 @@ function SidebarPanel({
             />
           ) : (
             <div className="flex min-h-0 flex-1 items-center justify-center px-3">
-              <p className="text-center text-[13px] text-white/45">No investigation history</p>
+              <p className="text-center text-[13px] text-white/45">No recents</p>
             </div>
           )}
         </div>
