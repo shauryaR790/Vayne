@@ -1,6 +1,7 @@
 "use client";
 
 import { AsciiPageTitle } from "@/components/brand/vayne-ascii-title";
+import { useReportChrome } from "@/components/workspace/report-chrome-context";
 import {
   buildInvestigationConsoleModel,
   type EvidenceTimelineStep,
@@ -41,6 +42,8 @@ function InvestigationSummary({
 }: {
   summary: InvestigationSummaryCard;
 }) {
+  const { onViewEngine } = useReportChrome();
+
   return (
     <section className="border-b border-vx-border px-4 py-4 sm:px-6">
       <div className="shrink-0">
@@ -56,6 +59,18 @@ function InvestigationSummary({
         />
         <SummaryField label="Business Risk" value={summary.businessRisk} />
         <SummaryField label="Estimated Review" value={summary.estimatedReview} />
+
+        {onViewEngine ? (
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={onViewEngine}
+              className="border border-white/20 px-4 py-2.5 text-[12px] uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/40 hover:text-white"
+            >
+              View Engine
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-8 max-w-[64ch] pb-4">

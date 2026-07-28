@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 
 import { InvestigationEngineHeader } from "@/components/workspace/analyst/analyst-panel-header";
 import { EngineWorkstation } from "@/components/workspace/engine-workstation";
+import { ReportChromeProvider } from "@/components/workspace/report-chrome-context";
 import {
   InvestigationInlineReport,
   MultiInvestigationInlineReport,
@@ -87,50 +88,38 @@ export function VaneInvestigationWorkspace({
     return [];
   });
 
-  const showViewEngine = Boolean(onViewEngineTrace);
-
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#141414]">
       <InvestigationEngineHeader />
-      <div
-        ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto bg-[#141414] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {showViewEngine ? (
-          <div className="border-b border-vx-border px-4 py-4 sm:px-6">
-            <button
-              type="button"
-              onClick={onViewEngineTrace}
-              className="border border-white/20 px-4 py-2.5 text-[12px] uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/40 hover:text-white"
-            >
-              View Engine
-            </button>
+      <ReportChromeProvider onViewEngine={onViewEngineTrace}>
+        <div
+          ref={scrollRef}
+          className="min-h-0 flex-1 overflow-y-auto bg-[#141414] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="mx-auto w-full min-w-0 max-w-[1080px]">
+            {renderedReports.length > 0 ? (
+              renderedReports
+            ) : investigationIds.length > 0 ? (
+              investigationIds.map((id, index) => (
+                <InvestigationInlineReport
+                  key={id}
+                  investigationId={id}
+                  sourceLabel={sourceLabels?.[index]}
+                  sourceLabels={sourceLabels}
+                  investigationMode={investigationMode}
+                  sequenceIndex={index + 1}
+                />
+              ))
+            ) : null}
+
+            {error ? (
+              <p className="border-t border-vx-border px-6 py-4 text-[14px] text-vx-secondary">
+                {error}
+              </p>
+            ) : null}
           </div>
-        ) : null}
-
-        <div className="mx-auto w-full min-w-0 max-w-[1080px]">
-          {renderedReports.length > 0 ? (
-            renderedReports
-          ) : investigationIds.length > 0 ? (
-            investigationIds.map((id, index) => (
-              <InvestigationInlineReport
-                key={id}
-                investigationId={id}
-                sourceLabel={sourceLabels?.[index]}
-                sourceLabels={sourceLabels}
-                investigationMode={investigationMode}
-                sequenceIndex={index + 1}
-              />
-            ))
-          ) : null}
-
-          {error ? (
-            <p className="border-t border-vx-border px-6 py-4 text-[14px] text-vx-secondary">
-              {error}
-            </p>
-          ) : null}
         </div>
-      </div>
+      </ReportChromeProvider>
     </div>
   );
 }
