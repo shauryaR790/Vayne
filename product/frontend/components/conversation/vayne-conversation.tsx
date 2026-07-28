@@ -41,6 +41,8 @@ import {
   getActiveInvestigationId,
   migrateLegacyConversationSession,
   notifyInvestigationLoaded,
+  patchInvestigationSessionTrace,
+  loadCachedEngineTrace,
   rebuildInvestigationSession,
   saveInvestigationSession,
   sessionStorageKeyFromState,
@@ -213,6 +215,7 @@ export function VaneWorkspace({
       analystInputDraft?: string;
       analystMessages?: AnalystMessage[];
       bundle?: InvestigationBundle | null;
+      engineTraceEvents?: EngineTraceEvent[];
     }) => {
       if (persistSkipRef.current) return;
 
@@ -223,6 +226,7 @@ export function VaneWorkspace({
       const msgs = serializeMessages(next?.messages ?? messages);
       const analystMsgs = serializeMessages(next?.analystMessages ?? analystMessages);
       const activeBundle = next?.bundle !== undefined ? next.bundle : bundle;
+      const traceEvents = next?.engineTraceEvents ?? engineTraceEvents;
 
       const sessionKey = sessionStorageKeyFromState({
         investigationId: invId,
@@ -243,7 +247,12 @@ export function VaneWorkspace({
       };
       saveConversationSession(legacyPayload);
 
-      if (!activeBundle || !sessionKey) return;
+      if (!activeBundle || !sessionKey) {
+        if (sessionKey && traceEvents.length) {
+          patchInvestigationSessionTrace(sessionKey, traceEvents as Record<string, unknown>[]);
+        }
+        return;
+      }
 
       saveInvestigationSession(
         buildInvestigationSessionFromBundle(activeBundle, {
@@ -257,6 +266,7 @@ export function VaneWorkspace({
           inputDraft: "",
           analystInputDraft: next?.analystInputDraft ?? analystInput,
           sessionId: sessionKey,
+          engineTraceEvents: traceEvents as Record<string, unknown>[],
         }),
       );
     },
@@ -264,6 +274,7 @@ export function VaneWorkspace({
       analystInput,
       analystMessages,
       bundle,
+      engineTraceEvents,
       investigationGroupId,
       investigationId,
       investigationIds,
@@ -312,7 +323,6 @@ export function VaneWorkspace({
       // History / resume always lands on the Engine workstation (Attention Queue),
       // not the full Investigation Workspace report. Trace events fill in async.
       setEnginePhase("complete");
-      setEngineTraceEvents([]);
       setEngineTraceOpen(true);
       setError("");
       setBriefingPrompt(null);
@@ -337,6 +347,20 @@ export function VaneWorkspace({
           sourceLabels,
         });
         const restoredAnalyst = session.analystMessages ?? [];
+        const cachedTrace = [
+          ...((session.engineTraceEvents ?? []) as EngineTraceEvent[]),
+          ...(loadCachedEngineTrace(session.id) as EngineTraceEvent[]),
+          ...(loadCachedEngineTrace(invId) as EngineTraceEvent[]),
+          ...bundleIds.flatMap((id) => loadCachedEngineTrace(id) as EngineTraceEvent[]),
+        ];
+        // De-dupe by JSON identity while preserving order.
+        const seenTrace = new Set<string>();
+        const uniqueCachedTrace = cachedTrace.filter((ev) => {
+          const key = JSON.stringify(ev);
+          if (seenTrace.has(key)) return false;
+          seenTrace.add(key);
+          return true;
+        });
 
         setMessages(engineMessages);
         setAnalystMessages(restoredAnalyst);
@@ -348,6 +372,8 @@ export function VaneWorkspace({
           setInvestigationMode(session.investigationMode);
           setModeExplicit(true);
         }
+        // Restore Trace before/with other state so refresh never flashes Boot/standby.
+        setEngineTraceEvents(uniqueCachedTrace);
 
         setActiveInvestigationId(session.id);
         syncUrl(invId);
@@ -373,12 +399,20 @@ export function VaneWorkspace({
           .then((traces) => {
             if (loadedResumeIdRef.current !== invId) return;
             const merged = traces.flat();
-            if (merged.length) setEngineTraceEvents(merged);
+            const next = merged.length ? merged : uniqueCachedTrace;
+            if (next.length) {
+              setEngineTraceEvents(next);
+              patchInvestigationSessionTrace(session.id, next as Record<string, unknown>[]);
+              for (const id of bundleIds) {
+                patchInvestigationSessionTrace(id, next as Record<string, unknown>[]);
+              }
+            }
             setEnginePhase("complete");
             setEngineTraceOpen(true);
           })
           .catch(() => {
             if (loadedResumeIdRef.current !== invId) return;
+            if (uniqueCachedTrace.length) setEngineTraceEvents(uniqueCachedTrace);
             setEnginePhase("complete");
             setEngineTraceOpen(true);
           });
@@ -745,6 +779,7 @@ export function VaneWorkspace({
         // Pace Trace events onto the UI so the terminal types line-by-line even
         // when the backend finishes near-instantly.
         const pending: EngineTraceEvent[] = [];
+        const collected: EngineTraceEvent[] = [];
         let pumpActive = true;
         const pumpToken = { live: true };
         const pump = (async () => {
@@ -754,6 +789,7 @@ export function VaneWorkspace({
               await sleep(24);
               continue;
             }
+            collected.push(next);
             setEngineTraceEvents((prev) => [...prev, next]);
             await sleep(48);
           }
@@ -776,6 +812,18 @@ export function VaneWorkspace({
         }
         pumpActive = false;
         await pump;
+
+        // Cache Trace locally so a refresh still restores Engine + Trace.
+        if (result && collected.length) {
+          const cacheIds = [
+            result.investigation_id,
+            result.investigation_group_id,
+            ...result.investigations.map((item) => item.investigation_id),
+          ].filter(Boolean) as string[];
+          for (const id of new Set(cacheIds)) {
+            patchInvestigationSessionTrace(id, collected as Record<string, unknown>[]);
+          }
+        }
       } catch (streamErr) {
         // Fallback to classic analyze if streaming endpoint is unavailable.
         console.warn(`${LOG_PREFIX} Engine trace stream failed — falling back`, streamErr);
@@ -939,6 +987,28 @@ export function VaneWorkspace({
     return () => window.removeEventListener("vayne:new-chat", onNewChat);
   }, [router]);
 
+  const restoreTraceForId = useCallback((id: string) => {
+    const session = findSessionForInvestigation(id);
+    const cached = [
+      ...((session?.engineTraceEvents ?? []) as EngineTraceEvent[]),
+      ...(loadCachedEngineTrace(session?.id || id) as EngineTraceEvent[]),
+      ...(loadCachedEngineTrace(id) as EngineTraceEvent[]),
+    ];
+    if (cached.length) setEngineTraceEvents(cached);
+    void fetchEngineTrace(id).then((events) => {
+      if (loadedResumeIdRef.current !== id) return;
+      if (events.length) {
+        setEngineTraceEvents(events);
+        patchInvestigationSessionTrace(id, events as Record<string, unknown>[]);
+        if (session?.id && session.id !== id) {
+          patchInvestigationSessionTrace(session.id, events as Record<string, unknown>[]);
+        }
+      } else if (cached.length) {
+        setEngineTraceEvents(cached);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     const onOpenInvestigation = (event: Event) => {
       const id = String((event as CustomEvent<{ id?: string }>).detail?.id || "").trim();
@@ -947,10 +1017,7 @@ export function VaneWorkspace({
       if (loadedResumeIdRef.current === id) {
         setEnginePhase("complete");
         setEngineTraceOpen(true);
-        void fetchEngineTrace(id).then((events) => {
-          if (loadedResumeIdRef.current !== id) return;
-          if (events.length) setEngineTraceEvents(events);
-        });
+        restoreTraceForId(id);
         syncUrl(id);
         return;
       }
@@ -959,7 +1026,7 @@ export function VaneWorkspace({
     window.addEventListener(OPEN_INVESTIGATION_EVENT, onOpenInvestigation as EventListener);
     return () =>
       window.removeEventListener(OPEN_INVESTIGATION_EVENT, onOpenInvestigation as EventListener);
-  }, [switchToInvestigation, syncUrl]);
+  }, [restoreTraceForId, switchToInvestigation, syncUrl]);
 
   useEffect(() => {
     return () => {
@@ -1042,18 +1109,13 @@ export function VaneWorkspace({
       if (loadedResumeIdRef.current === id) {
         setEnginePhase("complete");
         setEngineTraceOpen(true);
-        if (engineTraceEvents.length === 0) {
-          void fetchEngineTrace(id).then((events) => {
-            if (loadedResumeIdRef.current !== id) return;
-            if (events.length) setEngineTraceEvents(events);
-          });
-        }
+        if (engineTraceEvents.length === 0) restoreTraceForId(id);
         syncUrl(id);
         return;
       }
       void switchToInvestigation(id);
     },
-    [engineTraceEvents.length, switchToInvestigation, syncUrl],
+    [engineTraceEvents.length, restoreTraceForId, switchToInvestigation, syncUrl],
   );
 
   const engineSourceLabels = useMemo(() => {
@@ -1165,9 +1227,7 @@ export function VaneWorkspace({
                             investigationIds[0] ||
                             (bundle ? bundle.detail.summary.id : null);
                           if (id && engineTraceEvents.length === 0) {
-                            void fetchEngineTrace(id).then((events) => {
-                              if (events.length) setEngineTraceEvents(events);
-                            });
+                            restoreTraceForId(id);
                           }
                           setEngineTraceOpen(true);
                         }}
@@ -1281,9 +1341,7 @@ export function VaneWorkspace({
                         investigationIds[0] ||
                         (bundle ? bundle.detail.summary.id : null);
                       if (id && engineTraceEvents.length === 0) {
-                        void fetchEngineTrace(id).then((events) => {
-                          if (events.length) setEngineTraceEvents(events);
-                        });
+                        restoreTraceForId(id);
                       }
                       setEngineTraceOpen(true);
                     }}

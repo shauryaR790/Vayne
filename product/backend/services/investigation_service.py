@@ -164,6 +164,10 @@ class InvestigationService:
 
                 export_dir = self.export_dir(inv.id)
                 self._replace_export_dir(work_dir, export_dir)
+                try:
+                    trace.persist(export_dir)
+                except OSError:
+                    logger.warning("Failed to persist engine trace for %s", inv.id)
 
                 self._clear_children(inv)
                 self._persist(inv, report, export_dir)
@@ -179,6 +183,10 @@ class InvestigationService:
                 except OSError:
                     shutil.copytree(work_dir, export_dir, dirs_exist_ok=True)
                 cleanup_dir = None
+                try:
+                    trace.persist(export_dir)
+                except OSError:
+                    logger.warning("Failed to persist engine trace for %s", inv_id)
 
                 now = _utcnow()
                 inv = InvestigationORM(

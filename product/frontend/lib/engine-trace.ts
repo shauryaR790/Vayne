@@ -97,7 +97,11 @@ export async function fetchEngineTrace(investigationId: string): Promise<EngineT
   });
   if (!res.ok) return [];
   const body = await res.json();
-  return Array.isArray(body) ? (body as EngineTraceEvent[]) : [];
+  if (Array.isArray(body)) return body as EngineTraceEvent[];
+  if (body && typeof body === "object" && Array.isArray((body as { events?: unknown }).events)) {
+    return (body as { events: EngineTraceEvent[] }).events;
+  }
+  return [];
 }
 
 export const STAGE_LABELS: Record<string, string> = {

@@ -363,9 +363,20 @@ export function EngineTraceLive({
     }
   }, [events.length]);
 
+  // Resume/refresh: dump the full Trace immediately (no typewriter replay).
+  useEffect(() => {
+    if (running) return;
+    if (events.length === 0) return;
+    if (visibleCount !== 0) return;
+    if (items.length === 0) return;
+    setVisibleCount(items.length);
+  }, [running, events.length, items.length, visibleCount]);
+
   // Line-by-line terminal reveal.
   useEffect(() => {
     if (visibleCount >= items.length) return;
+    // Resume path already jumped to full length above.
+    if (!running && visibleCount === 0 && items.length > 0) return;
 
     const remaining = items.length - visibleCount;
     const delay = running

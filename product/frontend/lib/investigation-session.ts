@@ -31,6 +31,8 @@ export interface InvestigationSession {
   inputDraft: string;
   analystInputDraft?: string;
   updatedAt: number;
+  /** Cached Engine Trace so refresh/resume does not depend only on the API file. */
+  engineTraceEvents?: Record<string, unknown>[];
   /** Engine snapshots are loaded from the API at render time; optional cache slot. */
   executiveSummary?: Record<string, unknown>;
   attackPaths?: Record<string, unknown>[];
@@ -79,17 +81,103 @@ export function loadInvestigationSession(sessionId: string): InvestigationSessio
   return index[sessionId] ?? null;
 }
 
+const TRACE_CACHE_PREFIX = "vayne-engine-trace-cache:";
+
 export function saveInvestigationSession(session: InvestigationSession) {
   const index = loadSessionIndex();
-  index[session.id] = { ...session, updatedAt: Date.now() };
+  const prev = index[session.id];
+  // Never drop a previously cached Engine Trace when a later persist omits it.
+  const engineTraceEvents =
+    session.engineTraceEvents?.length
+      ? session.engineTraceEvents
+      : prev?.engineTraceEvents;
+  // Keep the sessions index slim (no proof dump); full Trace lives in the dedicated cache key.
+  const sessionTrace = engineTraceEvents?.length
+    ? slimTraceForCache(engineTraceEvents)
+    : undefined;
+  index[session.id] = {
+    ...session,
+    ...(sessionTrace?.length ? { engineTraceEvents: sessionTrace } : {}),
+    updatedAt: Date.now(),
+  };
   persistSessionIndex(index);
   setActiveInvestigationId(session.id);
+  if (engineTraceEvents?.length) {
+    writeEngineTraceCache(session.id, engineTraceEvents);
+  }
+}
+
+function slimTraceForCache(events: Record<string, unknown>[]): Record<string, unknown>[] {
+  // Drop verbose proof dump lines first — Attention Queue + stage telemetry still restore.
+  return events.filter((ev) => !(ev.stage === "proof" && ev.event === "line"));
+}
+
+function writeEngineTraceCache(sessionId: string, events: Record<string, unknown>[]) {
+  if (typeof window === "undefined" || !sessionId || !events.length) return;
+  try {
+    window.localStorage.setItem(`${TRACE_CACHE_PREFIX}${sessionId}`, JSON.stringify(events));
+  } catch {
+    try {
+      window.localStorage.setItem(
+        `${TRACE_CACHE_PREFIX}${sessionId}`,
+        JSON.stringify(slimTraceForCache(events)),
+      );
+    } catch {
+      /* quota */
+    }
+  }
+}
+
+function removeEngineTraceCache(sessionId: string) {
+  if (typeof window === "undefined" || !sessionId) return;
+  window.localStorage.removeItem(`${TRACE_CACHE_PREFIX}${sessionId}`);
+}
+
+function clearAllEngineTraceCaches() {
+  if (typeof window === "undefined") return;
+  const keys: string[] = [];
+  for (let i = 0; i < window.localStorage.length; i += 1) {
+    const key = window.localStorage.key(i);
+    if (key?.startsWith(TRACE_CACHE_PREFIX)) keys.push(key);
+  }
+  for (const key of keys) window.localStorage.removeItem(key);
+}
+
+export function patchInvestigationSessionTrace(
+  sessionId: string,
+  events: Record<string, unknown>[],
+) {
+  if (!sessionId || !events.length) return;
+  writeEngineTraceCache(sessionId, events);
+  const index = loadSessionIndex();
+  const existing = index[sessionId];
+  if (!existing) return;
+  const sessionTrace = slimTraceForCache(events);
+  index[sessionId] = {
+    ...existing,
+    ...(sessionTrace.length ? { engineTraceEvents: sessionTrace } : {}),
+    updatedAt: Date.now(),
+  };
+  persistSessionIndex(index);
+}
+
+export function loadCachedEngineTrace(sessionId: string): Record<string, unknown>[] {
+  if (typeof window === "undefined" || !sessionId) return [];
+  try {
+    const raw = window.localStorage.getItem(`${TRACE_CACHE_PREFIX}${sessionId}`);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as Record<string, unknown>[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 export function deleteInvestigationSession(sessionId: string) {
   const index = loadSessionIndex();
   delete index[sessionId];
   persistSessionIndex(index);
+  removeEngineTraceCache(sessionId);
   if (getActiveInvestigationId() === sessionId) {
     setActiveInvestigationId(null);
   }
@@ -99,6 +187,7 @@ export function clearAllInvestigationSessions() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SESSIONS_INDEX_KEY);
   localStorage.removeItem(ACTIVE_INVESTIGATION_KEY);
+  clearAllEngineTraceCaches();
 }
 
 export function findSessionForInvestigation(investigationId: string): InvestigationSession | null {
@@ -162,6 +251,7 @@ export function buildInvestigationSessionFromBundle(
     inputDraft?: string;
     analystInputDraft?: string;
     sessionId?: string;
+    engineTraceEvents?: Record<string, unknown>[];
   },
 ): InvestigationSession {
   const meta = buildInvestigationCardMetaFromBundle(bundle);
@@ -191,6 +281,9 @@ export function buildInvestigationSessionFromBundle(
     inputDraft: options.inputDraft ?? "",
     analystInputDraft: options.analystInputDraft ?? "",
     updatedAt: Date.now(),
+    ...(options.engineTraceEvents?.length
+      ? { engineTraceEvents: options.engineTraceEvents }
+      : {}),
   };
 }
 
