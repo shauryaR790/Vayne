@@ -36,12 +36,30 @@ function SummaryField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function InvestigationSummary({ summary }: { summary: InvestigationSummaryCard }) {
+function InvestigationSummary({
+  summary,
+  onViewEngine,
+}: {
+  summary: InvestigationSummaryCard;
+  onViewEngine?: () => void;
+}) {
   return (
     <section className="border-b border-vx-border px-4 py-4 sm:px-6">
       <div className="shrink-0">
         <AsciiPageTitle text={summary.title} stackWords />
       </div>
+
+      {onViewEngine ? (
+        <div className="mt-5">
+          <button
+            type="button"
+            onClick={onViewEngine}
+            className="border border-white/20 px-4 py-2.5 text-[12px] uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/40 hover:text-white"
+          >
+            View Engine
+          </button>
+        </div>
+      ) : null}
 
       <div className="mt-6 max-w-[520px]">
         <SummaryField label="Host" value={summary.host} />
@@ -128,17 +146,19 @@ function ReasoningPipeline({ reasoning }: { reasoning: ReasoningChainStep[] }) {
 export function InvestigationBriefing({
   workbench,
   uploadedFileCount,
+  onViewEngine,
 }: {
   workbench: WorkbenchData;
   uploadedFileCount?: number;
   onOpenSection?: (sectionId: string) => void;
+  onViewEngine?: () => void;
 }) {
   void uploadedFileCount;
   const model = buildInvestigationConsoleModel(workbench);
 
   if (!model.summary) {
     return (
-      <div className="border-b border-vx-border bg-vx-section-body px-4 py-10 sm:px-6">
+      <div className="border-b border-vx-border bg-[#141414] px-4 py-10 sm:px-6">
         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45">
           Investigation Summary
         </p>
@@ -150,13 +170,24 @@ export function InvestigationBriefing({
             {model.emptyDetail}
           </p>
         ) : null}
+        {onViewEngine ? (
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={onViewEngine}
+              className="border border-white/20 px-4 py-2.5 text-[12px] uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/40 hover:text-white"
+            >
+              View Engine
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className="border-b border-vx-border bg-vx-section-body">
-      <InvestigationSummary summary={model.summary} />
+    <div className="border-b border-vx-border bg-[#141414]">
+      <InvestigationSummary summary={model.summary} onViewEngine={onViewEngine} />
 
       <ConsoleSection title="Why This Investigation Exists">
         <div className="max-w-[64ch] space-y-4">

@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
 export function InvestigationSourceTabs({
   investigations,
   defaultIndex = 0,
+  onViewEngine,
 }: {
   investigations: Array<{ id: string; sourceLabel?: string }>;
   defaultIndex?: number;
+  onViewEngine?: () => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(defaultIndex);
   const active = investigations[activeIndex] ?? investigations[0];
@@ -23,13 +25,14 @@ export function InvestigationSourceTabs({
       <InvestigationInlineReport
         investigationId={investigations[0].id}
         sourceLabel={investigations[0].sourceLabel}
+        onViewEngine={onViewEngine}
       />
     );
   }
 
   return (
     <div className="flex w-full min-w-0 flex-col">
-      <div className="sticky top-[49px] z-[9] border-b border-vx-border bg-vx-section-body/95 backdrop-blur-sm">
+      <div className="sticky top-[49px] z-[9] border-b border-vx-border bg-[#141414]/95 backdrop-blur-sm">
         <div
           className="flex gap-1 overflow-x-auto px-4 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="tablist"
@@ -67,6 +70,7 @@ export function InvestigationSourceTabs({
           investigationId={active.id}
           sourceLabel={active.sourceLabel}
           sequenceIndex={activeIndex + 1}
+          onViewEngine={onViewEngine}
         />
       ) : null}
     </div>
