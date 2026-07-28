@@ -26,10 +26,17 @@ export interface EvidenceTimelineStep {
   note?: string;
 }
 
+export interface ReasoningChainStep {
+  stage: "Evidence" | "Correlation" | "Business Context" | "Conclusion";
+  detail: string;
+  items: string[];
+}
+
 export interface InvestigationConsoleModel {
   summary: InvestigationSummaryCard | null;
   whyExists: string[];
   evidenceTimeline: EvidenceTimelineStep[];
+  reasoningGraph: ReasoningChainStep[];
   reasoningTitle: string;
   reasoningBullets: string[];
   decisionChangers: string[];
@@ -393,6 +400,74 @@ function buildChecklist(item: PrioritizedInvestigation): string[] {
   ];
 }
 
+function buildReasoningGraph(
+  item: PrioritizedInvestigation,
+  finding: WorkbenchConfirmedFinding | undefined,
+  workbench: WorkbenchData,
+  raw?: WorkbenchPriorityItem,
+): ReasoningChainStep[] {
+  const sources = sourceCount(item, raw);
+  const exploit = hasExploitPath(workbench, item);
+  const host = item.affectedAssets[0] || finding?.host || "target";
+  const files =
+    workbench.summary_panel?.files_uploaded ??
+    workbench.executive_metrics?.files ??
+    workbench.totals.files ??
+    workbench.evidence_sources.length;
+  const scanners = Math.max(workbench.evidence_sources.length, sources, 1);
+  const duplicates =
+    workbench.summary_panel?.duplicate_findings_removed ??
+    workbench.executive_metrics?.duplicates_removed ??
+    0;
+  const crossMatches =
+    workbench.executive_metrics?.cross_source_matches ??
+    workbench.totals.cross_source_matches ??
+    0;
+
+  return [
+    {
+      stage: "Evidence",
+      detail: "Scanner observations retained for this subject",
+      items: [
+        `${files} report${files === 1 ? "" : "s"} reviewed`,
+        cleanLine(finding?.title || item.title) || `Observation on ${host}`,
+        `${scanners} scanner type${scanners === 1 ? "" : "s"} involved`,
+      ].filter(Boolean),
+    },
+    {
+      stage: "Correlation",
+      detail: "Cross-tool agreement evaluated for this investigation",
+      items: [
+        sources > 1
+          ? `${sources} sources agree on the same subject`
+          : "No supporting findings from other scanners",
+        `${Number(duplicates).toLocaleString()} duplicate observation${Number(duplicates) === 1 ? "" : "s"} merged`,
+        `${crossMatches} cross-source corroboration match${crossMatches === 1 ? "" : "es"}`,
+      ],
+    },
+    {
+      stage: "Business Context",
+      detail: "Priority ranked by impact — not scanner severity alone",
+      items: [
+        `Business risk: ${item.tier}`,
+        statusLabel(item.claimStatus),
+        exploit
+          ? "Attack-path evidence raises urgency"
+          : "No exploit evidence available",
+        ...(item.priorityReasons[0] ? [cleanLine(item.priorityReasons[0])].filter(Boolean) : []),
+      ].filter(Boolean) as string[],
+    },
+    {
+      stage: "Conclusion",
+      detail: "Start with this investigation before expanding optional detail",
+      items: [
+        twoWordTitle(item.title, item.tier),
+        cleanLine(item.immediateAction) || "Validate finding manually",
+      ],
+    },
+  ];
+}
+
 export function buildInvestigationConsoleModel(
   workbench: WorkbenchData,
 ): InvestigationConsoleModel {
@@ -404,6 +479,7 @@ export function buildInvestigationConsoleModel(
       summary: null,
       whyExists: [],
       evidenceTimeline: [],
+      reasoningGraph: [],
       reasoningTitle: "Investigation Reasoning",
       reasoningBullets: [],
       decisionChangers: [],
@@ -425,6 +501,7 @@ export function buildInvestigationConsoleModel(
     summary: buildSummary(startHere, finding),
     whyExists: buildWhyExists(startHere, finding, workbench, raw),
     evidenceTimeline: buildEvidenceTimeline(startHere, finding, workbench, raw),
+    reasoningGraph: buildReasoningGraph(startHere, finding, workbench, raw),
     reasoningTitle: reasoning.title,
     reasoningBullets: reasoning.bullets,
     decisionChangers: buildDecisionChangers(startHere, workbench),

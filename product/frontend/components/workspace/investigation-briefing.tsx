@@ -5,6 +5,7 @@ import {
   buildInvestigationConsoleModel,
   type EvidenceTimelineStep,
   type InvestigationSummaryCard,
+  type ReasoningChainStep,
 } from "@/lib/investigation-briefing";
 import type { WorkbenchData } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,39 @@ function EvidenceTimeline({ steps }: { steps: EvidenceTimelineStep[] }) {
   );
 }
 
+function ReasoningPipeline({ reasoning }: { reasoning: ReasoningChainStep[] }) {
+  if (!reasoning.length) return null;
+  return (
+    <div className="mt-1 space-y-0">
+      {reasoning.map((step, index) => (
+        <div key={step.stage} className="relative flex gap-4 pb-6 last:pb-0">
+          {index < reasoning.length - 1 ? (
+            <span
+              className="absolute left-[11px] top-7 h-[calc(100%-12px)] w-px bg-white/15"
+              aria-hidden
+            />
+          ) : null}
+          <span className="relative z-[1] mt-0.5 flex size-6 shrink-0 items-center justify-center border border-white/25 bg-vx-app text-[10px] font-bold text-white/70">
+            {index + 1}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-white">{step.stage}</p>
+            <p className="mt-1 text-[13px] text-white/55">{step.detail}</p>
+            <ul className="mt-2 space-y-1">
+              {step.items.map((item) => (
+                <li key={item} className="flex gap-2 text-[13px] leading-relaxed text-white/80">
+                  <span className="mt-2 size-1 shrink-0 rounded-full bg-white/40" aria-hidden />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function InvestigationBriefing({
   workbench,
   uploadedFileCount,
@@ -138,18 +172,8 @@ export function InvestigationBriefing({
         <EvidenceTimeline steps={model.evidenceTimeline} />
       </ConsoleSection>
 
-      <ConsoleSection title="Investigation Reasoning">
-        <p className="text-[15px] font-medium text-white">{model.reasoningTitle}</p>
-        <ul className="mt-4 max-w-[64ch] space-y-3">
-          {model.reasoningBullets.map((bullet) => (
-            <li key={bullet} className="flex gap-3 text-[14px] leading-relaxed text-white/80">
-              <span className="mt-0.5 shrink-0 font-mono text-white/55" aria-hidden>
-                ✓
-              </span>
-              <span>{bullet}</span>
-            </li>
-          ))}
-        </ul>
+      <ConsoleSection title="Reasoning">
+        <ReasoningPipeline reasoning={model.reasoningGraph} />
       </ConsoleSection>
 
       <ConsoleSection title="What Would Change This Decision">
