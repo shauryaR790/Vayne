@@ -47,7 +47,7 @@ function InvestigationSummary({
   return (
     <section className="border-b border-vx-border px-4 py-4 sm:px-6">
       <div className="shrink-0">
-        <AsciiPageTitle text={summary.title} stackWords />
+        <AsciiPageTitle text="ENGINE REPORT" stackWords />
       </div>
 
       <div className="mt-6 max-w-[520px] font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
