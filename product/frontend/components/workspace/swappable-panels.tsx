@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import {
+  DEFAULT_WORKSPACE_PANEL_ORDER,
   loadWorkspacePanelOrder,
   panelDragMime,
   panelGridTemplate,
@@ -19,6 +20,7 @@ import {
   type WorkspacePanelId,
 } from "@/lib/workspace-panel-order";
 import { cn } from "@/lib/utils";
+
 type PanelOrderContextValue = {
   order: WorkspacePanelId[];
   swap: (a: WorkspacePanelId, b: WorkspacePanelId) => void;
@@ -29,12 +31,22 @@ type PanelOrderContextValue = {
 const PanelOrderContext = createContext<PanelOrderContextValue | null>(null);
 
 export function WorkspacePanelOrderProvider({ children }: { children: ReactNode }) {
-  const [order, setOrder] = useState<WorkspacePanelId[]>(() => loadWorkspacePanelOrder());
+  // Start with default for SSR/hydration, then restore from localStorage once
+  // mounted — otherwise the first client effect would overwrite the user's
+  // saved order with the SSR default when leaving docs and returning home.
+  const [order, setOrder] = useState<WorkspacePanelId[]>([...DEFAULT_WORKSPACE_PANEL_ORDER]);
+  const [ready, setReady] = useState(false);
   const [dragOverId, setDragOverId] = useState<WorkspacePanelId | null>(null);
 
   useEffect(() => {
+    setOrder(loadWorkspacePanelOrder());
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
     saveWorkspacePanelOrder(order);
-  }, [order]);
+  }, [order, ready]);
 
   const swap = useCallback((a: WorkspacePanelId, b: WorkspacePanelId) => {
     setOrder((prev) => swapWorkspacePanels(prev, a, b));
