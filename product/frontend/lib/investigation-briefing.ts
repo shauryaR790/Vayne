@@ -119,6 +119,32 @@ function hasExploitPath(workbench: WorkbenchData, item: PrioritizedInvestigation
   );
 }
 
+function twoWordTitle(title: string, tier: string): string {
+  const stop = new Set([
+    "a",
+    "an",
+    "and",
+    "for",
+    "from",
+    "in",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "with",
+  ]);
+  const words = title
+    .replace(/[^a-zA-Z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0 && !stop.has(w.toLowerCase()));
+
+  if (words.length >= 2) return `${words[0]} ${words[1]}`.toUpperCase();
+  if (words.length === 1) return `${words[0]} RISK`.toUpperCase();
+  return `${tier} RISK`.toUpperCase();
+}
+
 function buildSummary(
   item: PrioritizedInvestigation,
   finding: WorkbenchConfirmedFinding | undefined,
@@ -130,7 +156,7 @@ function buildSummary(
     "Unknown host";
 
   return {
-    title: item.title,
+    title: twoWordTitle(item.title, item.tier),
     host,
     status: statusLabel(item.claimStatus),
     confidence: Number.isFinite(item.confidence) ? Math.round(item.confidence) : null,

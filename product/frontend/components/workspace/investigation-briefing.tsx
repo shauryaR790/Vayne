@@ -1,5 +1,6 @@
 "use client";
 
+import { AsciiPageTitle } from "@/components/brand/vayne-ascii-title";
 import {
   buildInvestigationConsoleModel,
   type EvidenceTimelineStep,
@@ -36,13 +37,10 @@ function SummaryField({ label, value }: { label: string; value: string }) {
 
 function InvestigationSummary({ summary }: { summary: InvestigationSummaryCard }) {
   return (
-    <section className="border-b border-vx-border px-4 py-8 sm:px-6">
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45">
-        Investigation Summary
-      </p>
-      <h1 className="mt-4 max-w-[40ch] text-[22px] font-semibold leading-snug tracking-tight text-white sm:text-[26px]">
-        {summary.title}
-      </h1>
+    <section className="border-b border-vx-border px-4 py-4 sm:px-6">
+      <div className="shrink-0">
+        <AsciiPageTitle text={summary.title} stackWords />
+      </div>
 
       <div className="mt-6 max-w-[520px]">
         <SummaryField label="Host" value={summary.host} />
@@ -55,7 +53,7 @@ function InvestigationSummary({ summary }: { summary: InvestigationSummaryCard }
         <SummaryField label="Estimated Review" value={summary.estimatedReview} />
       </div>
 
-      <div className="mt-8 max-w-[64ch]">
+      <div className="mt-8 max-w-[64ch] pb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/45">
           Recommended Action
         </p>
