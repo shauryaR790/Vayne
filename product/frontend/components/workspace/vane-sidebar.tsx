@@ -69,7 +69,7 @@ function NavLink({
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2.5 text-[16px] transition-colors",
+        "flex items-center gap-3 rounded-md px-3 py-1.5 text-[16px] transition-colors",
         active
           ? "bg-vx-elevated text-white"
           : "text-white hover:bg-vx-panel hover:text-white",
@@ -191,8 +191,8 @@ function SidebarPanel({
 
       <SidebarDivider />
 
-      <nav className="shrink-0 px-3 py-4">
-        <div className="flex flex-col gap-1">
+      <nav className="shrink-0 px-3 py-2.5">
+        <div className="flex flex-col gap-0.5">
           {ANALYST_RESOURCE_NAV.map((item) => (
             <NavLink
               key={item.id}
