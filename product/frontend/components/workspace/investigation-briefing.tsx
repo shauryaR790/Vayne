@@ -30,9 +30,9 @@ function ConsoleSection({
 
 function SummaryField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-6 border-b border-white/[0.06] py-2.5 last:border-b-0">
-      <span className="text-[12px] uppercase tracking-[0.1em] text-white/45">{label}</span>
-      <span className="max-w-[65%] text-right font-mono text-[13px] text-white/90">{value}</span>
+    <div className="flex justify-between gap-6 border-b border-white/[0.06] py-1.5">
+      <span className="text-white/45">{label}</span>
+      <span className="tabular-nums text-white/85">{value}</span>
     </div>
   );
 }
@@ -50,7 +50,7 @@ function InvestigationSummary({
         <AsciiPageTitle text={summary.title} stackWords />
       </div>
 
-      <div className="mt-6 max-w-[520px]">
+      <div className="mt-6 max-w-[520px] font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
         <SummaryField label="Host" value={summary.host} />
         <SummaryField label="Status" value={summary.status} />
         <SummaryField
