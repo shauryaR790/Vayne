@@ -31,6 +31,7 @@ import { sleep } from "@/lib/text-reveal";
 import {
   clearConversationSession,
   OPEN_INVESTIGATION_EVENT,
+  materializeAnalystMessages,
   saveConversationSession,
   serializeMessages,
   type StoredChatMessage,
@@ -308,6 +309,12 @@ export function VaneWorkspace({
       if (analyzingRef.current) return;
       if (switchingRef.current === invId) return;
       switchingRef.current = invId;
+
+      // Flush the active session chat before tear-down so history reopen keeps Ask VAYNE.
+      if (!persistSkipRef.current) {
+        persist();
+      }
+
       loadedResumeIdRef.current = invId;
 
       streamAbortRef.current?.abort();
@@ -346,7 +353,19 @@ export function VaneWorkspace({
           investigationGroupId: session.investigationGroupId ?? null,
           sourceLabels,
         });
-        const restoredAnalyst = session.analystMessages ?? [];
+        const restoredAnalyst = materializeAnalystMessages(session.analystMessages ?? []);
+
+        setMessages(engineMessages);
+        setAnalystMessages(restoredAnalyst);
+        setAnalystInput(session.analystInputDraft ?? "");
+        analystScrollTopRef.current = session.analystScrollTop ?? 0;
+        setInvestigationGroupId(session.investigationGroupId ?? null);
+        setInvestigationIds(bundleIds);
+        if (session.investigationMode) {
+          setInvestigationMode(session.investigationMode);
+          setModeExplicit(true);
+        }
+        // Restore Trace before/with other state so refresh never flashes Boot/standby.
         const cachedTrace = [
           ...((session.engineTraceEvents ?? []) as EngineTraceEvent[]),
           ...(loadCachedEngineTrace(session.id) as EngineTraceEvent[]),
@@ -361,18 +380,6 @@ export function VaneWorkspace({
           seenTrace.add(key);
           return true;
         });
-
-        setMessages(engineMessages);
-        setAnalystMessages(restoredAnalyst);
-        setAnalystInput(session.analystInputDraft ?? "");
-        analystScrollTopRef.current = session.analystScrollTop ?? 0;
-        setInvestigationGroupId(session.investigationGroupId ?? null);
-        setInvestigationIds(bundleIds);
-        if (session.investigationMode) {
-          setInvestigationMode(session.investigationMode);
-          setModeExplicit(true);
-        }
-        // Restore Trace before/with other state so refresh never flashes Boot/standby.
         setEngineTraceEvents(uniqueCachedTrace);
 
         setActiveInvestigationId(session.id);
@@ -430,12 +437,13 @@ export function VaneWorkspace({
                 ),
               );
             }
-            if (!restoredAnalyst.length) {
-              void playAnalystBriefing(
-                buildAnalystBriefingMessages(loadedBundles, {
-                  sourceLabels: session.files.map((f) => f.name),
-                }),
-              );
+            // Never re-stream Ask VAYNE on history navigation — chat should already be there.
+            // If somehow empty (legacy session), materialize the briefing instantly with no typewriter.
+            if (!restoredAnalyst.length && loadedBundles.length) {
+              const briefing = buildAnalystBriefingMessages(loadedBundles, {
+                sourceLabels: session.files.map((f) => f.name),
+              });
+              setAnalystMessages(materializeAnalystMessages(briefing));
             }
           })
           .catch(() => {
@@ -454,7 +462,7 @@ export function VaneWorkspace({
         if (switchingRef.current === invId) switchingRef.current = null;
       }
     },
-    [scrollToBottom, syncUrl, playAnalystBriefing],
+    [persist, scrollToBottom, syncUrl],
   );
 
   useEffect(() => {

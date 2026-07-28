@@ -92,7 +92,18 @@ export function serializeMessages(
   messages: Array<StoredChatMessage & { streaming?: boolean }>,
 ): StoredChatMessage[] {
   return messages
-    .filter((message) => !message.streaming)
+    .filter((message) => {
+      // Keep in-flight streams — dropping them made history reopen re-type the briefing.
+      if (message.role === "user") return true;
+      return Boolean(
+        message.content?.trim() ||
+          message.streamSegments?.length ||
+          message.fileInsights?.length ||
+          message.attachments?.length ||
+          message.kind === "investigation" ||
+          message.kind === "multi-investigation",
+      );
+    })
     .map(
       ({
         id,
@@ -118,4 +129,35 @@ export function serializeMessages(
         ...(streamSegments?.length ? { streamSegments } : {}),
       }),
     );
+}
+
+/** Restore Ask VAYNE history fully revealed — no typewriter replay. */
+export function materializeAnalystMessages(
+  messages: StoredChatMessage[],
+): Array<
+  StoredChatMessage & {
+    streaming: false;
+    revealedSegments?: number;
+    revealedFileInsights?: number;
+    segmentTexts?: string[];
+  }
+> {
+  return messages.map((message) => {
+    const segments = message.streamSegments;
+    return {
+      ...message,
+      streaming: false as const,
+      ...(segments?.length
+        ? {
+            revealedSegments: segments.length,
+            segmentTexts: segments.map((segment) =>
+              segment.type === "text" ? segment.content : "",
+            ),
+          }
+        : {}),
+      ...(message.fileInsights?.length
+        ? { revealedFileInsights: message.fileInsights.length }
+        : {}),
+    };
+  });
 }
