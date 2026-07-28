@@ -13,10 +13,12 @@ import { resetConversationToHome, openInvestigationInEngine } from "@/lib/conver
 import {
   HISTORY_MAX,
   RECENT_INVESTIGATIONS_UPDATED,
+  clearRecentInvestigations,
   loadInvestigationHistory,
   syncRecentInvestigationsFromApi,
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
+import { clearAllInvestigationSessions } from "@/lib/investigation-session";
 import { InvestigationHistoryList } from "@/components/workspace/investigation-history-rows";
 import { getAuthProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -144,6 +146,20 @@ function SidebarPanel({
     router.push(`/?id=${id}`);
   };
 
+  const clearHistory = () => {
+    if (!items.length) return;
+    const confirmed = window.confirm(
+      "Clear all investigation history from this browser? This removes the sidebar list and local sessions. Server-side investigation data is not deleted.",
+    );
+    if (!confirmed) return;
+    clearRecentInvestigations();
+    clearAllInvestigationSessions();
+    resetConversationToHome();
+    setItems([]);
+    onNavigate?.();
+    router.replace("/");
+  };
+
   return (
     <>
       <div className="shrink-0 px-3 pb-3 pt-4">
@@ -191,16 +207,29 @@ function SidebarPanel({
       <SidebarDivider />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-3">
-        <p className="mb-2 shrink-0 px-3 text-[13px] font-medium text-white">
-          Investigation History
-        </p>
+        <div className="mb-2 flex shrink-0 items-center justify-between gap-2 px-3">
+          <p className="text-[13px] font-medium text-white">Investigation History</p>
+          {items.length > 0 ? (
+            <button
+              type="button"
+              onClick={clearHistory}
+              className="text-[11px] uppercase tracking-[0.08em] text-white/45 transition-colors hover:text-white/80"
+            >
+              Clear all
+            </button>
+          ) : null}
+        </div>
         <div className="vx-no-scrollbar min-h-0 flex-1 overflow-y-auto">
-          <InvestigationHistoryList
-            items={items}
-            activeId={activeId}
-            onSelect={openInvestigation}
-            showTime="always"
-          />
+          {items.length > 0 ? (
+            <InvestigationHistoryList
+              items={items}
+              activeId={activeId}
+              onSelect={openInvestigation}
+              showTime="always"
+            />
+          ) : (
+            <p className="px-3 py-2 text-[13px] text-white/45">No investigation history</p>
+          )}
         </div>
       </div>
 

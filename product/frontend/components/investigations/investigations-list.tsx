@@ -10,10 +10,14 @@ import { MotionGroup } from "@/components/dashboard/motion";
 import {
   HISTORY_MAX,
   RECENT_INVESTIGATIONS_UPDATED,
+  clearRecentInvestigations,
   loadInvestigationHistory,
   syncRecentInvestigationsFromApi,
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
+import { clearAllInvestigationSessions } from "@/lib/investigation-session";
+import { resetConversationToHome } from "@/lib/conversation-session";
+import { useRouter } from "next/navigation";
 
 function formatWhen(iso: string): string {
   try {
@@ -29,6 +33,7 @@ function formatWhen(iso: string): string {
 }
 
 export function InvestigationsList() {
+  const router = useRouter();
   const [items, setItems] = useState<RecentInvestigation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,12 +55,36 @@ export function InvestigationsList() {
     return () => window.removeEventListener(RECENT_INVESTIGATIONS_UPDATED, onUpdate);
   }, [refresh]);
 
+  const clearHistory = () => {
+    if (!items.length) return;
+    const confirmed = window.confirm(
+      "Clear all investigation history from this browser? This removes the list and local sessions. Server-side investigation data is not deleted.",
+    );
+    if (!confirmed) return;
+    clearRecentInvestigations();
+    clearAllInvestigationSessions();
+    resetConversationToHome();
+    setItems([]);
+    router.replace("/");
+  };
+
   return (
     <div className="mx-auto w-full max-w-[920px] px-5 py-8 lg:px-8">
-      <PageHeader
-        title="History"
-        subtitle="Your investigations in this browser — nothing from other users"
-      />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <PageHeader
+          title="History"
+          subtitle="Your investigations in this browser — nothing from other users"
+        />
+        {items.length > 0 ? (
+          <button
+            type="button"
+            onClick={clearHistory}
+            className="mb-1 border border-white/15 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-white/60 transition-colors hover:border-white/35 hover:text-white"
+          >
+            Clear all history
+          </button>
+        ) : null}
+      </div>
 
       {loading && items.length ? (
         <p className="text-[13px] text-white/45">Refreshing…</p>

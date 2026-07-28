@@ -21,11 +21,13 @@ import { openInvestigationInEngine, resetConversationToHome } from "@/lib/conver
 import {
   RECENT_INVESTIGATIONS_UPDATED,
   SIDEBAR_RECENTS_MAX,
+  clearRecentInvestigations,
   formatHistoryLabel,
   loadRecentInvestigations,
   syncRecentInvestigationsFromApi,
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
+import { clearAllInvestigationSessions } from "@/lib/investigation-session";
 import { DeveloperMenu } from "@/components/dev/developer-menu";
 import { WorkspaceHomeLink } from "@/components/workspace/workspace-home-link";
 import { cn } from "@/lib/utils";
@@ -262,6 +264,18 @@ export function Sidebar({
     router.push(`/?id=${id}`);
   };
 
+  const clearHistory = () => {
+    const confirmed = window.confirm(
+      "Clear all investigation history from this browser? This removes the sidebar list and local sessions. Server-side investigation data is not deleted.",
+    );
+    if (!confirmed) return;
+    clearRecentInvestigations();
+    clearAllInvestigationSessions();
+    resetConversationToHome();
+    onMobileClose?.();
+    router.replace("/");
+  };
+
   const renderPanel = (mobile = false) => (
     <>
       <div className="shrink-0 px-3 pb-2 pt-4">
@@ -326,9 +340,18 @@ export function Sidebar({
       <SidebarDivider />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 py-2">
-        <p className="mb-1.5 shrink-0 px-2.5 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70">
-          Recent investigations
-        </p>
+        <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2 px-2.5">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70">
+            Recent investigations
+          </p>
+          <button
+            type="button"
+            onClick={clearHistory}
+            className="text-[10px] uppercase tracking-[0.08em] text-white/40 transition-colors hover:text-white/75"
+          >
+            Clear all
+          </button>
+        </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <SidebarRecents
             activeId={activeId}
