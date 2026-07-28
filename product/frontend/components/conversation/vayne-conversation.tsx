@@ -1228,7 +1228,13 @@ export function VaneWorkspace({
                         analystOnline={analystOnline}
                         error={error}
                         files={files}
-                        enginePhase={engineTraceOpen ? "complete" : enginePhase}
+                        enginePhase={
+                          engineTraceOpen
+                            ? enginePhase === "running"
+                              ? "running"
+                              : "complete"
+                            : enginePhase
+                        }
                         engineTraceEvents={engineTraceEvents}
                         onViewEngineTrace={() => {
                           const id =

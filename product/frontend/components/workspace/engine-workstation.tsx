@@ -284,6 +284,21 @@ export function EngineWorkstation({
                 label="Execution Time"
                 value={phase.elapsedS != null ? `${phase.elapsedS.toFixed(2)} s` : "—"}
               />
+
+              {!running && onViewFullReport ? (
+                <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={onViewFullReport}
+                    className={cn(
+                      "border border-white/20 px-4 py-2.5 text-[12px] uppercase tracking-[0.14em] text-white/80",
+                      "transition-colors hover:border-white/40 hover:text-white",
+                    )}
+                  >
+                    View full report
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-4">
@@ -322,18 +337,6 @@ export function EngineWorkstation({
           </div>
         </div>
       </div>
-
-      {!running && onViewFullReport ? (
-        <div className="flex shrink-0 justify-end border-t border-white/[0.08] px-4 py-2">
-          <button
-            type="button"
-            onClick={onViewFullReport}
-            className="font-mono text-[13px] text-white/70 hover:text-white"
-          >
-            View full report
-          </button>
-        </div>
-      ) : null}
     </section>
   );
 }
