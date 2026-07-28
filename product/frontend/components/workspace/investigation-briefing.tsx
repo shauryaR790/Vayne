@@ -1,15 +1,14 @@
 "use client";
 
-import { PriorityInvestigationRow } from "@/components/workspace/executive-investigation-overview";
 import {
-  buildInvestigationBriefingModel,
-  panelMetricsFromSummary,
-  type InvestigationBriefingModel,
+  buildInvestigationConsoleModel,
+  type EvidenceTimelineStep,
+  type InvestigationSummaryCard,
 } from "@/lib/investigation-briefing";
 import type { WorkbenchData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-function BriefingSection({
+function ConsoleSection({
   title,
   children,
   className,
@@ -19,256 +18,170 @@ function BriefingSection({
   className?: string;
 }) {
   return (
-    <section className={cn("border-b border-vx-border px-4 py-6 sm:px-6 sm:py-8", className)}>
-      <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">{title}</h2>
-      {children}
+    <section className={cn("border-b border-vx-border px-4 py-8 sm:px-6", className)}>
+      <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45">{title}</h2>
+      <div className="mt-5">{children}</div>
     </section>
   );
 }
 
-function BriefingMetricsStrip({
-  metrics,
-}: {
-  metrics: Array<{ label: string; value: string; sub?: string }>;
-}) {
+function SummaryField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-b border-vx-border px-4 py-5 sm:px-6">
-      <div className="flex max-w-[520px] flex-col gap-3">
-        {metrics.map((row) => (
-          <div key={row.label} className="flex items-baseline justify-between gap-6">
-            <p className="min-w-0 text-[12px] font-medium uppercase tracking-[0.1em] text-white/50">
-              {row.label}
-            </p>
-            <p className="shrink-0 font-mono text-[18px] font-semibold tabular-nums leading-none tracking-tight text-white sm:text-[20px]">
-              {row.value}
-            </p>
-          </div>
-        ))}
-      </div>
+    <div className="flex items-baseline justify-between gap-6 border-b border-white/[0.06] py-2.5 last:border-b-0">
+      <span className="text-[12px] uppercase tracking-[0.1em] text-white/45">{label}</span>
+      <span className="max-w-[65%] text-right font-mono text-[13px] text-white/90">{value}</span>
     </div>
   );
 }
 
-function EvidenceChain({ items }: { items: string[] }) {
-  if (!items.length) return null;
+function InvestigationSummary({ summary }: { summary: InvestigationSummaryCard }) {
   return (
-    <ol className="mt-4 space-y-2">
-      {items.map((item, index) => (
-        <li key={`${item}-${index}`} className="flex gap-3 text-[13px] leading-relaxed text-white/80">
-          <span className="shrink-0 font-mono text-[11px] font-bold text-white/35">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          <span>{item}</span>
+    <section className="border-b border-vx-border px-4 py-8 sm:px-6">
+      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45">
+        Investigation Summary
+      </p>
+      <h1 className="mt-4 max-w-[40ch] text-[22px] font-semibold leading-snug tracking-tight text-white sm:text-[26px]">
+        {summary.title}
+      </h1>
+
+      <div className="mt-6 max-w-[520px]">
+        <SummaryField label="Host" value={summary.host} />
+        <SummaryField label="Status" value={summary.status} />
+        <SummaryField
+          label="Confidence"
+          value={summary.confidence != null ? `${summary.confidence}%` : "—"}
+        />
+        <SummaryField label="Business Risk" value={summary.businessRisk} />
+        <SummaryField label="Estimated Review" value={summary.estimatedReview} />
+      </div>
+
+      <div className="mt-8 max-w-[64ch]">
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/45">
+          Recommended Action
+        </p>
+        <p className="mt-3 text-[15px] leading-relaxed text-white/90">{summary.recommendedAction}</p>
+      </div>
+    </section>
+  );
+}
+
+function EvidenceTimeline({ steps }: { steps: EvidenceTimelineStep[] }) {
+  return (
+    <ol className="max-w-[64ch] space-y-0">
+      {steps.map((step, index) => (
+        <li key={`${step.actor}-${index}`} className="relative">
+          <div className="flex gap-4">
+            <div className="flex w-6 shrink-0 flex-col items-center">
+              <span className="font-mono text-[12px] text-white/40">{index + 1}.</span>
+              {index < steps.length - 1 ? (
+                <span className="mt-2 flex-1 text-[12px] leading-none text-white/25" aria-hidden>
+                  ↓
+                </span>
+              ) : null}
+            </div>
+            <div className={cn("min-w-0 flex-1", index < steps.length - 1 ? "pb-6" : "pb-0")}>
+              <p className="text-[13px] font-semibold text-white">{step.actor}</p>
+              <p className="mt-1.5 text-[14px] leading-relaxed text-white/80">{step.detail}</p>
+              {step.note ? (
+                <p className="mt-1 text-[12px] text-white/45">{step.note}</p>
+              ) : null}
+            </div>
+          </div>
         </li>
       ))}
     </ol>
   );
 }
 
-function ReasoningPipeline({ reasoning }: { reasoning: InvestigationBriefingModel["reasoning"] }) {
-  return (
-    <div className="mt-5 space-y-0">
-      {reasoning.map((step, index) => (
-        <div key={step.stage} className="relative flex gap-4 pb-6 last:pb-0">
-          {index < reasoning.length - 1 ? (
-            <span
-              className="absolute left-[11px] top-7 h-[calc(100%-12px)] w-px bg-white/15"
-              aria-hidden
-            />
-          ) : null}
-          <span className="relative z-[1] mt-0.5 flex size-6 shrink-0 items-center justify-center border border-white/25 bg-vx-app text-[10px] font-bold text-white/70">
-            {index + 1}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-white">{step.stage}</p>
-            <p className="mt-1 text-[13px] text-white/55">{step.detail}</p>
-            <ul className="mt-2 space-y-1">
-              {step.items.map((item) => (
-                <li key={item} className="flex gap-2 text-[13px] leading-relaxed text-white/80">
-                  <span className="mt-2 size-1 shrink-0 rounded-full bg-white/40" aria-hidden />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function IgnoredRow({ label, value }: { label: string; value: number }) {
-  if (!value) return null;
-  return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-vx-border py-3 last:border-b-0">
-      <span className="text-[13px] text-white/75">{label}</span>
-      <span className="font-mono text-[13px] text-white/90">{value.toLocaleString()}</span>
-    </div>
-  );
-}
-
 export function InvestigationBriefing({
   workbench,
   uploadedFileCount,
-  onOpenSection,
 }: {
   workbench: WorkbenchData;
   uploadedFileCount?: number;
   onOpenSection?: (sectionId: string) => void;
 }) {
-  const briefing = buildInvestigationBriefingModel(workbench, uploadedFileCount);
-  const panel = workbench.summary_panel;
-  const metrics = panel ? panelMetricsFromSummary(panel) : null;
+  void uploadedFileCount;
+  const model = buildInvestigationConsoleModel(workbench);
+
+  if (!model.summary) {
+    return (
+      <div className="border-b border-vx-border bg-vx-section-body px-4 py-10 sm:px-6">
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45">
+          Investigation Summary
+        </p>
+        <p className="mt-4 max-w-[64ch] text-[16px] leading-relaxed text-white/85">
+          {model.emptyHeadline}
+        </p>
+        {model.emptyDetail ? (
+          <p className="mt-3 max-w-[64ch] text-[13px] leading-relaxed text-white/50">
+            {model.emptyDetail}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="border-b border-vx-border bg-vx-section-body">
-      <div className="border-b border-vx-border px-4 py-5 sm:px-6">
-        <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-white/50">
-          Investigation Brief
-        </p>
-        <p className="mt-3 max-w-[72ch] text-[16px] leading-relaxed text-white">
-          {briefing.metrics.workloadHeadline}
-        </p>
-        <p className="mt-2 max-w-[72ch] text-[13px] leading-relaxed text-white/55">
-          {briefing.metrics.reviewHeadline}
-        </p>
-      </div>
+      <InvestigationSummary summary={model.summary} />
 
-      {metrics ? <BriefingMetricsStrip metrics={metrics} /> : null}
-
-      <BriefingSection title="Start Here">
-        {briefing.startHere ? (
-          <div className="mt-2">
-            <PriorityInvestigationRow
-              item={briefing.startHere}
-              hideConfidence
-              onOpen={onOpenSection}
-            />
-            {briefing.priorityFileGroups[0]?.files.length ? (
-              <div className="mt-6 border-t border-vx-border pt-6">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/45">
-                  Exact evidence files
-                </p>
-                <div className="mt-3 divide-y divide-vx-border border border-vx-border">
-                  {briefing.priorityFileGroups[0].files.map((file) => (
-                    <div
-                      key={`start-${file.filename}-${file.scanner}`}
-                      className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3"
-                    >
-                      <span className="font-mono text-[13px] text-white">{file.filename}</span>
-                      <span className="text-[11px] uppercase tracking-wide text-white/45">
-                        {file.scanner}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            {briefing.startHere.evidenceItems.length ? (
-              <div className="mt-6 border-t border-vx-border pt-6">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/45">
-                  Evidence chain
-                </p>
-                <EvidenceChain items={briefing.startHere.evidenceItems} />
-              </div>
-            ) : null}
-            {briefing.startHere.analystTasks.length ? (
-              <div className="mt-6 border-t border-vx-border pt-6">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/45">
-                  Immediate analyst tasks
-                </p>
-                <ul className="mt-3 space-y-2">
-                  {briefing.startHere.analystTasks.slice(0, 4).map((task) => (
-                    <li key={task.action} className="text-[13px] leading-relaxed text-white/80">
-                      <span className="font-medium text-white">{task.action}</span>
-                      {task.why ? (
-                        <span className="text-white/55"> — {task.why}</span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            <p className="mt-6 text-[12px] text-white/50">
-              Expected review: ~{briefing.startHere.estimatedReviewMinutes} min
+      <ConsoleSection title="Why This Investigation Exists">
+        <div className="max-w-[64ch] space-y-4">
+          {model.whyExists.map((paragraph) => (
+            <p key={paragraph} className="text-[14px] leading-relaxed text-white/80">
+              {paragraph}
             </p>
-          </div>
-        ) : (
-          <div className="mt-4 max-w-[72ch] space-y-2">
-            <p className="text-[14px] leading-relaxed text-white/75">
-              {workbench.investigation_queue_status?.headline ||
-                "No investigation currently requires immediate review."}
-            </p>
-            {(workbench.investigation_queue_status?.reasons ?? []).map((reason) => (
-              <p key={reason} className="text-[13px] leading-relaxed text-white/60">
-                {reason}
-              </p>
-            ))}
-          </div>
-        )}
-      </BriefingSection>
-
-      <BriefingSection title="Why We Ignored the Rest">
-        <div className="mt-4 border border-vx-border px-4">
-          <IgnoredRow label="Duplicate evidence removed" value={briefing.ignored.duplicate_evidence_removed} />
-          <IgnoredRow label="Informational findings" value={briefing.ignored.informational_findings} />
-          <IgnoredRow label="Already mitigated findings" value={briefing.ignored.already_mitigated} />
-          <IgnoredRow label="Contradicted findings" value={briefing.ignored.contradicted_findings} />
-          <IgnoredRow label="Low business impact findings" value={briefing.ignored.low_business_impact} />
-          {(briefing.ignored.false_positives_removed ?? 0) > 0 ? (
-            <IgnoredRow
-              label="False positives eliminated"
-              value={briefing.ignored.false_positives_removed ?? 0}
-            />
-          ) : null}
-          {(briefing.ignored.noise_suppressed ?? 0) > 0 ? (
-            <IgnoredRow label="Noise suppressed" value={briefing.ignored.noise_suppressed ?? 0} />
-          ) : null}
+          ))}
         </div>
-        <p className="mt-4 text-[14px] font-medium text-white">{briefing.ignored.assurance}</p>
-        {briefing.ignored.exceptions.length ? (
-          <ul className="mt-3 space-y-2">
-            {briefing.ignored.exceptions.map((item) => (
-              <li key={item} className="text-[13px] leading-relaxed text-white/70">
-                {item}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </BriefingSection>
+      </ConsoleSection>
 
-      <BriefingSection title="Reasoning">
-        <ReasoningPipeline reasoning={briefing.reasoning} />
-      </BriefingSection>
+      <ConsoleSection title="Evidence Timeline">
+        <EvidenceTimeline steps={model.evidenceTimeline} />
+      </ConsoleSection>
 
-      <BriefingSection title="Change Detection" className="border-b-0">
-        {briefing.changeDetection.changed ? (
-          <div className="mt-4 space-y-3">
-            <p className="text-[14px] font-semibold text-white">Investigation Changed</p>
-            {briefing.changeDetection.previousPriority ? (
-              <p className="text-[13px] text-white/70">
-                Previous priority: {briefing.changeDetection.previousPriority}
-              </p>
-            ) : null}
-            {briefing.changeDetection.currentPriority ? (
-              <p className="text-[13px] text-white/70">
-                Current priority: {briefing.changeDetection.currentPriority}
-              </p>
-            ) : null}
-            {briefing.changeDetection.evidenceChanged ? (
-              <p className="text-[13px] text-white/70">{briefing.changeDetection.evidenceChanged}</p>
-            ) : null}
-            {briefing.changeDetection.whyRevisit ? (
-              <p className="text-[13px] text-white/80">{briefing.changeDetection.whyRevisit}</p>
-            ) : null}
-          </div>
-        ) : (
-          <p className="mt-4 text-[13px] leading-relaxed text-white/60">
-            {briefing.changeDetection.headline ||
-              "No prior investigation snapshot to compare on this upload."}
-          </p>
-        )}
-      </BriefingSection>
+      <ConsoleSection title="Investigation Reasoning">
+        <p className="text-[15px] font-medium text-white">{model.reasoningTitle}</p>
+        <ul className="mt-4 max-w-[64ch] space-y-3">
+          {model.reasoningBullets.map((bullet) => (
+            <li key={bullet} className="flex gap-3 text-[14px] leading-relaxed text-white/80">
+              <span className="mt-0.5 shrink-0 font-mono text-white/55" aria-hidden>
+                ✓
+              </span>
+              <span>{bullet}</span>
+            </li>
+          ))}
+        </ul>
+      </ConsoleSection>
+
+      <ConsoleSection title="What Would Change This Decision">
+        <p className="max-w-[64ch] text-[14px] leading-relaxed text-white/70">
+          This investigation would become higher priority if:
+        </p>
+        <ul className="mt-4 max-w-[64ch] space-y-2.5">
+          {model.decisionChangers.map((line) => (
+            <li key={line} className="flex gap-3 text-[14px] leading-relaxed text-white/80">
+              <span className="shrink-0 text-white/40" aria-hidden>
+                •
+              </span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </ConsoleSection>
+
+      <ConsoleSection title="Analyst Checklist" className="border-b-0">
+        <ul className="max-w-[64ch] space-y-3">
+          {model.checklist.map((item) => (
+            <li key={item} className="flex gap-3 text-[14px] leading-relaxed text-white/85">
+              <span className="mt-0.5 shrink-0 font-mono text-white/40" aria-hidden>
+                □
+              </span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </ConsoleSection>
     </div>
   );
 }

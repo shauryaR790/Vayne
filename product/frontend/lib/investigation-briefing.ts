@@ -2,320 +2,438 @@ import {
   buildPrioritizedInvestigations,
   type PrioritizedInvestigation,
 } from "./executive-investigation-overview";
+import { isInternalScoringText, sanitizeAnalystText } from "./analyst-display";
 import type {
-  WorkbenchCorrelation,
+  WorkbenchConfirmedFinding,
   WorkbenchData,
-  WorkbenchIgnoredBreakdown,
   WorkbenchPriorityItem,
   WorkbenchSummaryPanel,
 } from "./types";
 
-export interface BriefingMetrics {
-  reportsUploaded: number;
-  rawFindings: number;
-  investigationsGenerated: number;
-  estimatedReviewMinutes: number;
-  estimatedHoursSaved: number;
-  workloadHeadline: string;
-  reviewHeadline: string;
+export interface InvestigationSummaryCard {
+  title: string;
+  host: string;
+  status: string;
+  confidence: number | null;
+  businessRisk: string;
+  estimatedReview: string;
+  recommendedAction: string;
 }
 
-export interface FileEvidenceContribution {
-  filename: string;
-  scanner: string;
-  contributed: string;
-  increasedConfidence: boolean;
-  newEvidence: boolean;
-  confirmedPrior: boolean;
-}
-
-export interface PriorityFileGroup {
-  investigationId: string;
-  investigationTitle: string;
-  rank: number;
-  files: FileEvidenceContribution[];
-}
-
-export interface ReasoningChainStep {
-  stage: "Evidence" | "Correlation" | "Business Context" | "Conclusion";
+export interface EvidenceTimelineStep {
+  actor: string;
   detail: string;
-  items: string[];
+  note?: string;
 }
 
-export interface ChangeDetectionBrief {
-  changed: boolean;
-  headline?: string;
-  previousPriority?: string;
-  currentPriority?: string;
-  evidenceChanged?: string;
-  whyRevisit?: string;
+export interface InvestigationConsoleModel {
+  summary: InvestigationSummaryCard | null;
+  whyExists: string[];
+  evidenceTimeline: EvidenceTimelineStep[];
+  reasoningTitle: string;
+  reasoningBullets: string[];
+  decisionChangers: string[];
+  checklist: string[];
+  emptyHeadline?: string;
+  emptyDetail?: string;
 }
 
-export interface InvestigationBriefingModel {
-  metrics: BriefingMetrics;
-  startHere: PrioritizedInvestigation | null;
-  priorityFileGroups: PriorityFileGroup[];
-  ignored: WorkbenchIgnoredBreakdown;
-  reasoning: ReasoningChainStep[];
-  changeDetection: ChangeDetectionBrief;
+const TELEMETRY =
+  /\b(normalized|parsed|deduplicat|signal|telemetry|fingerprint|composite score|version parsed|ranked\s*#?\s*\d+)\b/i;
+
+function cleanLine(text: string, fallback = ""): string {
+  const cleaned = sanitizeAnalystText(text, "").replace(/\s+/g, " ").trim();
+  if (!cleaned || TELEMETRY.test(cleaned) || isInternalScoringText(cleaned)) return fallback;
+  return cleaned;
 }
 
-function formatMinutes(minutes: number): string {
-  if (minutes < 60) return `~${minutes} min`;
+function formatReviewMinutes(minutes: number): string {
+  if (!minutes || minutes <= 0) return "—";
+  if (minutes < 60) return `${minutes} minutes`;
   const hours = Math.floor(minutes / 60);
   const rem = minutes % 60;
-  if (!rem) return `~${hours}h`;
-  return `~${hours}h ${rem}m`;
+  if (!rem) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  return `${hours}h ${rem}m`;
 }
 
-function formatHours(hours: number): string {
-  if (hours <= 0) return "—";
-  if (hours < 1) return `${Math.round(hours * 60)} min`;
-  return `${hours % 1 === 0 ? hours : hours.toFixed(1)}h`;
+function statusLabel(claimStatus: string): string {
+  const raw = (claimStatus || "").toLowerCase();
+  if (raw.includes("confirm")) return "Confirmed";
+  if (raw.includes("suspect")) return "Suspected";
+  if (raw.includes("false")) return "Likely False Positive";
+  return "Needs Validation";
 }
 
-export function buildBriefingMetrics(
+function rawQueueItem(
   workbench: WorkbenchData,
-  uploadedFileCount?: number,
-): BriefingMetrics {
-  const panel = workbench.summary_panel;
-  const metrics = workbench.executive_metrics;
-  const stat = (label: string) =>
-    workbench.statistics.find((row) => row.label === label)?.value;
-
-  const reportsUploaded =
-    uploadedFileCount ?? panel?.files_uploaded ?? metrics?.files ?? workbench.totals.files ?? 0;
-  const rawFindings =
-    panel?.evidence_signals ?? metrics?.findings_raw ?? Number(stat("Evidence Signals")) ?? 0;
-  const investigationsGenerated =
-    panel?.investigations_generated ??
-    metrics?.investigations ??
-    workbench.investigations?.length ??
-    workbench.priority_queue?.length ??
-    0;
-  const estimatedReviewMinutes =
-    panel?.estimated_analyst_review_minutes ??
-    buildPrioritizedInvestigations(workbench)
-      .slice(0, 5)
-      .reduce((sum, item) => sum + item.estimatedReviewMinutes, 0);
-  const estimatedHoursSaved =
-    panel?.estimated_analyst_hours_saved ?? metrics?.analyst_hours_saved ?? 0;
-
-  const duplicates =
-    panel?.duplicate_findings_removed ??
-    metrics?.duplicates_removed ??
-    Number(stat("Duplicate Findings Removed")) ??
-    0;
-
-  const workloadHeadline =
-    estimatedHoursSaved > 0
-      ? `${formatHours(estimatedHoursSaved)} of manual triage eliminated — ${Number(duplicates).toLocaleString()} duplicate signals merged before you review.`
-      : duplicates > 0
-        ? `${Number(duplicates).toLocaleString()} duplicate signals merged — focus on ${investigationsGenerated} investigation${investigationsGenerated === 1 ? "" : "s"}, not ${Number(rawFindings).toLocaleString()} raw rows.`
-        : `Focus on ${investigationsGenerated} ranked investigation${investigationsGenerated === 1 ? "" : "s"} — not raw scanner output.`;
-
-  const reviewHeadline =
-    estimatedReviewMinutes > 0
-      ? `Expect ${formatMinutes(estimatedReviewMinutes)} of analyst review for the priority queue.`
-      : "Priority queue review time will appear once investigations are ranked.";
-
-  return {
-    reportsUploaded,
-    rawFindings,
-    investigationsGenerated,
-    estimatedReviewMinutes,
-    estimatedHoursSaved,
-    workloadHeadline,
-    reviewHeadline,
-  };
-}
-
-function correlationForInvestigation(
-  workbench: WorkbenchData,
-  item: WorkbenchPriorityItem,
-): WorkbenchCorrelation | undefined {
-  const title = item.title.toLowerCase();
-  return workbench.correlations.find(
-    (c) =>
-      c.subject.toLowerCase().includes(title.slice(0, 24)) ||
-      title.includes(c.subject.toLowerCase().slice(0, 24)) ||
-      (c.cve && title.includes(c.cve.toLowerCase())),
-  );
-}
-
-function fileRowsForInvestigation(
-  workbench: WorkbenchData,
-  item: WorkbenchPriorityItem,
-): FileEvidenceContribution[] {
-  const evidence = item.evidence ?? [];
-  const correlation = correlationForInvestigation(workbench, item);
-  const multiSource = (correlation?.sources?.length ?? 0) > 1;
-  const confidenceIncreased =
-    correlation?.base_confidence != null &&
-    correlation?.final_confidence != null &&
-    correlation.final_confidence > correlation.base_confidence;
-
-  if (evidence.length) {
-    const scannersSeen = new Set<string>();
-    return evidence.map((row) => {
-      const scanner = row.scanner || "Scanner";
-      const isFirstFromScanner = !scannersSeen.has(scanner);
-      scannersSeen.add(scanner);
-      return {
-        filename: row.filename || `${scanner} evidence`,
-        scanner,
-        contributed: row.summary?.trim() || row.evidence_quality || "Finding signal retained",
-        increasedConfidence: confidenceIncreased || row.confidence_weight >= 0.6,
-        newEvidence: isFirstFromScanner && !multiSource,
-        confirmedPrior: multiSource || row.evidence_quality.toLowerCase().includes("corrobor"),
-      };
-    });
-  }
-
-  const contributions = workbench.file_contributions.filter((row) =>
-    (item.evidence_sources ?? []).some(
-      (src) =>
-        src.toLowerCase().includes(row.tool.toLowerCase()) ||
-        row.tool.toLowerCase().includes(src.toLowerCase()),
-    ),
-  );
-
-  if (contributions.length) {
-    return contributions.map((row, index) => ({
-      filename: row.file,
-      scanner: row.tool,
-      contributed: `${row.retained} retained · ${row.findings} raw signals`,
-      increasedConfidence: confidenceIncreased && index > 0,
-      newEvidence: index === 0,
-      confirmedPrior: multiSource && index > 0,
-    }));
-  }
-
-  return (item.evidence_sources ?? []).map((src, index) => ({
-    filename: `${src} upload`,
-    scanner: src,
-    contributed: "Contributed scanner evidence to this investigation",
-    increasedConfidence: confidenceIncreased && index > 0,
-    newEvidence: index === 0,
-    confirmedPrior: multiSource,
-  }));
-}
-
-export function buildPriorityFileGroups(workbench: WorkbenchData): PriorityFileGroup[] {
+  id: string,
+): WorkbenchPriorityItem | undefined {
   const queue = workbench.investigations?.length
     ? workbench.investigations
     : workbench.priority_queue;
-  if (!queue?.length) return [];
-
-  return queue.slice(0, 4).map((item, index) => ({
-    investigationId: item.id,
-    investigationTitle: item.title,
-    rank: item.rank ?? index + 1,
-    files: fileRowsForInvestigation(workbench, item),
-  }));
+  return queue?.find((item) => item.id === id) ?? queue?.[0];
 }
 
-export function buildIgnoredBreakdown(workbench: WorkbenchData): WorkbenchIgnoredBreakdown {
-  if (workbench.ignored_breakdown) return workbench.ignored_breakdown;
+function relatedFinding(
+  workbench: WorkbenchData,
+  item: PrioritizedInvestigation,
+): WorkbenchConfirmedFinding | undefined {
+  const host = item.affectedAssets[0]?.toLowerCase();
+  const title = item.title.toLowerCase();
+  const findings = workbench.confirmed_findings;
+  if (!findings.length) return undefined;
 
-  const panel = workbench.summary_panel;
-  const metrics = workbench.executive_metrics;
-  const stat = (label: string) =>
-    Number(workbench.statistics.find((row) => row.label === label)?.value ?? 0);
+  const byHostAndTitle = findings.find((f) => {
+    const fTitle = f.title.toLowerCase();
+    const hostMatch = host ? f.host?.toLowerCase() === host : true;
+    return (
+      hostMatch &&
+      (fTitle.includes(title.slice(0, 18)) || title.includes(fTitle.slice(0, 18)))
+    );
+  });
+  if (byHostAndTitle) return byHostAndTitle;
+
+  if (host) {
+    const byHost = findings.find((f) => f.host?.toLowerCase() === host);
+    if (byHost) return byHost;
+  }
+  return findings[0];
+}
+
+function sourceCount(item: PrioritizedInvestigation, raw?: WorkbenchPriorityItem): number {
+  const fromEvidence = raw?.evidence?.length
+    ? new Set(raw.evidence.map((row) => row.scanner || "Scanner")).size
+    : 0;
+  return Math.max(item.evidenceSources.length, fromEvidence, item.evidenceCount > 0 ? 1 : 0);
+}
+
+function hasExploitPath(workbench: WorkbenchData, item: PrioritizedInvestigation): boolean {
+  if ((workbench.totals?.validated_paths ?? 0) > 0) return true;
+  const host = item.affectedAssets[0]?.toLowerCase();
+  const paths = workbench.candidate_paths ?? [];
+  const validated = paths.filter((p) => p.status === "VALIDATED");
+  if (!validated.length) return false;
+  if (!host) return true;
+  return validated.some((p) =>
+    (p.steps ?? []).some((step) => String(step).toLowerCase().includes(host)),
+  );
+}
+
+function buildSummary(
+  item: PrioritizedInvestigation,
+  finding: WorkbenchConfirmedFinding | undefined,
+): InvestigationSummaryCard {
+  const host =
+    item.affectedAssets[0] ||
+    finding?.host ||
+    item.affectedIdentities[0] ||
+    "Unknown host";
 
   return {
-    duplicate_evidence_removed:
-      panel?.duplicate_findings_removed ?? metrics?.duplicates_removed ?? stat("Duplicate Findings Removed"),
-    informational_findings: Math.max(
-      0,
-      (panel?.evidence_signals ?? metrics?.findings_raw ?? stat("Evidence Signals")) -
-        (metrics?.findings_retained ?? workbench.confirmed_findings.length) -
-        (panel?.duplicate_findings_removed ?? 0),
-    ),
-    already_mitigated: 0,
-    contradicted_findings: workbench.conflicts.length,
-    low_business_impact: (workbench.priority_queue ?? []).filter((p) => p.tier === "Low").length,
-    false_positives_removed: stat("False Positives Eliminated"),
-    noise_suppressed: panel?.noise_suppressed ?? 0,
-    assurance: "No critical evidence was hidden.",
-    exceptions: [],
+    title: item.title,
+    host,
+    status: statusLabel(item.claimStatus),
+    confidence: Number.isFinite(item.confidence) ? Math.round(item.confidence) : null,
+    businessRisk: item.tier,
+    estimatedReview: formatReviewMinutes(item.estimatedReviewMinutes),
+    recommendedAction:
+      cleanLine(item.immediateAction) ||
+      cleanLine(item.analystTasks[0]?.action || "") ||
+      "Validate manually before remediation.",
   };
 }
 
-export function buildReasoningChain(
+function buildWhyExists(
+  item: PrioritizedInvestigation,
+  finding: WorkbenchConfirmedFinding | undefined,
   workbench: WorkbenchData,
-  startHere: PrioritizedInvestigation | null,
-): ReasoningChainStep[] {
-  const panel = workbench.summary_panel;
-  const metrics = workbench.executive_metrics;
-  const crossMatches = metrics?.cross_source_matches ?? workbench.totals.cross_source_matches ?? 0;
-  const duplicates =
-    panel?.duplicate_findings_removed ?? metrics?.duplicates_removed ?? 0;
+  raw?: WorkbenchPriorityItem,
+): string[] {
+  const paragraphs: string[] = [];
+  const sources = sourceCount(item, raw);
+  const exploit = hasExploitPath(workbench, item);
+  const serviceHint =
+    cleanLine(finding?.title || "") ||
+    cleanLine(item.title) ||
+    "a security weakness";
 
-  const evidenceItems = [
-    `${panel?.files_uploaded ?? workbench.totals.files} report(s) ingested`,
-    `${panel?.evidence_signals ?? metrics?.findings_raw ?? "—"} raw finding signals parsed`,
-    `${workbench.evidence_sources.length} scanner type(s) normalized`,
-  ];
+  const host = item.affectedAssets[0] || finding?.host;
+  const discovery = host
+    ? `The engine observed ${serviceHint} on ${host} during asset discovery.`
+    : `The engine observed ${serviceHint} during asset discovery.`;
+  paragraphs.push(discovery);
 
-  const correlationItems = [
-    `${duplicates.toLocaleString()} duplicate signals merged`,
-    `${crossMatches} cross-source corroboration match(es)`,
-    `${workbench.conflicts.length} contradiction(s) evaluated`,
-  ];
+  if (exploit) {
+    paragraphs.push(
+      "Supporting attack-path evidence raises the chance this can be chained into a broader compromise.",
+    );
+  } else {
+    paragraphs.push("No exploit evidence was found for this observation.");
+  }
 
-  const businessItems = startHere
-    ? [
-        startHere.businessImpact || "Business impact scored from exposure and blast radius",
-        ...(startHere.priorityReasons.slice(0, 3).map((r) => r) || []),
-      ]
-    : [
-        workbench.investigation_queue_status?.headline ||
-          "No investigation met immediate business-risk thresholds",
-      ];
+  if (sources <= 1) {
+    paragraphs.push("Only one scanner observed this issue.");
+  } else {
+    paragraphs.push(
+      `${sources} independent scanners contributed evidence for this investigation.`,
+    );
+  }
 
-  const conclusionItems = startHere
-    ? [
-        `#${startHere.rank ?? 1} · ${startHere.title}`,
-        startHere.immediateAction || startHere.reason,
-      ]
-    : [workbench.investigation_queue_status?.next_step || "Review optional detail sections below"];
+  const why =
+    cleanLine(item.reason) ||
+    cleanLine(finding?.why_it_matters || "") ||
+    cleanLine(finding?.unique_reason || "");
+  if (why && !paragraphs.some((p) => p.toLowerCase().includes(why.toLowerCase().slice(0, 24)))) {
+    paragraphs.push(why);
+  }
 
-  return [
-    { stage: "Evidence", detail: "Raw scanner output normalized and deduplicated", items: evidenceItems },
-    { stage: "Correlation", detail: "Cross-tool signals merged into investigations", items: correlationItems },
-    { stage: "Business Context", detail: "Priority ranked by impact — not scanner severity", items: businessItems },
-    { stage: "Conclusion", detail: "Start with the highest-priority investigation", items: conclusionItems },
-  ];
+  paragraphs.push("Additional validation is required before asserting risk.");
+  return paragraphs;
 }
 
-export function buildChangeDetectionBrief(
+function buildEvidenceTimeline(
+  item: PrioritizedInvestigation,
+  finding: WorkbenchConfirmedFinding | undefined,
   workbench: WorkbenchData,
-  startHere: PrioritizedInvestigation | null,
-): ChangeDetectionBrief {
-  // No persisted prior snapshot yet — honest stub until cross-run diff exists.
+  raw?: WorkbenchPriorityItem,
+): EvidenceTimelineStep[] {
+  const steps: EvidenceTimelineStep[] = [];
+  const evidenceRows = raw?.evidence ?? [];
+
+  if (evidenceRows.length) {
+    for (const row of evidenceRows.slice(0, 4)) {
+      const actor = row.scanner || "Scanner";
+      const detail =
+        cleanLine(row.summary || "") ||
+        cleanLine(finding?.title || item.title) ||
+        "Observed finding retained for review";
+      const weight = row.confidence_weight;
+      const note =
+        weight >= 0.75 ? "Confidence High" : weight >= 0.45 ? "Confidence Medium" : "Confidence Limited";
+      steps.push({ actor, detail, note });
+    }
+  } else if (item.evidenceSources.length) {
+    for (const src of item.evidenceSources.slice(0, 3)) {
+      steps.push({
+        actor: src,
+        detail:
+          cleanLine(finding?.title || item.title) ||
+          "Observed service or weakness during scan",
+        note: "Observation retained",
+      });
+    }
+  } else if (finding) {
+    for (const src of (finding.sources.length ? finding.sources : ["Scanner"]).slice(0, 2)) {
+      steps.push({
+        actor: src,
+        detail: cleanLine(finding.title) || item.title,
+        note:
+          finding.machine_confidence >= 75
+            ? "Confidence High"
+            : finding.machine_confidence >= 50
+              ? "Confidence Medium"
+              : "Confidence Limited",
+      });
+    }
+  } else {
+    steps.push({
+      actor: "Evidence Intake",
+      detail: cleanLine(item.title) || "Investigation opened from retained findings",
+    });
+  }
+
+  const sources = sourceCount(item, raw);
+  steps.push({
+    actor: "Correlation Engine",
+    detail:
+      sources > 1
+        ? "Multiple scanners contributed corroborating evidence for the same subject."
+        : "No supporting findings from other scanners.",
+  });
+
+  const exploit = hasExploitPath(workbench, item);
+  steps.push({
+    actor: "Investigation Engine",
+    detail: exploit
+      ? "A candidate attack path met the evidence bar for further review."
+      : "Unable to confirm exploitability from available evidence.",
+  });
+
+  steps.push({
+    actor: "Conclusion",
+    detail:
+      item.tier === "Critical" || item.tier === "High"
+        ? "Prioritize validation and containment planning."
+        : "Requires analyst validation before remediation decisions.",
+  });
+
+  return steps;
+}
+
+function buildReasoning(
+  item: PrioritizedInvestigation,
+  workbench: WorkbenchData,
+  raw?: WorkbenchPriorityItem,
+): { title: string; bullets: string[] } {
+  const tier = item.tier.toUpperCase();
+  const title = `Why this is ${tier} priority`;
+  const bullets: string[] = [];
+  const sources = sourceCount(item, raw);
+  const exploit = hasExploitPath(workbench, item);
+
+  for (const reason of item.priorityReasons) {
+    const line = cleanLine(reason);
+    if (line && !bullets.includes(line)) bullets.push(line);
+  }
+
+  if (sources <= 1) {
+    bullets.push("Only one independent source observed the issue");
+  } else {
+    bullets.push(`${sources} independent sources observed the issue`);
+  }
+
+  if (!exploit) {
+    bullets.push("No exploit chain exists");
+    bullets.push("No corroborating scanner evidence of active exploitation");
+  } else {
+    bullets.push("Attack-path evidence elevates urgency pending validation");
+  }
+
+  if (item.affectedAssets.length <= 1 && item.affectedIdentities.length === 0) {
+    bullets.push("No sensitive asset relationships detected beyond the observed host");
+  }
+
+  if (item.missingEvidence.length) {
+    bullets.push("Manual validation required — key evidence is still missing");
+  } else if (statusLabel(item.claimStatus) === "Needs Validation") {
+    bullets.push("Manual validation required");
+  }
+
+  // Prefer specific bullets; drop near-duplicates.
+  const unique: string[] = [];
+  for (const bullet of bullets) {
+    const key = bullet.toLowerCase();
+    if (unique.some((u) => u.toLowerCase().includes(key.slice(0, 28)) || key.includes(u.toLowerCase().slice(0, 28)))) {
+      continue;
+    }
+    unique.push(bullet);
+  }
+
+  return { title, bullets: unique.slice(0, 6) };
+}
+
+function buildDecisionChangers(
+  item: PrioritizedInvestigation,
+  workbench: WorkbenchData,
+): string[] {
+  const lines: string[] = [];
+  for (const missing of item.missingEvidence.slice(0, 4)) {
+    const cleaned = cleanLine(missing);
+    if (cleaned) lines.push(cleaned);
+  }
+
+  const defaults = [
+    "Another scanner confirms a matching CVE or misconfiguration",
+    "Exploit tooling or traffic proves the weakness is reachable",
+    "A public exploit is available for the observed service version",
+    "The asset is tagged Production or handles customer data",
+  ];
+
+  for (const line of defaults) {
+    if (lines.length >= 4) break;
+    if (!lines.some((existing) => existing.toLowerCase().includes(line.toLowerCase().slice(0, 18)))) {
+      lines.push(line);
+    }
+  }
+
   void workbench;
-  void startHere;
-  return {
-    changed: false,
-    headline: "No prior investigation snapshot to compare.",
-  };
+  return lines.slice(0, 4);
 }
 
-export function buildInvestigationBriefingModel(
+function buildChecklist(item: PrioritizedInvestigation): string[] {
+  const fromTasks = item.analystTasks
+    .map((task) => cleanLine(task.action))
+    .filter(Boolean);
+
+  if (fromTasks.length) return fromTasks.slice(0, 5);
+
+  const host = item.affectedAssets[0];
+  return [
+    host ? `Confirm the finding manually on ${host}` : "Confirm the finding manually",
+    "Verify whether the asset is production-exposed",
+    "Compare the observed service against supported releases",
+    "Document residual risk if remediation is deferred",
+    "Re-run the scan after remediation",
+  ];
+}
+
+export function buildInvestigationConsoleModel(
   workbench: WorkbenchData,
-  uploadedFileCount?: number,
-): InvestigationBriefingModel {
+): InvestigationConsoleModel {
   const prioritized = buildPrioritizedInvestigations(workbench);
   const startHere = prioritized[0] ?? null;
 
+  if (!startHere) {
+    return {
+      summary: null,
+      whyExists: [],
+      evidenceTimeline: [],
+      reasoningTitle: "Investigation Reasoning",
+      reasoningBullets: [],
+      decisionChangers: [],
+      checklist: [],
+      emptyHeadline:
+        workbench.investigation_queue_status?.headline ||
+        "No investigation currently requires immediate review.",
+      emptyDetail:
+        workbench.investigation_queue_status?.next_step ||
+        "Optional engine detail sections below remain available if you need supporting artifacts.",
+    };
+  }
+
+  const raw = rawQueueItem(workbench, startHere.id);
+  const finding = relatedFinding(workbench, startHere);
+  const reasoning = buildReasoning(startHere, workbench, raw);
+
   return {
-    metrics: buildBriefingMetrics(workbench, uploadedFileCount),
-    startHere,
-    priorityFileGroups: buildPriorityFileGroups(workbench),
-    ignored: buildIgnoredBreakdown(workbench),
-    reasoning: buildReasoningChain(workbench, startHere),
-    changeDetection: buildChangeDetectionBrief(workbench, startHere),
+    summary: buildSummary(startHere, finding),
+    whyExists: buildWhyExists(startHere, finding, workbench, raw),
+    evidenceTimeline: buildEvidenceTimeline(startHere, finding, workbench, raw),
+    reasoningTitle: reasoning.title,
+    reasoningBullets: reasoning.bullets,
+    decisionChangers: buildDecisionChangers(startHere, workbench),
+    checklist: buildChecklist(startHere),
+  };
+}
+
+/** @deprecated Prefer buildInvestigationConsoleModel — kept for any legacy callers. */
+export function buildInvestigationBriefingModel(workbench: WorkbenchData) {
+  const consoleModel = buildInvestigationConsoleModel(workbench);
+  const prioritized = buildPrioritizedInvestigations(workbench);
+  return {
+    metrics: {
+      reportsUploaded: 0,
+      rawFindings: 0,
+      investigationsGenerated: prioritized.length,
+      estimatedReviewMinutes: prioritized[0]?.estimatedReviewMinutes ?? 0,
+      estimatedHoursSaved: 0,
+      workloadHeadline: consoleModel.summary?.title || consoleModel.emptyHeadline || "",
+      reviewHeadline: consoleModel.summary?.recommendedAction || consoleModel.emptyDetail || "",
+    },
+    startHere: prioritized[0] ?? null,
+    priorityFileGroups: [],
+    ignored: {
+      duplicate_evidence_removed: 0,
+      informational_findings: 0,
+      already_mitigated: 0,
+      contradicted_findings: 0,
+      low_business_impact: 0,
+      assurance: "",
+      exceptions: [] as string[],
+    },
+    reasoning: [] as Array<{ stage: string; detail: string; items: string[] }>,
+    changeDetection: { changed: false as const },
+    console: consoleModel,
   };
 }
 
@@ -324,50 +442,7 @@ export function panelMetricsFromSummary(panel: WorkbenchSummaryPanel): Array<{
   value: string;
   sub?: string;
 }> {
-  return [
-    {
-      label: "Reports uploaded",
-      value: panel.files_uploaded.toLocaleString(),
-      sub: "Evidence ingested",
-    },
-    {
-      label: "Raw findings",
-      value: panel.evidence_signals.toLocaleString(),
-      sub: "Before deduplication",
-    },
-    {
-      label: "Investigations generated",
-      value: panel.investigations_generated.toLocaleString(),
-      sub: "Merged to review",
-    },
-    {
-      label: "Estimated analyst review",
-      value: panel.estimated_analyst_review_minutes
-        ? formatMinutesCompact(panel.estimated_analyst_review_minutes)
-        : "—",
-      sub: "Priority queue",
-    },
-    {
-      label: "Estimated time saved",
-      value:
-        panel.estimated_analyst_hours_saved > 0
-          ? formatHoursCompact(panel.estimated_analyst_hours_saved)
-          : "—",
-      sub: "Manual triage cut",
-    },
-  ];
-}
-
-function formatMinutesCompact(minutes: number): string {
-  if (minutes < 60) return `~${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const rem = minutes % 60;
-  if (!rem) return `~${hours}h`;
-  return `~${hours}h ${rem}m`;
-}
-
-function formatHoursCompact(hours: number): string {
-  if (hours <= 0) return "—";
-  if (hours < 1) return `${Math.round(hours * 60)}m`;
-  return `${hours % 1 === 0 ? hours : hours.toFixed(1)}h`;
+  // Engine Session owns operating metrics — report UI should not render these.
+  void panel;
+  return [];
 }
