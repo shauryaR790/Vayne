@@ -50,9 +50,9 @@ export function sectionContextFinding(finding: WorkbenchConfirmedFinding): strin
     `Host: ${finding.host}`,
     `Severity: ${finding.severity}`,
     `Status: ${finding.status}`,
-    `What happened: ${ex.whatHappened}`,
-    `Why retained: ${ex.whyBelieve.join("; ")}`,
-    `Caveats: ${ex.whatCouldBeWrong.join("; ") || "None listed"}`,
+    ex.whatHappened ? `Detail: ${ex.whatHappened}` : null,
+    ex.whyBelieve.length ? `Why retained: ${ex.whyBelieve.join("; ")}` : null,
+    ex.whatCouldBeWrong.length ? `Caveats: ${ex.whatCouldBeWrong.join("; ")}` : null,
     `Conclusion: ${ex.finalConclusion}`,
     `Confidence: ${score}%`,
     contributors.length

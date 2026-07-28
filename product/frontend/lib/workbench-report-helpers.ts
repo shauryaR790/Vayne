@@ -155,14 +155,51 @@ export function evidenceAgainst(finding: WorkbenchConfirmedFinding): string[] {
   return out.slice(0, 3);
 }
 
-/** "What could change this conclusion?" — honest uncertainty (P10). */
+/** Engine formula / model telemetry that is not useful to an analyst. */
+export function isEngineTelemetryNoise(text: string): boolean {
+  const t = text.trim();
+  if (!t) return true;
+  return (
+    /^model\s*=/i.test(t) ||
+    /observation_confidence/i.test(t) ||
+    /base\s*=\s*\d+/i.test(t) ||
+    /fingerprint\s*=\s*(true|false)/i.test(t) ||
+    /->\s*\d+\s*%/i.test(t) ||
+    /this could be incorrect if/i.test(t) ||
+    /contradicts the finding/i.test(t)
+  );
+}
+
+/** Keep analyst-useful lines; drop formulas, model tags, and near-duplicates. */
+export function filterAnalystReasons(
+  lines: string[],
+  opts?: { alsoSkip?: string[] },
+): string[] {
+  const skip = new Set(
+    (opts?.alsoSkip || [])
+      .map((s) => s.replace(/\s+/g, " ").trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const out: string[] = [];
+  for (const raw of lines) {
+    const polished = polishEngineText(raw);
+    if (isEngineTelemetryNoise(polished)) continue;
+    const key = polished.replace(/\s+/g, " ").trim().toLowerCase();
+    if (!key || skip.has(key)) continue;
+    if (out.some((x) => x.toLowerCase() === key)) continue;
+    out.push(polished);
+  }
+  return out;
+}
+
+/** "What could change this conclusion?" — real overturn signals only (P10). */
 export function uncertaintyFactors(finding: WorkbenchConfirmedFinding): string[] {
   const sc = finding.investigation?.self_challenge;
   const out: string[] = [];
 
   if (sc?.what_would_overturn?.length) {
     for (const item of sc.what_would_overturn) {
-      if (item?.trim()) out.push(item.trim());
+      if (item?.trim() && !isEngineTelemetryNoise(item)) out.push(item.trim());
       if (out.length >= 4) return out;
     }
   }
@@ -171,7 +208,7 @@ export function uncertaintyFactors(finding: WorkbenchConfirmedFinding): string[]
     for (const c of sc.challenges) {
       if (!c.weakens) continue;
       const line = c.question?.replace(/\?$/, "") || c.answer;
-      if (line && !out.includes(line)) out.push(line);
+      if (line && !out.includes(line) && !isEngineTelemetryNoise(line)) out.push(line);
       if (out.length >= 4) return out;
     }
   }
@@ -180,15 +217,10 @@ export function uncertaintyFactors(finding: WorkbenchConfirmedFinding): string[]
   if (loop && !loop.exploit_confirmed) {
     out.push("A failed exploit replay would lower exploit confidence");
   }
-  for (const c of finding.not_validated_checks || []) {
-    out.push(`This could be incorrect if ${prettyCheck(c).toLowerCase()} contradicts the finding`);
-    if (out.length >= 4) break;
-  }
   if (finding.evidence_summary && finding.evidence_summary.conflicts > 0) {
     out.push("Resolving the scanner conflict could raise or lower confidence");
   }
-  if (!out.length) out.push("New contradicting evidence would change this conclusion");
-  return out.slice(0, 4);
+  return filterAnalystReasons(out).slice(0, 4);
 }
 
 export interface RecommendationTask {
@@ -608,38 +640,36 @@ export function buildFindingExplainability(finding: WorkbenchConfirmedFinding): 
   const inv = finding.investigation;
   const sc = inv?.self_challenge;
 
+  const titleHost = `${finding.title}${finding.host ? ` on ${finding.host}` : ""}`.toLowerCase();
   const proofLine = finding.proof?.[0]?.detail || finding.evidence[0] || "";
-  const whatHappened =
+  const rawWhat =
     inv?.conclusion?.split(/(?<=[.!?])\s+/)[0]?.trim() ||
     (proofLine
       ? `${finding.title}${finding.host ? ` on ${finding.host}` : ""} — ${proofLine}`
       : `${finding.title}${finding.host ? ` was identified on ${finding.host}` : ""}.`);
-  const polishedWhat = polishEngineText(whatHappened);
+  const polishedWhat = isEngineTelemetryNoise(rawWhat) ? "" : polishEngineText(rawWhat);
+  // Skip "What happened" copy that only restates title + host.
+  const whatHappened =
+    polishedWhat && !polishedWhat.toLowerCase().includes(titleHost) && polishedWhat.toLowerCase() !== titleHost
+      ? polishedWhat
+      : proofLine && !isEngineTelemetryNoise(proofLine) && !titleHost.includes(proofLine.toLowerCase())
+        ? polishEngineText(proofLine)
+        : "";
 
   const human = inv?.human_reasoning || [];
-  let whyBelieve: string[] = [];
+  let whyBelieveRaw: string[] = [];
+  if (finding.why_it_matters) whyBelieveRaw.push(finding.why_it_matters);
+  if (finding.unique_reason) whyBelieveRaw.push(finding.unique_reason);
   if (human.length) {
-    whyBelieve = human.slice(0, 6);
+    whyBelieveRaw.push(...human.slice(0, 6));
   } else {
     for (const c of finding.validated_checks || []) {
-      whyBelieve.push(prettyCheck(c));
+      whyBelieveRaw.push(prettyCheck(c));
     }
-    if (finding.unique_reason) whyBelieve.unshift(finding.unique_reason);
-    if (!whyBelieve.length) whyBelieve = finding.reasoning.slice(0, 5);
-    whyBelieve = [...new Set(whyBelieve)].slice(0, 6);
+    if (!whyBelieveRaw.length) whyBelieveRaw.push(...finding.reasoning.slice(0, 5));
   }
 
-  let whatCouldBeWrong = uncertaintyFactors(finding);
-  if (sc?.challenges?.length) {
-    const fromChallenges = sc.challenges
-      .filter((c) => c.weakens)
-      .map((c) => {
-        const q = c.question?.replace(/\?$/, "").trim();
-        return q ? `${q.charAt(0).toUpperCase()}${q.slice(1)}` : c.answer;
-      })
-      .filter((v): v is string => Boolean(v));
-    if (fromChallenges.length) whatCouldBeWrong = [...new Set([...fromChallenges, ...whatCouldBeWrong])].slice(0, 5);
-  }
+  const whatCouldBeWrong = uncertaintyFactors(finding);
 
   const confidenceWouldIncrease: ConfidenceIncreaseItem[] = [];
   for (const t of inv?.investigation_tasks || []) {
@@ -660,15 +690,25 @@ export function buildFindingExplainability(finding: WorkbenchConfirmedFinding): 
     if (confidenceWouldIncrease.length >= 5) break;
   }
 
-  const finalConclusion =
-    inv?.conclusion?.trim() ||
-    sc?.verdict?.trim() ||
-    finding.unique_reason ||
-    finding.reasoning[finding.reasoning.length - 1] ||
-    statusMeaning(finding.status).meaning;
+  const conclusionCandidates = [
+    inv?.conclusion?.trim(),
+    sc?.verdict?.trim(),
+    finding.why_it_matters?.trim(),
+    finding.unique_reason?.trim(),
+    finding.reasoning[finding.reasoning.length - 1],
+    statusMeaning(finding.status).meaning,
+  ].filter((v): v is string => Boolean(v && !isEngineTelemetryNoise(v)));
+
+  const finalConclusion = polishEngineText(
+    conclusionCandidates[0] || statusMeaning(finding.status).meaning,
+  );
+
+  const whyBelieve = filterAnalystReasons(whyBelieveRaw, {
+    alsoSkip: [finalConclusion, whatHappened, titleHost],
+  }).slice(0, 5);
 
   return {
-    whatHappened: polishedWhat,
+    whatHappened,
     whyBelieve,
     whatCouldBeWrong,
     confidenceWouldIncrease,

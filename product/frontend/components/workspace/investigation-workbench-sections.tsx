@@ -8,7 +8,6 @@ import {
 } from "react";
 import { ChevronDown } from "lucide-react";
 
-import { SourceFileBadge } from "@/components/shared/source-file-badge";
 import { EVIDENCE_LIST_COMPACT_THRESHOLD } from "@/lib/staged-files-summary";
 
 import type {
@@ -550,19 +549,12 @@ function AnalystFindingCard({
   const explain = buildFindingExplainability(finding);
   const { score, contributors } = confidenceContributors(finding);
   const state = findingDisplayStatus(finding);
-  const proof = finding.proof?.length
-    ? finding.proof
-    : finding.sources.map((s) => ({
-        source: s,
-        detail: finding.evidence[0] || "Scanner observation",
-      }));
   const sem = semanticConfidence(finding);
   const metrics = displayedConfidenceMetrics(finding);
   const primary =
     metrics.find((m) => m.key === sem?.primary.metric) || metrics[0] || null;
   const against = evidenceAgainst(finding);
   const exploit = exploitVerification(finding);
-  const hypotheses = (finding.investigation?.hypotheses || []).slice(0, 3);
   const evidenceMeta = finding.evidence_summary;
 
   const agreed = new Set(
@@ -577,16 +569,27 @@ function AnalystFindingCard({
     sem?.scanner_agreement?.ratio ||
     `${agreed.size} / ${Math.max(capable.length, 1)}`;
   const showCapableAgreement = capable.length > 1;
-  const corrMetric = sem?.correlation;
   const sourceFile =
     sourceFilenames?.length
       ? findingSourceFile(finding, sourceFilenames, contributions)
       : undefined;
 
+  const sourcesLine = [
+    ...finding.sources,
+    sourceFile,
+  ]
+    .filter((v): v is string => Boolean(v))
+    .filter((v, i, arr) => arr.indexOf(v) === i);
+
+  const showConclusion =
+    explain.finalConclusion &&
+    explain.finalConclusion.toLowerCase() !== state.meaning.toLowerCase();
+
+  const nextProbe = explain.confidenceWouldIncrease[0];
+
   return (
     <WorkspaceCard className="flex w-full flex-col overflow-hidden p-0">
       <div className="min-h-0 flex-1">
-        {/* Header — what & where */}
         <div className="border-b border-vx-border p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -598,153 +601,97 @@ function AnalystFindingCard({
               <h4 className="text-[13px] font-black uppercase leading-snug tracking-wide text-white">
                 {stripLeadingEnumeration(finding.title)}
               </h4>
-              <p className="mt-1 font-mono text-[11px] text-white">
+              <p className="mt-1 font-mono text-[11px] text-white/70">
                 {finding.host || "—"}
+                {sourcesLine.length ? (
+                  <span className="text-white/40"> · {sourcesLine.join(" · ")}</span>
+                ) : null}
               </p>
-              {sourceFile ? (
-                <div className="mt-2">
-                  <SourceFileBadge file={sourceFile} title={`Finding from ${sourceFile}`} />
-                </div>
-              ) : null}
-              {expert ? (
-                <p
-                  className="mt-0.5 truncate font-mono text-[10px] text-white/35"
-                  title="CVE · version · CPE"
-                >
-                  {[finding.cve, evidenceMeta?.version, evidenceMeta?.cpe]
-                    .filter(Boolean)
-                    .join(" · ") || "no CVE / version metadata"}
-                </p>
-              ) : null}
             </div>
             <Badge variant={severityVariant(finding.severity)} title="Scanner severity">
-              Sev · {finding.severity}
+              {finding.severity}
             </Badge>
           </div>
 
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <StatePill active label={state.label} />
-            <p className="text-[11px] leading-snug text-white">{state.meaning}</p>
+            <p className="text-[11px] leading-snug text-white/70">{state.meaning}</p>
           </div>
 
-          <p className="mt-3 border-t border-vx-border pt-3 text-[13px] leading-relaxed text-white">
-            {polishEngineText(explain.finalConclusion)}
-          </p>
+          {showConclusion ? (
+            <p className="mt-3 border-t border-vx-border pt-3 text-[13px] leading-relaxed text-white">
+              {explain.finalConclusion}
+            </p>
+          ) : null}
         </div>
 
-        <div className="space-y-5 border-t border-vx-border p-4">
-          <ExplainabilityBlock title="What happened">
-            <p className="text-[13px] leading-relaxed text-white">{polishEngineText(explain.whatHappened)}</p>
-          </ExplainabilityBlock>
-
+        <div className="space-y-5 p-4">
           {primary ? (
             <div>
-              <SectionLabel>Evidence strength</SectionLabel>
+              <SectionLabel>Confidence</SectionLabel>
               <div className="mt-2">
                 <ConfidenceBar score={score} contributors={contributors} compact />
-                <p className="mt-2 text-[12px] leading-snug text-white">
+                <p className="mt-2 text-[12px] leading-snug text-white/80">
                   {score}% — {confidenceMeaning(primary.key, primary.metric.score)}
                 </p>
               </div>
             </div>
           ) : null}
 
-          <ExplainabilityBlock title="Why VAYNE retained this finding">
-            <BulletList items={explain.whyBelieve} />
-          </ExplainabilityBlock>
-
-          <ExplainabilityBlock title="What could make this wrong">
-            <BulletList items={explain.whatCouldBeWrong} prefix="?" />
-          </ExplainabilityBlock>
+          {explain.whyBelieve.length ? (
+            <ExplainabilityBlock title="Why retained">
+              <BulletList items={explain.whyBelieve} />
+            </ExplainabilityBlock>
+          ) : null}
 
           {exploit ? <ExploitBadge verification={exploit} /> : null}
 
           {against.length ? (
             <div>
-              <SectionLabel>Evidence against</SectionLabel>
+              <SectionLabel>Conflicts</SectionLabel>
               <ul className="mt-2 space-y-1">
                 {against.map((a) => (
-                  <li key={a} className="flex items-center gap-2 text-[11px] leading-snug">
-                    <span className="font-mono text-white/70">⚠</span>
-                    <span className="text-white/60">{a}</span>
+                  <li key={a} className="text-[12px] leading-snug text-white/70">
+                    {a}
                   </li>
                 ))}
               </ul>
             </div>
           ) : null}
 
-          <div>
-            <SectionLabel>Proof</SectionLabel>
-            <ul className="mt-3 space-y-2">
-              {proof.map((row, i) => (
-                <li
-                  key={`${row.source}-${i}`}
-                  className="grid grid-cols-[7rem_1fr] gap-3 border border-vx-border bg-vx-inset px-3 py-2"
-                >
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-white/70">
-                    {row.source}
-                  </span>
-                  <span className="font-mono text-[12px] text-white/80">{row.detail}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
           {showCapableAgreement ? (
             <div>
-              <SectionLabel>Scanner Agreement</SectionLabel>
-              <p className="mt-1 text-[11px] text-white/45">
-                Which scanners that could detect this actually did
-              </p>
-              <div className="mt-3 space-y-2">
+              <SectionLabel>Scanner agreement · {agreementRatio}</SectionLabel>
+              <div className="mt-2 flex flex-wrap gap-2">
                 {capable.map((s) => (
-                  <div
+                  <span
                     key={s}
-                    className="flex items-center justify-between border border-white/15 px-3 py-2"
+                    className={cn(
+                      "border px-2 py-1 font-mono text-[11px]",
+                      agreed.has(s)
+                        ? "border-white/25 text-white"
+                        : "border-white/10 text-white/35",
+                    )}
                   >
-                    <span className="text-[12px] font-bold uppercase tracking-wide text-white/80">
-                      {s}
-                    </span>
-                    <span
-                      className={cn(
-                        "font-mono text-[14px]",
-                        agreed.has(s) ? "text-white" : "text-white/30",
-                      )}
-                    >
-                      {agreed.has(s) ? "✓" : "✗"}
-                    </span>
-                  </div>
+                    {agreed.has(s) ? "✓" : "✗"} {s}
+                  </span>
                 ))}
-              </div>
-              <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3 border-t border-vx-border pt-3">
-                <p className="text-[12px] font-bold uppercase tracking-wide text-white/60">
-                  Agreement {agreementRatio}
-                </p>
-                {corrMetric ? (
-                  <p className="font-mono text-[13px] font-bold text-white">
-                    Correlation {corrMetric.score}%
-                  </p>
-                ) : null}
               </div>
             </div>
           ) : null}
 
-          {hypotheses.length ? (
+          {nextProbe ? (
             <div>
-              <SectionLabel>Alternative explanations considered</SectionLabel>
-              <div className="mt-3 space-y-2">
-                {hypotheses.map((h, i) => (
-                  <div key={`${h.label}-${i}`} className="border border-white/15 px-3 py-2">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="text-[12px] font-bold text-white/80">{h.label}</span>
-                      <span className="font-mono text-[12px] text-white/60">{h.probability}%</span>
-                    </div>
-                    {h.rationale ? (
-                      <p className="mt-1 text-[11px] leading-snug text-white/50">{h.rationale}</p>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
+              <SectionLabel>Next validation</SectionLabel>
+              <p className="mt-2 text-[13px] leading-relaxed text-white">
+                {nextProbe.item}
+                {nextProbe.explanation ? (
+                  <span className="text-white/55"> — {nextProbe.explanation}</span>
+                ) : null}
+                {typeof nextProbe.gain === "number" ? (
+                  <span className="font-mono text-white/45"> · +{nextProbe.gain}%</span>
+                ) : null}
+              </p>
             </div>
           ) : null}
 
@@ -755,10 +702,8 @@ function AnalystFindingCard({
                 {[
                   { label: "CVE", value: finding.cve || "—" },
                   { label: "CPE", value: evidenceMeta?.cpe || "—" },
-                  { label: "Canonical entity", value: evidenceMeta?.canonical_entity || finding.title },
                   { label: "Version", value: evidenceMeta?.version || "—" },
                   { label: "Category", value: evidenceMeta?.category || "—" },
-                  { label: "Scanners", value: finding.sources.join(", ") || "—" },
                 ].map((row) => (
                   <div key={row.label} className="border border-vx-border bg-vx-inset px-3 py-2">
                     <dt className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
@@ -771,21 +716,16 @@ function AnalystFindingCard({
                 ))}
               </dl>
               {finding.evidence.length ? (
-                <div className="mt-3">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
-                    Raw evidence
-                  </p>
-                  <ul className="mt-2 space-y-1">
-                    {finding.evidence.map((e, i) => (
-                      <li
-                        key={`${e}-${i}`}
-                        className="border border-white/10 bg-vx-app px-3 py-1.5 font-mono text-[11px] leading-snug text-white/60"
-                      >
-                        {e}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <ul className="mt-3 space-y-1">
+                  {finding.evidence.slice(0, 4).map((e, i) => (
+                    <li
+                      key={`${e}-${i}`}
+                      className="border border-white/10 bg-vx-app px-3 py-1.5 font-mono text-[11px] leading-snug text-white/60"
+                    >
+                      {e}
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </div>
           ) : null}
