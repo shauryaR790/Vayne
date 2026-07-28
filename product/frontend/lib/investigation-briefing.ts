@@ -326,7 +326,7 @@ export function panelMetricsFromSummary(panel: WorkbenchSummaryPanel): Array<{
 }> {
   return [
     {
-      label: "Reports",
+      label: "Reports uploaded",
       value: panel.files_uploaded.toLocaleString(),
       sub: "Evidence ingested",
     },
@@ -336,19 +336,19 @@ export function panelMetricsFromSummary(panel: WorkbenchSummaryPanel): Array<{
       sub: "Before deduplication",
     },
     {
-      label: "Investigations",
+      label: "Investigations generated",
       value: panel.investigations_generated.toLocaleString(),
       sub: "Merged to review",
     },
     {
-      label: "Est. review",
+      label: "Estimated analyst review",
       value: panel.estimated_analyst_review_minutes
         ? formatMinutesCompact(panel.estimated_analyst_review_minutes)
         : "—",
       sub: "Priority queue",
     },
     {
-      label: "Time saved",
+      label: "Estimated time saved",
       value:
         panel.estimated_analyst_hours_saved > 0
           ? formatHoursCompact(panel.estimated_analyst_hours_saved)

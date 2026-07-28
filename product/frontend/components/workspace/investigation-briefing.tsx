@@ -33,13 +33,13 @@ function BriefingMetricsStrip({
 }) {
   return (
     <div className="border-b border-vx-border px-4 py-5 sm:px-6">
-      <div className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="flex max-w-[520px] flex-col gap-3">
         {metrics.map((row) => (
-          <div key={row.label} className="min-w-0">
-            <p className="truncate text-[11px] font-medium uppercase tracking-[0.12em] text-white/45">
+          <div key={row.label} className="flex items-baseline justify-between gap-6">
+            <p className="min-w-0 text-[12px] font-medium uppercase tracking-[0.1em] text-white/50">
               {row.label}
             </p>
-            <p className="mt-2 font-mono text-[28px] font-semibold tabular-nums leading-none tracking-tight text-white sm:text-[32px]">
+            <p className="shrink-0 font-mono text-[18px] font-semibold tabular-nums leading-none tracking-tight text-white sm:text-[20px]">
               {row.value}
             </p>
           </div>
