@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
 
 import { workbenchSurfaceClasses } from "@/components/shared/workspace-card";
@@ -77,11 +77,6 @@ export function WorkstationSection({
     </motion.section>
   );
 }
-
-const panelTransition = {
-  duration: 0.32,
-  ease: [0.22, 1, 0.36, 1] as const,
-};
 
 export function CollapsibleSection({
   title,
@@ -170,22 +165,24 @@ export function CollapsibleSection({
           </>
         )}
       </div>
-      <AnimatePresence initial={false}>
-        {isOpen ? (
-          <motion.div
-            key="panel"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={panelTransition}
-            className="overflow-hidden"
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div
+            className={cn(
+              "bg-vx-section-body text-white transition-opacity duration-300",
+              isOpen ? "opacity-100" : "opacity-0",
+              bodyClassName ?? "px-0 py-0",
+            )}
           >
-            <div className={cn("bg-vx-section-body text-white", bodyClassName ?? "px-0 py-0")}>
-              {children}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+            {children}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

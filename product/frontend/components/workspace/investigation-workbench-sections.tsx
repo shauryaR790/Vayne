@@ -1330,24 +1330,114 @@ export function EvidenceSection({
   }, [workbench.file_contributions]);
 
   const scanners = workbench.evidence_sources.map((s) => s.label);
+  const provenance = workbench.provenance || [];
+  const findingProof = workbench.confirmed_findings
+    .flatMap((f) => {
+      const rows =
+        f.proof?.length
+          ? f.proof.map((p) => ({
+              finding: f.title,
+              host: f.host,
+              source: p.source,
+              detail: p.detail,
+            }))
+          : (f.evidence || []).map((e) => ({
+              finding: f.title,
+              host: f.host,
+              source: f.sources[0] || "Evidence",
+              detail: e,
+            }));
+      return rows;
+    })
+    .slice(0, 24);
+
+  const hasContent =
+    provenance.length > 0 ||
+    workbench.evidence_sources.length > 0 ||
+    workbench.correlations.length > 0 ||
+    findingProof.length > 0;
 
   const body = (
     <div className={cn("space-y-6", embedded && "px-6 py-6")}>
-      {workbench.evidence_sources.length ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {workbench.evidence_sources.map((s) => (
-            <EvidenceSourceCard
-              key={s.tool}
-              source={s}
-              hosts={hostByTool.get(s.label) ?? hostByTool.get(s.tool) ?? 0}
-            />
+      {!hasContent ? (
+        <p className="text-[13px] leading-relaxed text-white/55">
+          No retained evidence rows for this investigation yet.
+        </p>
+      ) : null}
+
+      {provenance.length ? (
+        <div className="space-y-3">
+          <SectionLabel>Why VAYNE believes this</SectionLabel>
+          {provenance.map((row, i) => (
+            <WorkspaceCard key={`${row.claim}-${i}`} className="p-4">
+              <p className="text-[13px] font-medium leading-snug text-white">{row.claim}</p>
+              {row.supports?.length ? (
+                <ul className="mt-3 space-y-2">
+                  {row.supports.map((s, j) => (
+                    <li
+                      key={`${s.source}-${j}`}
+                      className="grid grid-cols-[6.5rem_1fr] gap-3 border border-vx-border bg-vx-inset px-3 py-2"
+                    >
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-white/55">
+                        {s.source}
+                      </span>
+                      <span className="font-mono text-[12px] leading-snug text-white/80">
+                        {s.evidence}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </WorkspaceCard>
           ))}
+        </div>
+      ) : null}
+
+      {workbench.evidence_sources.length ? (
+        <div className="space-y-3">
+          <SectionLabel>Sources</SectionLabel>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {workbench.evidence_sources.map((s) => (
+              <EvidenceSourceCard
+                key={s.tool}
+                source={s}
+                hosts={hostByTool.get(s.label) ?? hostByTool.get(s.tool) ?? 0}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {!provenance.length && findingProof.length ? (
+        <div className="space-y-3">
+          <SectionLabel>Proof</SectionLabel>
+          <ul className="space-y-2">
+            {findingProof.map((row, i) => (
+              <li
+                key={`${row.finding}-${row.source}-${i}`}
+                className="border border-vx-border bg-vx-inset px-3 py-2"
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wide text-white/50">
+                  {row.finding}
+                  {row.host ? ` · ${row.host}` : ""}
+                </p>
+                <div className="mt-1.5 grid grid-cols-[6.5rem_1fr] gap-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-white/55">
+                    {row.source}
+                  </span>
+                  <span className="font-mono text-[12px] leading-snug text-white/80">
+                    {row.detail}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 
       {workbench.correlations.length ? (
         <div>
-          <div className="mb-4 border-b border-white pb-3">
+          <div className="mb-4 border-b border-white/15 pb-3">
             <h3 className="text-[12px] font-bold uppercase tracking-[0.15em]">Correlation</h3>
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
