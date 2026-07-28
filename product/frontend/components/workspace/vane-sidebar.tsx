@@ -219,7 +219,7 @@ function SidebarPanel({
             </button>
           ) : null}
         </div>
-        <div className="vx-no-scrollbar min-h-0 flex-1 overflow-y-auto">
+        <div className="vx-no-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
           {items.length > 0 ? (
             <InvestigationHistoryList
               items={items}
@@ -228,7 +228,9 @@ function SidebarPanel({
               showTime="always"
             />
           ) : (
-            <p className="px-3 py-2 text-[13px] text-white/45">No investigation history</p>
+            <div className="flex min-h-0 flex-1 items-center justify-center px-3">
+              <p className="text-center text-[13px] text-white/45">No investigation history</p>
+            </div>
           )}
         </div>
       </div>
