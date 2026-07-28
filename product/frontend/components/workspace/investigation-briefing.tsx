@@ -1,10 +1,8 @@
 "use client";
 
-import { MetricTile } from "@/components/shared/workspace-card";
 import { PriorityInvestigationRow } from "@/components/workspace/executive-investigation-overview";
 import {
   buildInvestigationBriefingModel,
-  panelMetricsFromSummary,
   type InvestigationBriefingModel,
 } from "@/lib/investigation-briefing";
 import type { WorkbenchData } from "@/lib/types";
@@ -95,8 +93,6 @@ export function InvestigationBriefing({
   onOpenSection?: (sectionId: string) => void;
 }) {
   const briefing = buildInvestigationBriefingModel(workbench, uploadedFileCount);
-  const panel = workbench.summary_panel;
-  const metrics = panel ? panelMetricsFromSummary(panel) : null;
 
   return (
     <div className="border-b border-vx-border bg-vx-section-body">
@@ -111,23 +107,6 @@ export function InvestigationBriefing({
           {briefing.metrics.reviewHeadline}
         </p>
       </div>
-
-      {metrics ? (
-        <div className="border-b border-vx-border px-4 py-6 sm:px-6 sm:py-7">
-          <div className="grid grid-cols-2 items-stretch gap-x-8 gap-y-6 sm:grid-cols-3 lg:grid-cols-5">
-            {metrics.map((row) => (
-              <MetricTile
-                key={row.label}
-                flat
-                large
-                label={row.label}
-                value={row.value}
-                sub={row.sub}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       <BriefingSection title="Start Here">
         {briefing.startHere ? (

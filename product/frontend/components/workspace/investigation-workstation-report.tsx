@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { CombinedEvidenceBanner } from "@/components/workspace/combined-evidence-banner";
 import { InvestigationBriefing } from "@/components/workspace/investigation-briefing";
 import { GraphExplorer } from "@/components/graph/GraphExplorer";
 import type { ReasoningCheck } from "@/components/graph/GraphEmptyState";
@@ -321,9 +320,6 @@ export function InvestigationWorkstationReport({
     bundle.report.target,
     bundle.report.name,
   );
-  const showCombinedAttribution =
-    (investigationMode === "combined" || uploadedFilenames.length > 1) &&
-    uploadedFilenames.length > 1;
 
   const nextDelay = useMemo(() => createReveal(), []);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -349,9 +345,6 @@ export function InvestigationWorkstationReport({
 
   return (
     <article className={cn("flex w-full min-w-0 flex-col gap-1", className)}>
-      {showCombinedAttribution ? (
-        <CombinedEvidenceBanner filenames={uploadedFilenames} />
-      ) : null}
       {workbench ? (
         <InvestigationBriefing
           workbench={workbench}
