@@ -33,18 +33,19 @@ export function MetricTile({
 }) {
   const display =
     typeof value === "string" ? value.toUpperCase() : value.toLocaleString();
+  const longValue = display.length > 8;
 
   return (
     <div
       className={cn(
-        "flex h-full min-w-0 flex-col",
+        "flex h-full min-w-0 flex-col overflow-hidden",
         !flat && workbenchSurfaceClasses,
         flat ? "py-1" : "p-4",
       )}
     >
       <p
         className={cn(
-          "min-h-[2.75rem] font-bold uppercase leading-snug tracking-[0.12em] text-white/55",
+          "font-bold uppercase leading-snug tracking-[0.12em] text-white/55",
           large ? "text-[12px]" : "text-[11px]",
         )}
       >
@@ -52,24 +53,24 @@ export function MetricTile({
       </p>
       <p
         className={cn(
-          "mt-2 font-black tabular-nums uppercase leading-none tracking-tight text-white",
-          large ? "text-[2.125rem]" : "text-2xl",
+          "mt-2 min-w-0 break-words font-black tabular-nums uppercase tracking-tight text-white",
+          longValue ? "text-[1.125rem] leading-snug sm:text-[1.25rem]" : "leading-none",
+          !longValue && (large ? "text-[2rem]" : "text-2xl"),
         )}
+        title={display}
       >
         {display}
       </p>
       {sub ? (
         <p
           className={cn(
-            "mt-2.5 min-h-[1.25rem] normal-case leading-snug text-white/50",
+            "mt-2.5 normal-case leading-snug text-white/50",
             large ? "text-[13px]" : "text-[12px]",
           )}
         >
           {sub}
         </p>
-      ) : (
-        <div className="mt-2.5 min-h-[1.25rem]" aria-hidden />
-      )}
+      ) : null}
     </div>
   );
 }

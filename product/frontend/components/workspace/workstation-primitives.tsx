@@ -54,7 +54,7 @@ export function WorkstationSection({
       transition={{ duration: 0.35, delay: reveal, ease: [0.22, 1, 0.36, 1] }}
       className="border-b border-vx-border"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-4 py-4 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-vx-section-body px-4 pb-3 pt-5 sm:px-6">
         <h2
           className={cn(
             "font-bold uppercase tracking-[0.15em] text-white",
@@ -68,7 +68,7 @@ export function WorkstationSection({
       <div
         className={cn(
           "min-w-0 bg-vx-section-body px-6 text-white",
-          large ? "py-8" : "py-6",
+          large ? "pb-8 pt-2" : "pb-6 pt-2",
           bodyClassName,
         )}
       >
@@ -120,41 +120,39 @@ export function CollapsibleSection({
       className="border-b border-vx-border"
       style={reveal > 0 ? { animationDelay: `${reveal}s` } : undefined}
     >
-      {forceOpen ? (
-        <div className="flex w-full items-center justify-between gap-3 border-b border-vx-border bg-vx-section-body px-4 py-4 sm:px-6">
-          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
-            {title}
-          </span>
-          {aside ? <span className="flex shrink-0 items-center gap-2">{aside}</span> : null}
-        </div>
-      ) : (
-        <div className="flex w-full items-center gap-2 border-b border-vx-border bg-vx-section-body px-4 py-4 sm:gap-3 sm:px-6">
-          <button
-            type="button"
-            onClick={() => setOpenState(!isOpen)}
-            aria-expanded={isOpen}
-            className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left transition-colors hover:text-white"
-          >
-            <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
+      <div className="flex w-full items-center gap-2 bg-vx-section-body px-4 py-4 sm:gap-3 sm:px-6">
+        {forceOpen ? (
+          <>
+            <span className="min-w-0 flex-1 text-[11px] font-bold uppercase tracking-[0.15em] text-white">
               {title}
             </span>
-            <ChevronDown
-              className={cn(
-                "size-4 shrink-0 transition-transform duration-200",
-                isOpen && "rotate-180",
-              )}
-              aria-hidden
-            />
-          </button>
-        </div>
-      )}
+            {aside ? <span className="flex shrink-0 items-center gap-2">{aside}</span> : null}
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setOpenState(!isOpen)}
+              aria-expanded={isOpen}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:text-white"
+            >
+              <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-white">
+                {title}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "size-4 shrink-0 text-white/50 transition-transform duration-200",
+                  isOpen && "rotate-180",
+                )}
+                aria-hidden
+              />
+            </button>
+            {aside ? <span className="flex shrink-0 items-center gap-2">{aside}</span> : null}
+          </>
+        )}
+      </div>
       {isOpen ? (
         <div className={cn("bg-vx-section-body text-white", bodyClassName ?? "px-0 py-0")}>
-          {aside && !forceOpen ? (
-            <div className="flex justify-end border-b border-vx-border px-4 py-3 sm:px-6">
-              {aside}
-            </div>
-          ) : null}
           {children}
         </div>
       ) : null}

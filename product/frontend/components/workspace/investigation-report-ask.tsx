@@ -41,21 +41,23 @@ export function SectionAskVayneButton({
   return (
     <button
       type="button"
-      onClick={() => ask(sectionTitle, engineContext)}
+      onClick={(e) => {
+        e.stopPropagation();
+        ask(sectionTitle, engineContext);
+      }}
       className={cn(
-        "inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-sm text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
         variant === "subtle" &&
-          "border-0 bg-transparent px-0 py-0 text-white hover:text-white",
+          "border border-white/15 bg-white/[0.04] px-2.5 py-1 text-white/70 hover:border-white/30 hover:bg-white/[0.08] hover:text-white",
         variant === "corner" &&
-          "border border-white bg-transparent px-2.5 py-1.5 text-white hover:bg-white hover:text-black",
+          "border border-white/20 bg-transparent px-2.5 py-1.5 text-white/80 hover:border-white/40 hover:text-white",
         variant === "inline" &&
-          "mt-4 border border-white bg-transparent px-3 py-2 text-white hover:bg-white hover:text-black",
+          "mt-4 border border-white/20 bg-transparent px-3 py-2 text-white/80 hover:border-white/40 hover:text-white",
         className,
       )}
     >
-      <Sparkles className="size-3 shrink-0" />
-      <span className="sm:hidden">Ask VAYNE</span>
-      <span className="hidden sm:inline">Ask VAYNE about this section</span>
+      <Sparkles className="size-3 shrink-0 opacity-80" />
+      Ask VAYNE
     </button>
   );
 }

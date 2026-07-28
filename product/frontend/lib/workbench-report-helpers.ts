@@ -566,12 +566,11 @@ export function riskOverviewMetrics(workbench: WorkbenchData, risk: string, conf
     },
     {
       label: "Evidence strength",
-      value: band?.word ?? (score != null ? `${score}%` : "—"),
+      value: score != null ? `${score}%` : "—",
       highlight: true,
-      sub:
-        score != null && band
-          ? `${score}% — ${band.sentence}`
-          : "How strongly evidence supports the top finding",
+      sub: band
+        ? `${band.word} — ${band.sentence}`
+        : "How strongly evidence supports the top finding",
     },
     {
       label: "Retained findings",

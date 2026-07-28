@@ -481,7 +481,7 @@ export function RiskOverviewSection({
         Attack surface is about potential impact. Evidence strength is about proof — they measure
         different things.
       </p>
-      <div className="grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
         {metrics.map((m) => (
           <MetricTile
             key={m.label}
