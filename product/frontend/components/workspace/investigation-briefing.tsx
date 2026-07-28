@@ -32,19 +32,16 @@ function BriefingMetricsStrip({
   metrics: Array<{ label: string; value: string; sub?: string }>;
 }) {
   return (
-    <div className="border-b border-vx-border px-4 py-4 sm:px-6">
-      <div className="grid grid-cols-2 gap-px overflow-hidden border border-white/[0.1] bg-white/[0.1] sm:grid-cols-3 lg:grid-cols-5">
+    <div className="border-b border-vx-border px-4 py-5 sm:px-6">
+      <div className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
         {metrics.map((row) => (
-          <div key={row.label} className="min-w-0 bg-vx-section-body px-3.5 py-3">
-            <p className="truncate text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+          <div key={row.label} className="min-w-0">
+            <p className="truncate text-[11px] font-medium uppercase tracking-[0.12em] text-white/45">
               {row.label}
             </p>
-            <p className="mt-1.5 font-mono text-[18px] font-semibold tabular-nums leading-none tracking-tight text-white sm:text-[20px]">
+            <p className="mt-2 font-mono text-[28px] font-semibold tabular-nums leading-none tracking-tight text-white sm:text-[32px]">
               {row.value}
             </p>
-            {row.sub ? (
-              <p className="mt-1.5 truncate text-[11px] leading-snug text-white/40">{row.sub}</p>
-            ) : null}
           </div>
         ))}
       </div>
