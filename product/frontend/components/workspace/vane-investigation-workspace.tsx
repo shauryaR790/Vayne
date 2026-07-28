@@ -91,15 +91,15 @@ export function VaneInvestigationWorkspace({
       ref={scrollRef}
       className="h-full overflow-y-auto bg-vx-app [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-vx-border bg-vx-section-body px-6 py-3">
+      <header className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-vx-border bg-vx-section-body px-4 py-3 sm:px-6">
         <h1 className="text-[13px] font-medium text-vx-secondary">Investigation Workspace</h1>
         {onViewEngineTrace && (engineTraceEvents.length > 0 || investigationIds.length > 0) ? (
           <button
             type="button"
             onClick={onViewEngineTrace}
-            className="font-mono text-[11px] uppercase tracking-[0.12em] text-white/55 transition-colors hover:text-white"
+            className="shrink-0 border border-white/20 px-4 py-2.5 text-[12px] uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/40 hover:text-white"
           >
-            View Engine Session
+            View Engine
           </button>
         ) : null}
       </header>
