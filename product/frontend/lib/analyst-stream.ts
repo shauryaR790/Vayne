@@ -473,7 +473,7 @@ export async function runAnalystThinkingSteps(
 
     onStep(step);
 
-    await sleep(640, signal);
+    await sleep(900, signal);
 
   }
 
@@ -513,7 +513,7 @@ export async function streamAnalystBriefing(
 
       options.onThinkingStep!(step);
 
-      await sleep(640, signal);
+      await sleep(900, signal);
 
     }
 
