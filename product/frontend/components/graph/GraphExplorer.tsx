@@ -5,6 +5,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  Position,
   type Edge,
   type Node,
   type ReactFlowInstance,
@@ -221,6 +222,8 @@ function GraphCanvas({
           id: n.id,
           type: isGroup ? "group" : "vayne",
           position: { x: pos.x, y: pos.y },
+          sourcePosition: Position.Bottom,
+          targetPosition: Position.Top,
           data: {
             ...n,
             type: nodeType,

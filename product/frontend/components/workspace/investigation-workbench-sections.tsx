@@ -1503,14 +1503,14 @@ export function DeveloperDetailsSection({
                   {workbench.file_contributions.length.toLocaleString()} source files contributed
                   evidence. Top contributors by signal volume:
                 </p>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4">
                   {workbench.file_contributions.slice(0, 8).map((f, i) => (
                     <FileContributionCard key={i} file={f} />
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4">
                 {workbench.file_contributions.map((f, i) => (
                   <FileContributionCard key={i} file={f} />
                 ))}
@@ -1554,19 +1554,21 @@ export function DeveloperDetailsSection({
 
 function FileContributionCard({ file }: { file: WorkbenchFileContribution }) {
   return (
-    <WorkspaceCard className="p-5">
-      <h4 className="truncate text-[13px] font-black uppercase text-white">{file.file}</h4>
-      <div className="mt-4 grid grid-cols-3 gap-3 border-t border-vx-border pt-4">
+    <WorkspaceCard className="min-w-0 overflow-hidden p-4">
+      <h4 className="truncate text-[12px] font-black uppercase tracking-wide text-white">
+        {file.file}
+      </h4>
+      <div className="mt-3 grid min-w-0 grid-cols-3 gap-2 border-t border-vx-border pt-3">
         {[
           { label: "Findings", value: file.findings },
           { label: "Retained", value: file.retained },
           { label: "Rejected", value: file.rejected },
         ].map((stat) => (
-          <div key={stat.label} className="border border-vx-border bg-vx-inset p-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">
+          <div key={stat.label} className="min-w-0 overflow-hidden border border-vx-border bg-vx-inset p-2.5">
+            <p className="truncate text-[9px] font-bold uppercase tracking-[0.1em] text-white/50">
               {stat.label}
             </p>
-            <p className="mt-2 text-2xl font-black leading-none text-white">{stat.value}</p>
+            <p className="mt-1.5 truncate text-xl font-black leading-none text-white">{stat.value}</p>
           </div>
         ))}
       </div>

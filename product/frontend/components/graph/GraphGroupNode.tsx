@@ -33,7 +33,7 @@ function GraphGroupNodeComponent({ data, selected }: NodeProps) {
     >
       <Handle
         type="target"
-        position={Position.Left}
+        position={Position.Top}
         className="!h-1.5 !w-1.5 !border-none !bg-zinc-500"
       />
       <button
@@ -64,7 +64,7 @@ function GraphGroupNodeComponent({ data, selected }: NodeProps) {
       </button>
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Bottom}
         className="!h-1.5 !w-1.5 !border-none !bg-zinc-500"
       />
     </div>

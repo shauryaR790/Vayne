@@ -8,9 +8,9 @@ const elk = new ELK();
 
 const ELK_OPTIONS: Record<string, string> = {
   "elk.algorithm": "layered",
-  "elk.direction": "RIGHT",
-  "elk.spacing.nodeNode": "28",
-  "elk.layered.spacing.nodeNodeBetweenLayers": "168",
+  "elk.direction": "DOWN",
+  "elk.spacing.nodeNode": "36",
+  "elk.layered.spacing.nodeNodeBetweenLayers": "96",
   "elk.layered.spacing.edgeNodeBetweenLayers": "28",
   "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
   "elk.layered.layering.strategy": "LONGEST_PATH",
@@ -19,9 +19,10 @@ const ELK_OPTIONS: Record<string, string> = {
   "elk.padding": "[top=24,left=32,bottom=24,right=32]",
 };
 
-const MAX_ROWS = 5;
-const ROW_GAP = 72;
-const COL_GAP = 168;
+/** Max nodes side-by-side in one layer before wrapping to another row. */
+const MAX_COLS = 3;
+const COL_GAP = 48;
+const ROW_GAP = 88;
 
 export interface ElkLayoutPosition {
   x: number;
@@ -36,46 +37,80 @@ function nodeDimensions(node: GraphNode): { width: number; height: number } {
   return { width: GRAPH_NODE_WIDTH, height: GRAPH_NODE_HEIGHT };
 }
 
-/** Spread dense layers horizontally instead of tall vertical stacks. */
+/**
+ * Keep top-to-bottom layers readable on square viewports:
+ * wide layers wrap into extra rows instead of stretching the canvas horizontally.
+ */
 function spreadDenseLayers(
   positions: Map<string, ElkLayoutPosition>,
   nodes: GraphNode[],
 ): Map<string, ElkLayoutPosition> {
-  const byX = new Map<number, string[]>();
+  const byY = new Map<number, string[]>();
   for (const node of nodes) {
     const pos = positions.get(node.id);
     if (!pos) continue;
-    const bucket = Math.round(pos.x / 40) * 40;
-    if (!byX.has(bucket)) byX.set(bucket, []);
-    byX.get(bucket)!.push(node.id);
+    const bucket = Math.round(pos.y / 40) * 40;
+    if (!byY.has(bucket)) byY.set(bucket, []);
+    byY.get(bucket)!.push(node.id);
   }
 
   const next = new Map(positions);
-  for (const [, ids] of byX) {
-    if (ids.length <= MAX_ROWS) continue;
-    ids.sort((a, b) => (next.get(a)?.y ?? 0) - (next.get(b)?.y ?? 0));
+  const layerKeys = [...byY.keys()].sort((a, b) => a - b);
+  let yCursor = 24;
+
+  for (const key of layerKeys) {
+    const ids = byY.get(key)!;
+    ids.sort((a, b) => (next.get(a)?.x ?? 0) - (next.get(b)?.x ?? 0));
+
+    const rowHeight = Math.max(
+      ...ids.map((id) => next.get(id)?.height ?? GRAPH_NODE_HEIGHT),
+      GRAPH_NODE_HEIGHT,
+    );
+
+    if (ids.length <= MAX_COLS) {
+      const totalWidth =
+        ids.reduce((sum, id) => sum + (next.get(id)?.width ?? GRAPH_NODE_WIDTH), 0) +
+        Math.max(0, ids.length - 1) * COL_GAP;
+      let x = Math.max(32, 200 - totalWidth / 2);
+      for (const id of ids) {
+        const pos = next.get(id);
+        if (!pos) continue;
+        next.set(id, { ...pos, x, y: yCursor });
+        x += pos.width + COL_GAP;
+      }
+      yCursor += rowHeight + ROW_GAP;
+      continue;
+    }
+
     ids.forEach((id, index) => {
       const pos = next.get(id);
       if (!pos) return;
-      const colOffset = Math.floor(index / MAX_ROWS);
-      const row = index % MAX_ROWS;
+      const col = index % MAX_COLS;
+      const row = Math.floor(index / MAX_COLS);
       next.set(id, {
         ...pos,
-        x: pos.x + colOffset * COL_GAP,
-        y: 24 + row * ROW_GAP,
+        x: 32 + col * (GRAPH_NODE_WIDTH + COL_GAP),
+        y: yCursor + row * (rowHeight + 28),
       });
     });
+    const rows = Math.ceil(ids.length / MAX_COLS);
+    yCursor += rows * (rowHeight + 28) + ROW_GAP - 28;
   }
 
-  let minY = Infinity;
-  let maxY = -Infinity;
+  // Center the finished stack horizontally in a typical square viewport band.
+  let minX = Infinity;
+  let maxX = -Infinity;
   for (const pos of next.values()) {
-    minY = Math.min(minY, pos.y);
-    maxY = Math.max(maxY, pos.y + pos.height);
+    minX = Math.min(minX, pos.x);
+    maxX = Math.max(maxX, pos.x + pos.width);
   }
-  const mid = (minY + maxY) / 2;
-  for (const [id, pos] of next) {
-    next.set(id, { ...pos, y: pos.y - mid + 120 });
+  const contentWidth = maxX - minX;
+  const targetLeft = Math.max(24, (420 - contentWidth) / 2);
+  const shiftX = targetLeft - minX;
+  if (Number.isFinite(shiftX) && Math.abs(shiftX) > 1) {
+    for (const [id, pos] of next) {
+      next.set(id, { ...pos, x: pos.x + shiftX });
+    }
   }
 
   return next;
@@ -123,7 +158,11 @@ export async function computeElkLayout(
     return spreadDenseLayers(
       nodes.reduce((map, node, i) => {
         const dim = nodeDimensions(node);
-        map.set(node.id, { x: 32 + i * 200, y: 48, ...dim });
+        map.set(node.id, {
+          x: 48 + (i % MAX_COLS) * (GRAPH_NODE_WIDTH + COL_GAP),
+          y: 32 + Math.floor(i / MAX_COLS) * (GRAPH_NODE_HEIGHT + ROW_GAP),
+          ...dim,
+        });
         return map;
       }, new Map<string, ElkLayoutPosition>()),
       nodes,

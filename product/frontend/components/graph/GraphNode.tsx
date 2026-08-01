@@ -54,7 +54,7 @@ function GraphNodeComponent({ data, selected }: NodeProps) {
       >
         <Handle
           type="target"
-          position={Position.Left}
+          position={Position.Top}
           className="!h-2 !w-2 !border-2 !border-[#09090b]"
           style={{ background: border }}
         />
@@ -90,7 +90,7 @@ function GraphNodeComponent({ data, selected }: NodeProps) {
         </div>
         <Handle
           type="source"
-          position={Position.Right}
+          position={Position.Bottom}
           className="!h-2 !w-2 !border-2 !border-[#09090b]"
           style={{ background: border }}
         />
