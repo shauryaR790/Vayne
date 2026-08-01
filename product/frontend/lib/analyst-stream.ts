@@ -46,17 +46,19 @@ export interface AnalystStreamMessage extends StoredChatMessage {
 
 
 const TEXT_REVEAL = {
-  linePauseMs: 150,
+  linePauseMs: 18,
+  wordGroupPauseMs: 10,
+  wordsPerBite: 20,
 } as const;
 
 function thinkPauseMs(label: string): number {
   if (label.toLowerCase().includes("reading") || label.toLowerCase().includes("parsing")) {
-    return 1100;
+    return 280;
   }
   if (label.toLowerCase().includes("correlating") || label.toLowerCase().includes("weighing")) {
-    return 1300;
+    return 320;
   }
-  return 1000;
+  return 240;
 }
 
 
@@ -103,7 +105,7 @@ async function streamSegmentTimeline(
 
 
 
-  await sleep(800, signal);
+  await sleep(120, signal);
 
 
 
@@ -136,7 +138,7 @@ async function streamSegmentTimeline(
       );
 
       const pauseMs = thinkPauseMs(segment.label);
-      const microIntervalMs = 360;
+      const microIntervalMs = 120;
       let elapsed = 0;
       let microStep = 0;
 
@@ -189,7 +191,7 @@ async function streamSegmentTimeline(
 
       );
 
-      await sleep(180, signal);
+      await sleep(60, signal);
 
       continue;
 
@@ -209,7 +211,7 @@ async function streamSegmentTimeline(
 
       );
 
-      await sleep(520, signal);
+      await sleep(80, signal);
 
       continue;
 
@@ -315,7 +317,7 @@ async function streamSegmentTimeline(
 
     );
 
-    await sleep(320, signal);
+    await sleep(40, signal);
 
   }
 
@@ -413,7 +415,7 @@ async function streamLegacyBriefing(
 
     );
 
-    await sleep(520, signal);
+    await sleep(80, signal);
 
   }
 
@@ -473,7 +475,7 @@ export async function runAnalystThinkingSteps(
 
     onStep(step);
 
-    await sleep(900, signal);
+    await sleep(220, signal);
 
   }
 
@@ -513,7 +515,7 @@ export async function streamAnalystBriefing(
 
       options.onThinkingStep!(step);
 
-      await sleep(900, signal);
+      await sleep(220, signal);
 
     }
 
@@ -541,7 +543,7 @@ export async function streamAnalystBriefing(
 
       }
 
-      await sleep(240, signal);
+      await sleep(40, signal);
 
     } else {
 

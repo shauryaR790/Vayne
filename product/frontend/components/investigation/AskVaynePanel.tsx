@@ -13,7 +13,7 @@ import {
   type ReportMode,
 } from "@/lib/analyst-chat";
 import type { ChatTurn } from "@/lib/vayne-analyst";
-import { revealLines, sleep } from "@/lib/text-reveal";
+import { createStreamBatcher } from "@/lib/stream-buffer";
 import { HoverCard } from "@/components/shared/hover-card";
 import { VayneThinking } from "@/components/shared/vayne-thinking";
 import { ChatBubble } from "@/components/investigation/chat-bubble";
@@ -83,8 +83,21 @@ export function AskVaynePanel({
       const streamId = `stream-${Date.now()}`;
       let fullText = "";
       let gotTokens = false;
-      const thinkStartedAt = Date.now();
-      const minThinkMs = 2200;
+      let startedReply = false;
+
+      const batcher = createStreamBatcher((text) => {
+        updateStreamMessage(streamId, text, true);
+      });
+
+      const beginReply = () => {
+        if (startedReply) return;
+        startedReply = true;
+        setReasoning(false);
+        setMessages((prev) => [
+          ...prev,
+          { id: streamId, role: "assistant", content: "", streaming: true },
+        ]);
+      };
 
       try {
         for await (const event of streamAnalystChat(investigationId, question, history, {
@@ -116,7 +129,9 @@ export function AskVaynePanel({
 
           if (event.type === "token") {
             gotTokens = true;
-            fullText += event.token;
+            beginReply();
+            batcher.append(event.token);
+            fullText = batcher.text;
           }
 
           if (event.type === "usage") {
@@ -142,10 +157,9 @@ export function AskVaynePanel({
 
       if (streamAbort.current) return;
 
-      const thinkRemain = Math.max(0, minThinkMs - (Date.now() - thinkStartedAt));
-      if (thinkRemain > 0) await sleep(thinkRemain);
-
       setReasoning(false);
+      batcher.finish();
+      fullText = batcher.text;
 
       if (!gotTokens || !fullText.trim()) {
         setMessages((prev) => [
@@ -157,16 +171,6 @@ export function AskVaynePanel({
       }
 
       setAnalystStatus((s) => (s ? { ...s, online: true } : s));
-      setMessages((prev) => [
-        ...prev,
-        { id: streamId, role: "assistant", content: "", streaming: true },
-      ]);
-
-      await revealLines(
-        fullText,
-        (partial) => updateStreamMessage(streamId, partial, true),
-        { linePauseMs: 180, wordGroupPauseMs: 70, wordsPerBite: 7 },
-      );
       updateStreamMessage(streamId, fullText, false);
       setBusy(false);
     },

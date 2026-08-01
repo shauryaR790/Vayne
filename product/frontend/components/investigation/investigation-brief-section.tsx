@@ -7,7 +7,7 @@ import {
   ANALYST_OFFLINE_MESSAGE,
   streamInvestigationBrief,
 } from "@/lib/analyst-chat";
-import { revealLines, sleep } from "@/lib/text-reveal";
+import { createStreamBatcher } from "@/lib/stream-buffer";
 import { HoverCard } from "@/components/shared/hover-card";
 import { CursorLoadingStatus } from "@/components/shared/cursor-loading-status";
 import { AnalystMarkdown } from "@/components/workspace/analyst/analyst-markdown";
@@ -32,8 +32,15 @@ export function InvestigationBriefSection({
     setContent("");
 
     let fullText = "";
-    const thinkStartedAt = Date.now();
-    const minThinkMs = 1800;
+    let gotTokens = false;
+
+    const batcher = createStreamBatcher((text) => {
+      if (!abortRef.current) {
+        setContent(text);
+        setThinking(false);
+        setStreaming(true);
+      }
+    });
 
     try {
       for await (const event of streamInvestigationBrief(investigationId)) {
@@ -50,7 +57,9 @@ export function InvestigationBriefSection({
           return;
         }
         if (event.type === "token") {
-          fullText += event.token;
+          gotTokens = true;
+          batcher.append(event.token);
+          fullText = batcher.text;
         }
         if (event.type === "done") break;
       }
@@ -63,30 +72,18 @@ export function InvestigationBriefSection({
 
     if (abortRef.current) return;
 
-    const thinkRemain = Math.max(0, minThinkMs - (Date.now() - thinkStartedAt));
-    if (thinkRemain > 0) await sleep(thinkRemain);
-    if (abortRef.current) return;
-
+    batcher.finish();
+    fullText = batcher.text;
     setThinking(false);
 
-    if (!fullText.trim()) {
+    if (!gotTokens || !fullText.trim()) {
       setContent(ANALYST_OFFLINE_MESSAGE);
       setStreaming(false);
       return;
     }
 
-    await revealLines(
-      fullText,
-      (partial) => {
-        if (!abortRef.current) setContent(partial);
-      },
-      { linePauseMs: 180, wordGroupPauseMs: 70, wordsPerBite: 7 },
-    );
-
-    if (!abortRef.current) {
-      setContent(fullText);
-      setStreaming(false);
-    }
+    setContent(fullText);
+    setStreaming(false);
   }, [investigationId]);
 
   useEffect(() => {

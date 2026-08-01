@@ -26,7 +26,8 @@ import {
   type InvestigationBundle,
 } from "@/lib/investigation-bundle";
 import { saveRecentInvestigation, recentEntryFromBundle } from "@/lib/recent-investigations";
-import { sleep, revealLines } from "@/lib/text-reveal";
+import { sleep } from "@/lib/text-reveal";
+import { createStreamBatcher } from "@/lib/stream-buffer";
 import {
   clearConversationSession,
   OPEN_INVESTIGATION_EVENT,
@@ -615,21 +616,30 @@ export function VaneWorkspace({
       });
       setActivityFeed(feed);
 
-      const thinkStartedAt = Date.now();
-      const minThinkMs = 2200;
-
       let activityStep = 0;
       const stepTimer = window.setInterval(() => {
         activityStep += 1;
         if (activityStep >= chatScript.length) return;
         feed = advanceActivityFeed(feed, chatScript, activityStep);
         setActivityFeed({ ...feed });
-      }, 900);
+      }, 700);
 
-      // Collect the full model reply while thinking UI is visible — never paint
-      // tokens live (that looked like an instant paste). Then type line-by-line.
       let fullText = "";
       let gotTokens = false;
+      let startedReply = false;
+
+      const batcher = createStreamBatcher((text) => {
+        updateAnalystMessage(streamId, text, true);
+      });
+
+      const beginReply = () => {
+        if (startedReply) return;
+        startedReply = true;
+        window.clearInterval(stepTimer);
+        setActivityFeed(null);
+        setThinking(false);
+        updateAnalystMessage(streamId, "", true);
+      };
 
       const signal = beginStream();
       const stream = investigationId
@@ -665,7 +675,9 @@ export function VaneWorkspace({
 
           if (event.type === "token") {
             gotTokens = true;
-            fullText += event.token;
+            beginReply();
+            batcher.append(event.token);
+            fullText = batcher.text;
           }
 
           if (event.type === "done") break;
@@ -681,14 +693,11 @@ export function VaneWorkspace({
 
       if (signal.aborted) return;
 
-      const thinkRemain = Math.max(0, minThinkMs - (Date.now() - thinkStartedAt));
-      if (thinkRemain > 0) {
-        await sleep(thinkRemain);
-      }
-
       window.clearInterval(stepTimer);
       setActivityFeed(null);
       setThinking(false);
+      batcher.finish();
+      fullText = batcher.text;
 
       if (!gotTokens || !fullText.trim()) {
         updateAnalystMessage(streamId, ANALYST_OFFLINE_MESSAGE, false);
@@ -696,12 +705,6 @@ export function VaneWorkspace({
         return;
       }
 
-      updateAnalystMessage(streamId, "", true);
-      await revealLines(
-        fullText,
-        (partial) => updateAnalystMessage(streamId, partial, true),
-        { linePauseMs: 180, wordGroupPauseMs: 70, wordsPerBite: 7 },
-      );
       updateAnalystMessage(streamId, fullText, false);
       if (gotTokens) {
         setChatQuotaRemaining((prev) =>
