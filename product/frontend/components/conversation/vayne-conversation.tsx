@@ -26,7 +26,6 @@ import {
   type InvestigationBundle,
 } from "@/lib/investigation-bundle";
 import { saveRecentInvestigation, recentEntryFromBundle } from "@/lib/recent-investigations";
-import { sleep } from "@/lib/text-reveal";
 import { createStreamBatcher } from "@/lib/stream-buffer";
 import {
   clearConversationSession,
@@ -789,9 +788,6 @@ export function VaneWorkspace({
       { id: `user-${Date.now()}`, role: "user", content: prompt, attachments },
     ]);
 
-    const runStartedAt = performance.now();
-    const MIN_ENGINE_FEEL_MS = 900;
-
     try {
       // History is a workspace session — never name the run after uploaded files.
       const sessionName = "Security Investigation";
@@ -804,40 +800,21 @@ export function VaneWorkspace({
       let result: Awaited<ReturnType<typeof analyzeFiles>> | null = null;
       try {
         // Push Trace events as soon as the engine emits them — no artificial backlog.
-        const pending: EngineTraceEvent[] = [];
         const collected: EngineTraceEvent[] = [];
-        let pumpActive = true;
-        const pumpToken = { live: true };
-        const pump = (async () => {
-          while (pumpToken.live && (pumpActive || pending.length)) {
-            const next = pending.shift();
-            if (!next) {
-              await sleep(8);
-              continue;
-            }
-            collected.push(next);
-            setEngineTraceEvents((prev) => [...prev, next]);
-            await sleep(10);
-          }
-        })();
 
         for await (const event of streamAnalyzeWithTrace(validation.files, sessionName, {
           mode: resolvedMode,
           prompt,
         })) {
           if (event.type === "engine_event") {
-            pending.push(event.event);
+            collected.push(event.event);
+            setEngineTraceEvents((prev) => [...prev, event.event]);
           } else if (event.type === "error") {
-            pumpActive = false;
-            pumpToken.live = false;
-            pending.length = 0;
             throw new Error(event.message || "Analysis failed");
           } else if (event.type === "complete") {
             result = event.result;
           }
         }
-        pumpActive = false;
-        await pump;
 
         // Cache Trace locally so a refresh still restores Engine + Trace.
         if (result && collected.length) {
@@ -861,13 +838,6 @@ export function VaneWorkspace({
 
       if (!result) {
         throw new Error("Analysis returned no result");
-      }
-
-      // Keep the Engine in "running" long enough that the Trace can feel like a
-      // real terminal session (~2–3s), even on tiny uploads.
-      const elapsed = performance.now() - runStartedAt;
-      if (elapsed < MIN_ENGINE_FEEL_MS) {
-        await sleep(MIN_ENGINE_FEEL_MS - elapsed);
       }
 
       if (result.warnings?.length) {

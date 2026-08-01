@@ -386,14 +386,6 @@ function scrollElToEnd(el: HTMLElement | null) {
   });
 }
 
-function delayForTraceItem(item: RevealItem | undefined): number {
-  if (!item) return 40;
-  if (item.kind === "stage-title") return 70;
-  if (item.kind === "proof-line") return 28;
-  if (item.kind === "line" && item.line.arrow) return 45;
-  return 35;
-}
-
 export function EngineTraceLive({
   events,
   running,
@@ -405,57 +397,26 @@ export function EngineTraceLive({
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
-  const liveSessionRef = useRef(false);
   const [manualScroll, setManualScroll] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
 
   const chunks = useMemo(() => buildTraceChunks(events), [events]);
   const items = useMemo(() => flattenTraceChunks(chunks), [chunks]);
 
-  // Reset reveal when a new run starts (events cleared).
+  // Reset when a new run starts (events cleared).
   useEffect(() => {
     if (events.length === 0) {
       setVisibleCount(0);
       stickToBottom.current = true;
       setManualScroll(false);
-      liveSessionRef.current = false;
     }
   }, [events.length]);
 
+  // Show Trace lines as soon as they exist — no typing holds.
   useEffect(() => {
-    if (running) liveSessionRef.current = true;
-  }, [running]);
-
-  // Historical resume only: show the full Trace immediately.
-  // Live / just-finished runs always type line-by-line with thinking holds.
-  useEffect(() => {
-    if (running || liveSessionRef.current) return;
-    if (events.length === 0) return;
-    if (visibleCount !== 0) return;
     if (items.length === 0) return;
     setVisibleCount(items.length);
-  }, [running, events.length, items.length, visibleCount]);
-
-  // Line-by-line terminal reveal with ~0.1–0.2s thinking holds.
-  useEffect(() => {
-    if (visibleCount >= items.length) return;
-    // Resume path dumps historical traces above.
-    if (!running && !liveSessionRef.current && visibleCount === 0 && items.length > 0) {
-      return;
-    }
-
-    const delay = delayForTraceItem(items[visibleCount]);
-    const timer = window.setTimeout(() => {
-      setVisibleCount((n) => Math.min(items.length, n + 1));
-    }, delay);
-
-    return () => window.clearTimeout(timer);
-  }, [visibleCount, items, running]);
-
-  // Catch up when new items append during a live run.
-  useEffect(() => {
-    if (visibleCount > items.length) setVisibleCount(items.length);
-  }, [items.length, visibleCount]);
+  }, [items.length]);
 
   const revealing = visibleCount < items.length;
   const showCursor = Boolean(running) || revealing;
