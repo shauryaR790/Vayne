@@ -525,23 +525,40 @@ function listItemToRecent(
  * not only IDs already present in this browser.
  */
 let syncInFlight: Promise<RecentInvestigation[]> | null = null;
+let syncGeneration = 0;
+
+/** Invalidate in-flight history syncs (call on account switch). */
+export function invalidateHistorySync() {
+  syncGeneration += 1;
+  syncInFlight = null;
+}
 
 export async function syncRecentInvestigationsFromApi(
   limit: number = HISTORY_MAX,
+  options?: { replaceLocal?: boolean },
 ): Promise<RecentInvestigation[]> {
   if (typeof window === "undefined") return [];
+
+  const replaceLocal = Boolean(options?.replaceLocal);
+  const generation = replaceLocal ? ++syncGeneration : syncGeneration;
 
   const run = async (): Promise<RecentInvestigation[]> => {
     try {
       const rows = await listInvestigations();
-      const local = loadRawRecentInvestigations();
+      if (generation !== syncGeneration) return loadInvestigationHistory(limit);
+
+      const local = replaceLocal ? [] : loadRawRecentInvestigations();
       const localById = new Map(local.map((item) => [item.id, item]));
 
       const fromServer = rows.map((row) => listItemToRecent(row, localById.get(row.id)));
       const serverIds = new Set(fromServer.map((item) => item.id));
-      // Keep local-only rows that the API did not return (e.g. still indexing).
-      const stillLocal = local.filter((item) => !serverIds.has(item.id));
+      // Keep local-only rows that the API did not return (e.g. still indexing),
+      // unless we're replacing after an account switch.
+      const stillLocal = replaceLocal
+        ? []
+        : local.filter((item) => !serverIds.has(item.id));
       const prepared = prepareInvestigationHistory([...fromServer, ...stillLocal], HISTORY_MAX);
+      if (generation !== syncGeneration) return prepared.slice(0, limit);
       persistInvestigationList(prepared);
       notifyRecentUpdated();
 
@@ -556,8 +573,10 @@ export async function syncRecentInvestigationsFromApi(
         );
       });
       if (needsTitle.length > 0) {
+        const enrichGen = generation;
         void Promise.all(needsTitle.slice(0, 12).map((item) => enrichRecentInvestigation(item)))
           .then((enriched) => {
+            if (enrichGen !== syncGeneration) return;
             const byId = new Map(enriched.map((item) => [item.id, item]));
             const merged = prepareInvestigationHistory(
               loadRawRecentInvestigations().map((item) => byId.get(item.id) ?? item),
@@ -571,11 +590,11 @@ export async function syncRecentInvestigationsFromApi(
 
       return prepared.slice(0, limit);
     } catch {
-      return loadInvestigationHistory(limit);
+      return replaceLocal ? [] : loadInvestigationHistory(limit);
     }
   };
 
-  if (!syncInFlight) {
+  if (replaceLocal || !syncInFlight) {
     syncInFlight = run().finally(() => {
       syncInFlight = null;
     });
@@ -585,11 +604,14 @@ export async function syncRecentInvestigationsFromApi(
   return prepared.slice(0, limit);
 }
 
-/** After login/register — pull the team workspace history into the sidebar. */
+/** After login/register — replace local sidebar with this account's investigations only. */
 export async function hydrateInvestigationHistoryAfterAuth(
   limit: number = HISTORY_MAX,
 ): Promise<RecentInvestigation[]> {
-  return syncRecentInvestigationsFromApi(limit);
+  invalidateHistorySync();
+  clearRecentInvestigations();
+  notifyRecentUpdated();
+  return syncRecentInvestigationsFromApi(limit, { replaceLocal: true });
 }
 
 export function removeRecentInvestigation(id: string) {

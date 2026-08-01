@@ -19,8 +19,9 @@ import {
   type RecentInvestigation,
 } from "@/lib/recent-investigations";
 import { clearAllInvestigationSessions } from "@/lib/investigation-session";
+import { leaveAuthWorkspace } from "@/lib/account-local-state";
 import { InvestigationHistoryList } from "@/components/workspace/investigation-history-rows";
-import { clearAuthSession, getAuthProfile, type AuthProfile } from "@/lib/auth";
+import { getAuthProfile, type AuthProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const TUTORIAL_PROMO_DISMISSED_KEY = "vane-sidebar-tutorial-promo-dismissed";
@@ -165,8 +166,9 @@ function SidebarPanel({
   };
 
   const handleLogout = () => {
-    clearAuthSession();
+    leaveAuthWorkspace();
     setAuthProfile(null);
+    setItems([]);
     onNavigate?.();
     router.push("/login");
   };

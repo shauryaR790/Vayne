@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginUser, registerUser } from "@/lib/api";
-import { setAuthSession } from "@/lib/auth";
+import { enterAuthWorkspace } from "@/lib/account-local-state";
 import { hydrateInvestigationHistoryAfterAuth } from "@/lib/recent-investigations";
 import { formatAuthError } from "@/lib/user-messages";
 
@@ -41,13 +41,16 @@ export function LoginForm() {
         mode === "login"
           ? await loginUser(email, password)
           : await registerUser({ email, password, name, team_name: teamName });
-      setAuthSession(session.access_token, {
-        email: session.email,
-        name: session.name,
-        team_id: session.team_id,
-        team_name: session.team_name,
-        workspace_id: session.workspace_id,
-      });
+      enterAuthWorkspace(
+        {
+          email: session.email,
+          name: session.name,
+          team_id: session.team_id,
+          team_name: session.team_name,
+          workspace_id: session.workspace_id,
+        },
+        session.access_token,
+      );
       // Pull this team's investigations into sidebar history before landing home.
       try {
         await hydrateInvestigationHistoryAfterAuth();
