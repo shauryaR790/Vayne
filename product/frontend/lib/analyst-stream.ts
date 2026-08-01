@@ -4,7 +4,7 @@ import { flattenSegmentText } from "@/lib/analyst-segments";
 
 import type { StoredChatMessage } from "@/lib/conversation-session";
 
-import { revealText, sleep } from "@/lib/text-reveal";
+import { revealLines, sleep } from "@/lib/text-reveal";
 
 import {
   advanceActivityFeed,
@@ -46,33 +46,17 @@ export interface AnalystStreamMessage extends StoredChatMessage {
 
 
 const TEXT_REVEAL = {
-
-  charsPerTick: 2,
-
-  tickMs: 26,
-
-  paragraphPauseMs: 480,
-
+  linePauseMs: 150,
 } as const;
 
-
-
 function thinkPauseMs(label: string): number {
-
   if (label.toLowerCase().includes("reading") || label.toLowerCase().includes("parsing")) {
-
-    return 920;
-
-  }
-
-  if (label.toLowerCase().includes("correlating") || label.toLowerCase().includes("weighing")) {
-
     return 1100;
-
   }
-
-  return 780;
-
+  if (label.toLowerCase().includes("correlating") || label.toLowerCase().includes("weighing")) {
+    return 1300;
+  }
+  return 1000;
 }
 
 
@@ -119,7 +103,7 @@ async function streamSegmentTimeline(
 
 
 
-  await sleep(420, signal);
+  await sleep(800, signal);
 
 
 
@@ -245,7 +229,7 @@ async function streamSegmentTimeline(
 
 
 
-    await revealText(
+    await revealLines(
 
       segment.content,
 
@@ -401,7 +385,7 @@ async function streamLegacyBriefing(
 
   if (lead) {
 
-    await revealText(lead, (partial) => {
+    await revealLines(lead, (partial) => {
 
       apply((prev) =>
 
@@ -437,7 +421,7 @@ async function streamLegacyBriefing(
 
   const bodyPrefix = lead ? `${lead}\n\n` : "";
 
-  await revealText(
+  await revealLines(
 
     body,
 

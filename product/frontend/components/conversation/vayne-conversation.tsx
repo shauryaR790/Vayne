@@ -26,7 +26,7 @@ import {
   type InvestigationBundle,
 } from "@/lib/investigation-bundle";
 import { saveRecentInvestigation, recentEntryFromBundle } from "@/lib/recent-investigations";
-import { createRhythmStreamBatcher } from "@/lib/stream-buffer";
+import { createLineRevealBatcher } from "@/lib/stream-buffer";
 import { sleep } from "@/lib/text-reveal";
 import {
   clearConversationSession,
@@ -616,7 +616,7 @@ export function VaneWorkspace({
       setActivityFeed(feed);
 
       const thinkStartedAt = Date.now();
-      const minThinkMs = 1400;
+      const minThinkMs = 2000;
 
       let activityStep = 0;
       const stepTimer = window.setInterval(() => {
@@ -624,16 +624,20 @@ export function VaneWorkspace({
         if (activityStep >= chatScript.length) return;
         feed = advanceActivityFeed(feed, chatScript, activityStep);
         setActivityFeed({ ...feed });
-      }, 880);
+      }, 900);
 
-      const batcher = createRhythmStreamBatcher(
+      let revealedAny = false;
+      const batcher = createLineRevealBatcher(
         (text) => {
-          window.clearInterval(stepTimer);
-          setActivityFeed(null);
-          setThinking(false);
+          if (!revealedAny) {
+            revealedAny = true;
+            window.clearInterval(stepTimer);
+            setActivityFeed(null);
+            setThinking(false);
+          }
           updateAnalystMessage(streamId, text, true);
         },
-        { pauseMs: 175 },
+        { linePauseMs: 150, sentencePauseMs: 170 },
       );
       let gotTokens = false;
 
@@ -653,7 +657,7 @@ export function VaneWorkspace({
             window.clearInterval(stepTimer);
             setActivityFeed(null);
             setThinking(false);
-            batcher.finish();
+            await batcher.finish();
             if (event.code === "quota_exceeded") {
               setChatQuotaRemaining(0);
               updateAnalystMessage(streamId, event.message || ANALYST_QUOTA_MESSAGE, false);
@@ -680,11 +684,9 @@ export function VaneWorkspace({
               if (thinkRemain > 0) {
                 await new Promise((r) => window.setTimeout(r, thinkRemain));
               }
-              window.clearInterval(stepTimer);
-              setActivityFeed(null);
             }
             gotTokens = true;
-            setThinking(false);
+            // Keep the thinking UI until the first line is actually revealed.
             batcher.append(event.token);
           }
 
@@ -694,13 +696,13 @@ export function VaneWorkspace({
         window.clearInterval(stepTimer);
         setActivityFeed(null);
         setThinking(false);
-        batcher.finish();
+        await batcher.finish();
         updateAnalystMessage(streamId, ANALYST_OFFLINE_MESSAGE, false);
         setBusy(false);
         return;
       }
 
-      batcher.finish();
+      await batcher.finish();
       window.clearInterval(stepTimer);
       setActivityFeed(null);
       setThinking(false);
@@ -799,7 +801,7 @@ export function VaneWorkspace({
           while (pumpToken.live && (pumpActive || pending.length)) {
             const next = pending.shift();
             if (!next) {
-              await sleep(24);
+              await sleep(80);
               continue;
             }
             collected.push(next);

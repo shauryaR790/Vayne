@@ -46,3 +46,34 @@ export async function revealText(
 
   onUpdate(fullText);
 }
+
+/**
+ * Reveal text one line at a time with a short thinking hold between lines.
+ */
+export async function revealLines(
+  fullText: string,
+  onUpdate: (partial: string) => void,
+  options?: {
+    linePauseMs?: number;
+    signal?: AbortSignal;
+  },
+): Promise<void> {
+  const linePauseMs = options?.linePauseMs ?? 140;
+  if (!fullText) {
+    onUpdate("");
+    return;
+  }
+
+  const lines = fullText.split("\n");
+  let acc = "";
+  for (let i = 0; i < lines.length; i++) {
+    if (options?.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    if (i > 0) acc += "\n";
+    acc += lines[i];
+    onUpdate(acc);
+    if (i < lines.length - 1) {
+      await sleep(linePauseMs, options?.signal);
+    }
+  }
+  onUpdate(fullText);
+}
