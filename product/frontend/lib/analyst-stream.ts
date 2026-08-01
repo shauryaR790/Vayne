@@ -4,7 +4,12 @@ import { flattenSegmentText } from "@/lib/analyst-segments";
 
 import type { StoredChatMessage } from "@/lib/conversation-session";
 
+import { revealLines, sleep } from "@/lib/text-reveal";
+
 import {
+  advanceActivityFeed,
+  buildThinkMicroScript,
+  initActivityFeed,
   type AgentActivityFeed,
 } from "@/lib/analyst-activity";
 
@@ -40,7 +45,24 @@ export interface AnalystStreamMessage extends StoredChatMessage {
 
 
 
-/** Paint briefing segments immediately — no think holds or typed reveal. */
+const TEXT_REVEAL = {
+  linePauseMs: 18,
+  wordGroupPauseMs: 10,
+  wordsPerBite: 20,
+} as const;
+
+function thinkPauseMs(label: string): number {
+  if (label.toLowerCase().includes("reading") || label.toLowerCase().includes("parsing")) {
+    return 280;
+  }
+  if (label.toLowerCase().includes("correlating") || label.toLowerCase().includes("weighing")) {
+    return 320;
+  }
+  return 240;
+}
+
+
+
 async function streamSegmentTimeline(
 
   message: StoredChatMessage,
@@ -51,11 +73,13 @@ async function streamSegmentTimeline(
 
 ): Promise<void> {
 
-  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  const id = message.id;
 
   const segments = message.streamSegments ?? [];
 
   const segmentTexts = segments.map((segment) => (segment.type === "text" ? segment.content : ""));
+
+
 
   apply((prev) => [
 
@@ -65,19 +89,265 @@ async function streamSegmentTimeline(
 
       ...message,
 
-      content: message.content || flattenSegmentText(segments),
+      content: "",
 
-      streaming: false,
+      streaming: true,
 
-      revealedSegments: segments.length,
+      revealedSegments: 0,
 
-      segmentTexts,
+      segmentTexts: segments.map(() => ""),
 
       activeThinking: null,
 
     },
 
   ]);
+
+
+
+  await sleep(120, signal);
+
+
+
+  for (let index = 0; index < segments.length; index++) {
+
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+
+    const segment = segments[index];
+
+
+
+    if (segment.type === "think") {
+      const microScript = buildThinkMicroScript(segment.label, segment.detail);
+      let microFeed = initActivityFeed(microScript, { waitingLabel: "Working through evidence" });
+
+      apply((prev) =>
+        prev.map((row) =>
+          row.id === id
+            ? {
+                ...row,
+                activeThinking: {
+                  label: segment.label,
+                  detail: segment.detail,
+                  activity: microFeed,
+                },
+                streaming: true,
+              }
+            : row,
+        ),
+      );
+
+      const pauseMs = thinkPauseMs(segment.label);
+      const microIntervalMs = 120;
+      let elapsed = 0;
+      let microStep = 0;
+
+      while (elapsed < pauseMs) {
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        await sleep(Math.min(microIntervalMs, pauseMs - elapsed), signal);
+        elapsed += microIntervalMs;
+        microStep += 1;
+        if (microStep < microScript.length) {
+          microFeed = advanceActivityFeed(microFeed, microScript, microStep);
+          apply((prev) =>
+            prev.map((row) =>
+              row.id === id
+                ? {
+                    ...row,
+                    activeThinking: {
+                      label: segment.label,
+                      detail: segment.detail,
+                      activity: microFeed,
+                    },
+                    streaming: true,
+                  }
+                : row,
+            ),
+          );
+        }
+      }
+
+      apply((prev) =>
+
+        prev.map((row) =>
+
+          row.id === id
+
+            ? {
+
+                ...row,
+
+                revealedSegments: index + 1,
+
+                activeThinking: null,
+
+                streaming: true,
+
+              }
+
+            : row,
+
+        ),
+
+      );
+
+      await sleep(60, signal);
+
+      continue;
+
+    }
+
+
+
+    if (segment.type === "file") {
+
+      apply((prev) =>
+
+        prev.map((row) =>
+
+          row.id === id ? { ...row, revealedSegments: index + 1, activeThinking: null, streaming: true } : row,
+
+        ),
+
+      );
+
+      await sleep(80, signal);
+
+      continue;
+
+    }
+
+
+
+    apply((prev) =>
+
+      prev.map((row) =>
+
+        row.id === id ? { ...row, activeThinking: null, streaming: true, revealedSegments: index } : row,
+
+      ),
+
+    );
+
+
+
+    await revealLines(
+
+      segment.content,
+
+      (partial) => {
+
+        apply((prev) =>
+
+          prev.map((row) => {
+
+            if (row.id !== id) return row;
+
+            const nextTexts = [...(row.segmentTexts ?? segmentTexts)];
+
+            nextTexts[index] = partial;
+
+            return {
+
+              ...row,
+
+              segmentTexts: nextTexts,
+
+              content: flattenSegmentText(
+
+                segments.map((item, i) =>
+
+                  item.type === "text" ? { type: "text" as const, content: nextTexts[i] ?? "" } : item,
+
+                ),
+
+              ),
+
+              streaming: true,
+
+              revealedSegments: index,
+
+            };
+
+          }),
+
+        );
+
+      },
+
+      { ...TEXT_REVEAL, signal },
+
+    );
+
+
+
+    apply((prev) =>
+
+      prev.map((row) => {
+
+        if (row.id !== id) return row;
+
+        const nextTexts = [...(row.segmentTexts ?? segmentTexts)];
+
+        nextTexts[index] = segment.content;
+
+        return {
+
+          ...row,
+
+          segmentTexts: nextTexts,
+
+          content: flattenSegmentText(
+
+            segments.map((item, i) =>
+
+              item.type === "text" ? { type: "text" as const, content: nextTexts[i] ?? "" } : item,
+
+            ),
+
+          ),
+
+          revealedSegments: index + 1,
+
+          streaming: true,
+
+        };
+
+      }),
+
+    );
+
+    await sleep(40, signal);
+
+  }
+
+
+
+  apply((prev) =>
+
+    prev.map((row) =>
+
+      row.id === id
+
+        ? {
+
+            ...row,
+
+            streaming: false,
+
+            revealedSegments: segments.length,
+
+            activeThinking: null,
+
+            content: message.content || flattenSegmentText(segments),
+
+          }
+
+        : row,
+
+    ),
+
+  );
 
 }
 
@@ -93,29 +363,99 @@ async function streamLegacyBriefing(
 
 ): Promise<void> {
 
-  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  const id = message.id;
 
   const insights = message.fileInsights ?? [];
+
+  const marker = message.content.indexOf("\n\n**");
+
+  const lead = marker > 0 ? message.content.slice(0, marker) : "";
+
+  const body = marker > 0 ? message.content.slice(marker + 2) : message.content;
+
+
 
   apply((prev) => [
 
     ...prev,
 
-    {
+    { ...message, content: "", streaming: true, fileInsights: insights, revealedFileInsights: 0 },
 
-      ...message,
+  ]);
 
-      content: message.content,
 
-      streaming: false,
 
-      fileInsights: insights,
+  if (lead) {
 
-      revealedFileInsights: insights.length,
+    await revealLines(lead, (partial) => {
+
+      apply((prev) =>
+
+        prev.map((row) => (row.id === id ? { ...row, content: partial, streaming: true } : row)),
+
+      );
+
+    }, TEXT_REVEAL);
+
+  }
+
+
+
+  for (let i = 0; i < insights.length; i++) {
+
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+
+    apply((prev) =>
+
+      prev.map((row) =>
+
+        row.id === id ? { ...row, content: lead, revealedFileInsights: i + 1, streaming: true } : row,
+
+      ),
+
+    );
+
+    await sleep(80, signal);
+
+  }
+
+
+
+  const bodyPrefix = lead ? `${lead}\n\n` : "";
+
+  await revealLines(
+
+    body,
+
+    (partial) => {
+
+      apply((prev) =>
+
+        prev.map((row) =>
+
+          row.id === id
+
+            ? { ...row, content: `${bodyPrefix}${partial}`, streaming: true, revealedFileInsights: insights.length }
+
+            : row,
+
+        ),
+
+      );
 
     },
 
-  ]);
+    TEXT_REVEAL,
+
+  );
+
+
+
+  apply((prev) =>
+
+    prev.map((row) => (row.id === id ? { ...row, streaming: false, revealedFileInsights: insights.length } : row)),
+
+  );
 
 }
 
@@ -125,13 +465,17 @@ export async function runAnalystThinkingSteps(
 
   onStep: (step: string) => void,
 
-  _signal?: AbortSignal,
+  signal?: AbortSignal,
 
 ): Promise<void> {
 
   for (const step of ANALYST_THINKING_STEPS) {
 
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+
     onStep(step);
+
+    await sleep(220, signal);
 
   }
 
@@ -171,6 +515,8 @@ export async function streamAnalystBriefing(
 
       options.onThinkingStep!(step);
 
+      await sleep(220, signal);
+
     }
 
     options.onThinkingStep!(null);
@@ -196,6 +542,8 @@ export async function streamAnalystBriefing(
         await streamLegacyBriefing(message, apply, signal);
 
       }
+
+      await sleep(40, signal);
 
     } else {
 
@@ -310,3 +658,5 @@ export function buildSegmentRenderPlan(
   return items;
 
 }
+
+
