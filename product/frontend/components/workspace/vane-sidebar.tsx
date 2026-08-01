@@ -27,11 +27,11 @@ const TUTORIAL_PROMO_DISMISSED_KEY = "vane-sidebar-tutorial-promo-dismissed";
 
 function SidebarTutorialPromo({ onDismiss }: { onDismiss: () => void }) {
   return (
-    <div className="relative mx-3 mb-3 rounded-lg border border-vx-border bg-vx-elevated p-4">
+    <div className="relative mx-3 mb-3 rounded-2xl border border-vx-border bg-vx-elevated p-4">
       <button
         type="button"
         onClick={onDismiss}
-        className="absolute right-2 top-2 rounded p-1 text-white transition-colors hover:bg-white/10"
+        className="absolute right-2 top-2 rounded-lg p-1 text-white transition-colors hover:bg-white/10"
         aria-label="Dismiss tutorial prompt"
       >
         <X className="size-3.5" strokeWidth={2} aria-hidden />
@@ -42,7 +42,7 @@ function SidebarTutorialPromo({ onDismiss }: { onDismiss: () => void }) {
       </p>
       <Link
         href="/tutorial"
-        className="mt-4 flex w-full items-center justify-center rounded-md bg-white px-3 py-2.5 text-[13px] font-semibold text-black transition-opacity hover:opacity-90"
+        className="mt-4 flex w-full items-center justify-center rounded-xl bg-white px-3 py-2.5 text-[13px] font-semibold text-black transition-opacity hover:opacity-90"
       >
         Open tutorial
       </Link>

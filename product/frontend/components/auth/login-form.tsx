@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginUser, registerUser } from "@/lib/api";
 import { setAuthSession } from "@/lib/auth";
+import { hydrateInvestigationHistoryAfterAuth } from "@/lib/recent-investigations";
 import { formatAuthError } from "@/lib/user-messages";
 
 type AuthMode = "login" | "register";
@@ -47,6 +48,12 @@ export function LoginForm() {
         team_name: session.team_name,
         workspace_id: session.workspace_id,
       });
+      // Pull this team's investigations into sidebar history before landing home.
+      try {
+        await hydrateInvestigationHistoryAfterAuth();
+      } catch {
+        /* history sync is best-effort — still enter the app */
+      }
       router.replace("/");
     } catch (err) {
       setError(formatAuthError(err, mode));

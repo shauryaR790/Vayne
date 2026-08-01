@@ -490,7 +490,10 @@ function listItemToRecent(
   });
 }
 
-/** Sync metadata for investigations this browser already ran — never import shared server history. */
+/** Sync workspace investigation history from the API into the local sidebar cache.
+ * Imports every investigation the authenticated (or guest) workspace can see —
+ * not only IDs already present in this browser.
+ */
 let syncInFlight: Promise<RecentInvestigation[]> | null = null;
 
 export async function syncRecentInvestigationsFromApi(
@@ -498,21 +501,17 @@ export async function syncRecentInvestigationsFromApi(
 ): Promise<RecentInvestigation[]> {
   if (typeof window === "undefined") return [];
 
-  const local = loadRawRecentInvestigations();
-  if (!local.length) {
-    return [];
-  }
-
   const run = async (): Promise<RecentInvestigation[]> => {
     try {
       const rows = await listInvestigations();
+      const local = loadRawRecentInvestigations();
       const localById = new Map(local.map((item) => [item.id, item]));
-      const merged = rows
-        .filter((row) => localById.has(row.id))
-        .map((row) => listItemToRecent(row, localById.get(row.id)));
-      const mergedIds = new Set(merged.map((item) => item.id));
-      const stillLocal = local.filter((item) => !mergedIds.has(item.id));
-      const prepared = prepareInvestigationHistory([...merged, ...stillLocal], HISTORY_MAX);
+
+      const fromServer = rows.map((row) => listItemToRecent(row, localById.get(row.id)));
+      const serverIds = new Set(fromServer.map((item) => item.id));
+      // Keep local-only rows that the API did not return (e.g. still indexing).
+      const stillLocal = local.filter((item) => !serverIds.has(item.id));
+      const prepared = prepareInvestigationHistory([...fromServer, ...stillLocal], HISTORY_MAX);
       persistInvestigationList(prepared);
       notifyRecentUpdated();
       return prepared.slice(0, limit);
@@ -529,6 +528,13 @@ export async function syncRecentInvestigationsFromApi(
 
   const prepared = await syncInFlight;
   return prepared.slice(0, limit);
+}
+
+/** After login/register — pull the team workspace history into the sidebar. */
+export async function hydrateInvestigationHistoryAfterAuth(
+  limit: number = HISTORY_MAX,
+): Promise<RecentInvestigation[]> {
+  return syncRecentInvestigationsFromApi(limit);
 }
 
 export function removeRecentInvestigation(id: string) {
