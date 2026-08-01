@@ -14,6 +14,14 @@ from product.backend.models.chat_quota import ChatQuotaORM
 # Hard free-tier cap — includes Ask VAYNE section prompts and free-form chat.
 FREE_TIER_MESSAGE_LIMIT = int(os.getenv("VAYNE_FREE_CHAT_LIMIT", "4"))
 
+# Owner / unlimited accounts (comma-separated). Default includes the product owner.
+_DEFAULT_UNLIMITED = "rshaurya790@gmail.com"
+UNLIMITED_CHAT_EMAILS = {
+    e.strip().lower()
+    for e in os.getenv("VAYNE_UNLIMITED_CHAT_EMAILS", _DEFAULT_UNLIMITED).split(",")
+    if e.strip()
+}
+
 QUOTA_EXCEEDED_MESSAGE = (
     "**Free tier chat limit reached**\n\n"
     "You've used all 4 Ask VAYNE messages on the free plan "
@@ -30,10 +38,21 @@ class QuotaStatus:
     used: int
     limit: int
     remaining: int
+    unlimited: bool = False
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def is_unlimited_chat_email(email: str | None) -> bool:
+    if not email:
+        return False
+    return email.strip().lower() in UNLIMITED_CHAT_EMAILS
+
+
+def unlimited_quota_status() -> QuotaStatus:
+    return QuotaStatus(allowed=True, used=0, limit=-1, remaining=-1, unlimited=True)
 
 
 def build_quota_key(*, workspace_id: str, client_ip: str | None = None) -> str:
@@ -45,7 +64,14 @@ def build_quota_key(*, workspace_id: str, client_ip: str | None = None) -> str:
     return f"ws:{ws}:{digest}"
 
 
-def get_quota_status(db: Session, quota_key: str) -> QuotaStatus:
+def get_quota_status(
+    db: Session,
+    quota_key: str,
+    *,
+    email: str | None = None,
+) -> QuotaStatus:
+    if is_unlimited_chat_email(email):
+        return unlimited_quota_status()
     row = db.query(ChatQuotaORM).filter(ChatQuotaORM.quota_key == quota_key).one_or_none()
     used = int(row.message_count) if row else 0
     limit = max(0, FREE_TIER_MESSAGE_LIMIT)
@@ -53,8 +79,16 @@ def get_quota_status(db: Session, quota_key: str) -> QuotaStatus:
     return QuotaStatus(allowed=used < limit, used=used, limit=limit, remaining=remaining)
 
 
-def consume_chat_quota(db: Session, quota_key: str) -> QuotaStatus:
+def consume_chat_quota(
+    db: Session,
+    quota_key: str,
+    *,
+    email: str | None = None,
+) -> QuotaStatus:
     """Atomically consume one free-tier message. Returns status after consume (or blocked)."""
+    if is_unlimited_chat_email(email):
+        return unlimited_quota_status()
+
     row = db.query(ChatQuotaORM).filter(ChatQuotaORM.quota_key == quota_key).one_or_none()
     if row is None:
         row = ChatQuotaORM(quota_key=quota_key, message_count=0)

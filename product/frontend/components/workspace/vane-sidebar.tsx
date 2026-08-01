@@ -20,7 +20,7 @@ import {
 } from "@/lib/recent-investigations";
 import { clearAllInvestigationSessions } from "@/lib/investigation-session";
 import { InvestigationHistoryList } from "@/components/workspace/investigation-history-rows";
-import { getAuthProfile } from "@/lib/auth";
+import { clearAuthSession, getAuthProfile, type AuthProfile } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const TUTORIAL_PROMO_DISMISSED_KEY = "vane-sidebar-tutorial-promo-dismissed";
@@ -98,7 +98,11 @@ function SidebarPanel({
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(TUTORIAL_PROMO_DISMISSED_KEY) === "1";
   });
-  const authProfile = typeof window === "undefined" ? null : getAuthProfile();
+  const [authProfile, setAuthProfile] = useState<AuthProfile | null>(null);
+
+  useEffect(() => {
+    setAuthProfile(getAuthProfile());
+  }, [pathname]);
 
   const dismissTutorialPromo = useCallback(() => {
     window.localStorage.setItem(TUTORIAL_PROMO_DISMISSED_KEY, "1");
@@ -158,6 +162,13 @@ function SidebarPanel({
     setItems([]);
     onNavigate?.();
     router.replace("/");
+  };
+
+  const handleLogout = () => {
+    clearAuthSession();
+    setAuthProfile(null);
+    onNavigate?.();
+    router.push("/login");
   };
 
   return (
@@ -246,6 +257,13 @@ function SidebarPanel({
               <>
                 <p className="truncate text-[15px] text-white">{authProfile.name || authProfile.email}</p>
                 <p className="truncate text-[13px] text-white/60">{authProfile.team_name}</p>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="mt-2 text-[13px] text-white/55 transition-colors hover:text-white hover:underline"
+                >
+                  Log out
+                </button>
               </>
             ) : (
               <div className="space-y-1">

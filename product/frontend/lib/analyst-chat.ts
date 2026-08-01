@@ -197,6 +197,7 @@ export async function fetchChatQuota(): Promise<{
   limit: number;
   remaining: number;
   allowed: boolean;
+  unlimited?: boolean;
 } | null> {
   try {
     const res = await fetch(`${getApiBase()}/api/chat/quota`, {
@@ -209,6 +210,7 @@ export async function fetchChatQuota(): Promise<{
       limit: number;
       remaining: number;
       allowed: boolean;
+      unlimited?: boolean;
     };
   } catch {
     return null;

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from product.backend.auth import resolve_workspace_id
+from product.backend.auth import get_auth_context_optional, resolve_workspace_id, AuthContext
 from product.backend.db.session import get_db
 from product.backend.deps import get_investigation_service
 from product.backend.schemas.analyst_chat import AnalystChatRequest
@@ -94,9 +94,27 @@ _SSE_HEADERS = {
 }
 
 
-def _consume_or_block(db: Session, workspace_id: str, request: Request):
+def _quota_headers(status) -> dict[str, str]:
+    if status.unlimited:
+        return {
+            "X-Vayne-Chat-Remaining": "unlimited",
+            "X-Vayne-Chat-Limit": "unlimited",
+        }
+    return {
+        "X-Vayne-Chat-Remaining": str(status.remaining),
+        "X-Vayne-Chat-Limit": str(status.limit if status.limit >= 0 else FREE_TIER_MESSAGE_LIMIT),
+    }
+
+
+def _consume_or_block(
+    db: Session,
+    workspace_id: str,
+    request: Request,
+    auth: AuthContext | None,
+):
     key = build_quota_key(workspace_id=workspace_id, client_ip=client_ip(request))
-    return consume_chat_quota(db, key), key
+    email = auth.email if auth else None
+    return consume_chat_quota(db, key, email=email), key
 
 
 @router.get("/analyst/status")
@@ -117,14 +135,16 @@ async def chat_quota(
     request: Request,
     db: Session = Depends(get_db),
     workspace_id: str = Depends(resolve_workspace_id),
+    auth: AuthContext | None = Depends(get_auth_context_optional),
 ):
     key = build_quota_key(workspace_id=workspace_id, client_ip=client_ip(request))
-    status = get_quota_status(db, key)
+    status = get_quota_status(db, key, email=auth.email if auth else None)
     return {
         "used": status.used,
         "limit": status.limit,
         "remaining": status.remaining,
         "allowed": status.allowed,
+        "unlimited": status.unlimited,
     }
 
 
@@ -134,12 +154,13 @@ async def general_chat(
     request: Request,
     db: Session = Depends(get_db),
     workspace_id: str = Depends(resolve_workspace_id),
+    auth: AuthContext | None = Depends(get_auth_context_optional),
 ):
     """Ask VAYNE without an investigation — free-tier message quota enforced server-side."""
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="Message required")
 
-    status, _ = _consume_or_block(db, workspace_id, request)
+    status, _ = _consume_or_block(db, workspace_id, request, auth)
     if not status.allowed:
         return StreamingResponse(
             _quota_exceeded_stream(status.used, status.limit),
@@ -156,8 +177,7 @@ async def general_chat(
         media_type="text/event-stream",
         headers={
             **_SSE_HEADERS,
-            "X-Vayne-Chat-Remaining": str(status.remaining),
-            "X-Vayne-Chat-Limit": str(status.limit),
+            **_quota_headers(status),
         },
     )
 
@@ -184,6 +204,7 @@ async def analyst_chat(
     request: Request,
     db: Session = Depends(get_db),
     workspace_id: str = Depends(resolve_workspace_id),
+    auth: AuthContext | None = Depends(get_auth_context_optional),
     svc: InvestigationService = Depends(get_investigation_service),
 ):
     if not svc.get_investigation(inv_id):
@@ -191,7 +212,7 @@ async def analyst_chat(
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="Message required")
 
-    status, _ = _consume_or_block(db, workspace_id, request)
+    status, _ = _consume_or_block(db, workspace_id, request, auth)
     if not status.allowed:
         return StreamingResponse(
             _quota_exceeded_stream(status.used, status.limit),
@@ -208,7 +229,6 @@ async def analyst_chat(
         media_type="text/event-stream",
         headers={
             **_SSE_HEADERS,
-            "X-Vayne-Chat-Remaining": str(status.remaining),
-            "X-Vayne-Chat-Limit": str(status.limit),
+            **_quota_headers(status),
         },
     )

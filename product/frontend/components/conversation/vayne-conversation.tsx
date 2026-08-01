@@ -482,7 +482,9 @@ export function VaneWorkspace({
       if (!cancelled) setAnalystOnline(Boolean(status?.online));
     });
     void fetchChatQuota().then((quota) => {
-      if (!cancelled && quota) setChatQuotaRemaining(quota.remaining);
+      if (!cancelled && quota) {
+        setChatQuotaRemaining(quota.unlimited ? null : quota.remaining);
+      }
     });
     migrateLegacyConversationSession();
 
@@ -711,7 +713,7 @@ export function VaneWorkspace({
           prev === null ? prev : Math.max(0, prev - 1),
         );
         void fetchChatQuota().then((quota) => {
-          if (quota) setChatQuotaRemaining(quota.remaining);
+          if (quota) setChatQuotaRemaining(quota.unlimited ? null : quota.remaining);
         });
       }
       setBusy(false);
