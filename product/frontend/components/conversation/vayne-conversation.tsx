@@ -790,12 +790,13 @@ export function VaneWorkspace({
     const MIN_ENGINE_FEEL_MS = 900;
 
     try {
-      const label =
+      // History is a workspace session — never name the run after uploaded files.
+      const sessionName = "Security Investigation";
+      const sourceHint = fileNames[0];
+      const attachmentLabel =
         fileNames.length === 1
           ? fileNames[0]
-          : fileNames.length <= 3
-            ? fileNames.join(", ")
-            : `${fileNames[0]} + ${fileNames.length - 1} more files`;
+          : `${fileNames.length} evidence files`;
 
       let result: Awaited<ReturnType<typeof analyzeFiles>> | null = null;
       try {
@@ -817,7 +818,7 @@ export function VaneWorkspace({
           }
         })();
 
-        for await (const event of streamAnalyzeWithTrace(validation.files, label, {
+        for await (const event of streamAnalyzeWithTrace(validation.files, sessionName, {
           mode: resolvedMode,
           prompt,
         })) {
@@ -849,7 +850,7 @@ export function VaneWorkspace({
       } catch (streamErr) {
         // Fallback to classic analyze if streaming endpoint is unavailable.
         console.warn(`${LOG_PREFIX} Engine trace stream failed — falling back`, streamErr);
-        result = await analyzeFiles(validation.files, label, {
+        result = await analyzeFiles(validation.files, sessionName, {
           mode: resolvedMode,
           prompt,
         });
@@ -912,7 +913,10 @@ export function VaneWorkspace({
         setBundle(bundles[0] ?? null);
         for (const row of bundles) {
           saveRecentInvestigation(
-            recentEntryFromBundle(row, row.report.target?.split(/[/\\]/).pop() || label),
+            recentEntryFromBundle(
+              row,
+              row.report.target?.split(/[/\\]/).pop() || sourceHint,
+            ),
           );
         }
 
@@ -941,14 +945,14 @@ export function VaneWorkspace({
           content: "",
           kind: "investigation",
           investigationId: result.investigation_id,
-          sourceLabel: fileNames.length === 1 ? fileNames[0] : label,
+          sourceLabel: attachmentLabel,
         });
 
         void finishEngineAnimation();
 
         const data = await loadInvestigationBundle(result.investigation_id, setBundle);
         setInvestigationBundles([data]);
-        saveRecentInvestigation(recentEntryFromBundle(data, label));
+        saveRecentInvestigation(recentEntryFromBundle(data, sourceHint));
 
         const scannerTypes = data.workbench?.evidence_sources?.length ?? 0;
         const intro = combinedAnalystIntro(fileNames.length, scannerTypes);

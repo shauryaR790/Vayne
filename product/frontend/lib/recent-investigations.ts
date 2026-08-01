@@ -5,11 +5,17 @@ import {
   displayInvestigationTitle,
   displayRiskLevel,
   extractSourceFile,
+  looksLikeFileDumpLabel,
   looksLikeFilename,
   type RiskLevel,
 } from "./investigation-metadata";
 import type { InvestigationBundle } from "./investigation-bundle";
-import type { FindingsData, InvestigationDetail, InvestigationReport } from "./types";
+import type {
+  FindingsData,
+  InvestigationDetail,
+  InvestigationReport,
+  WorkbenchData,
+} from "./types";
 
 export interface RecentInvestigation {
   id: string;
@@ -115,40 +121,27 @@ function formatPreciseHistoryTime(iso: string): string {
   });
 }
 
-function historyLabelParts(item: RecentInvestigation): string[] {
-  const base = (item.title || item.name || "Security Investigation").trim();
-  const parts = [base];
-  if (item.sourceFile) {
-    parts.push(item.sourceFile.split(/[/\\]/).pop() || item.sourceFile);
-  }
-  const when = formatInvestigationTimestamp(item.updatedAt || item.createdAt);
-  if (when) parts.push(when);
-  if (item.pathCount != null && item.pathCount > 0) {
-    parts.push(`${item.pathCount} path${item.pathCount === 1 ? "" : "s"}`);
-  }
-  return parts;
-}
-
-/** Disambiguate sidebar rows that share the same generated title. */
+/** Sidebar label = investigation session name only (never a file dump). */
 export function formatHistoryLabel(
   item: RecentInvestigation,
   allItems: RecentInvestigation[],
 ): string {
-  const base = (item.title || item.name || "Security Investigation").trim();
-  const peers = allItems.filter(
-    (row) => (row.title || row.name || "Security Investigation").trim() === base,
-  );
+  const base = displayInvestigationTitle(item);
+  const peers = allItems.filter((row) => displayInvestigationTitle(row) === base);
   if (peers.length <= 1) return base;
 
-  let label = historyLabelParts(item).join(" · ");
-  const duplicateLabels = peers.filter(
-    (row) => historyLabelParts(row).join(" · ") === label,
-  );
-  if (duplicateLabels.length > 1) {
-    const precise = formatPreciseHistoryTime(item.updatedAt || item.createdAt);
-    if (precise) label = `${label} · ${precise}`;
+  const when = formatInvestigationTimestamp(item.updatedAt || item.createdAt);
+  if (when) {
+    const withTime = `${base} · ${when}`;
+    const stillDup = peers.filter((row) => {
+      const peerWhen = formatInvestigationTimestamp(row.updatedAt || row.createdAt);
+      return `${displayInvestigationTitle(row)} · ${peerWhen}` === withTime;
+    });
+    if (stillDup.length <= 1) return withTime;
   }
-  return label;
+
+  const precise = formatPreciseHistoryTime(item.updatedAt || item.createdAt);
+  return precise ? `${base} · ${precise}` : base;
 }
 
 export function formatInvestigationTimestamp(iso: string): string {
@@ -200,13 +193,20 @@ function normalizeEntry(entry: RecentInvestigation): RecentInvestigation {
   const sourceFile =
     entry.sourceFile ||
     entry.sourceFilename ||
-    (looksLikeFilename(entry.name) ? entry.name : undefined);
+    (looksLikeFilename(entry.name) || looksLikeFileDumpLabel(entry.name) ? entry.name : undefined);
+
+  const rawTitle = entry.title?.trim() || entry.name?.trim() || "";
+  const title =
+    rawTitle && !looksLikeFileDumpLabel(rawTitle) && !looksLikeFilename(rawTitle)
+      ? rawTitle
+      : displayInvestigationTitle(entry);
 
   return {
     ...entry,
-    title: entry.title?.trim() ? entry.title : displayInvestigationTitle(entry),
+    title,
     summary: entry.summary?.trim() ? entry.summary : displayInvestigationSummary(entry),
     risk: displayRiskLevel(entry),
+    name: title,
     sourceFile,
     sourceFilename: sourceFile ? normalizeSourceFilename(sourceFile) : entry.sourceFilename,
   };
@@ -367,11 +367,18 @@ export function recentEntryFromParts(
   report: InvestigationReport,
   findings: FindingsData,
   sourceFileLabel?: string,
+  workbench?: WorkbenchData | null,
 ): RecentInvestigation {
   const paths = detail.attack_paths;
   const path = paths[0];
   const finding = findings.validated[0];
-  const meta = buildInvestigationCardMeta(detail, report, findings, sourceFileLabel);
+  const meta = buildInvestigationCardMeta(
+    detail,
+    report,
+    findings,
+    sourceFileLabel,
+    workbench,
+  );
   const now = new Date().toISOString();
 
   return {
@@ -409,7 +416,13 @@ export function recentEntryFromBundle(
   data: InvestigationBundle,
   sourceFileLabel?: string,
 ): RecentInvestigation {
-  return recentEntryFromParts(data.detail, data.report, data.findings, sourceFileLabel);
+  return recentEntryFromParts(
+    data.detail,
+    data.report,
+    data.findings,
+    sourceFileLabel,
+    data.workbench,
+  );
 }
 
 export async function enrichRecentInvestigation(
@@ -425,7 +438,10 @@ export async function enrichRecentInvestigation(
       detail,
       report,
       findings,
-      entry.sourceFile || entry.name,
+      entry.sourceFile ||
+        (looksLikeFileDumpLabel(entry.name) || looksLikeFilename(entry.name)
+          ? entry.name
+          : undefined),
     );
     return {
       ...enriched,
@@ -457,18 +473,32 @@ function toIsoDate(value: string | Date | undefined): string {
   return value.toISOString();
 }
 
+function sessionSafeName(value?: string): string | undefined {
+  const v = value?.trim();
+  if (!v) return undefined;
+  if (looksLikeFileDumpLabel(v) || looksLikeFilename(v)) return undefined;
+  return v;
+}
+
 function listItemToRecent(
   row: Awaited<ReturnType<typeof listInvestigations>>[number],
   local?: RecentInvestigation,
 ): RecentInvestigation {
   const createdAt = toIsoDate(row.created_at || row.updated_at);
   const updatedAt = toIsoDate(row.updated_at || row.created_at);
-  const sourceFile = row.source_filename || local?.sourceFile;
+  const dumpName =
+    looksLikeFileDumpLabel(row.name) || looksLikeFilename(row.name) ? row.name : undefined;
+  const sourceFile = row.source_filename || local?.sourceFile || dumpName;
+  const title =
+    sessionSafeName(local?.title) ||
+    sessionSafeName(row.name) ||
+    sessionSafeName(local?.name) ||
+    "Security Investigation";
   return normalizeEntry({
     ...local,
     id: row.id,
-    title: local?.title || row.name,
-    name: row.name || local?.name,
+    title,
+    name: title,
     summary: row.summary || local?.summary,
     risk:
       local?.risk ||
@@ -514,6 +544,31 @@ export async function syncRecentInvestigationsFromApi(
       const prepared = prepareInvestigationHistory([...fromServer, ...stillLocal], HISTORY_MAX);
       persistInvestigationList(prepared);
       notifyRecentUpdated();
+
+      // Rebuild session titles for older runs that were named after file dumps.
+      const needsTitle = fromServer.filter((item, index) => {
+        const rowName = rows[index]?.name;
+        return (
+          looksLikeFileDumpLabel(rowName) ||
+          looksLikeFilename(rowName) ||
+          looksLikeFileDumpLabel(item.title) ||
+          looksLikeFilename(item.title)
+        );
+      });
+      if (needsTitle.length > 0) {
+        void Promise.all(needsTitle.slice(0, 12).map((item) => enrichRecentInvestigation(item)))
+          .then((enriched) => {
+            const byId = new Map(enriched.map((item) => [item.id, item]));
+            const merged = prepareInvestigationHistory(
+              loadRawRecentInvestigations().map((item) => byId.get(item.id) ?? item),
+              HISTORY_MAX,
+            );
+            persistInvestigationList(merged);
+            notifyRecentUpdated();
+          })
+          .catch(() => undefined);
+      }
+
       return prepared.slice(0, limit);
     } catch {
       return loadInvestigationHistory(limit);

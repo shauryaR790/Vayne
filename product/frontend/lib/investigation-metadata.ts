@@ -20,7 +20,23 @@ function truncate(text: string, max: number) {
 export function looksLikeFilename(value?: string): boolean {
   if (!value?.trim()) return false;
   const v = value.trim();
-  return /\.[a-z0-9]{2,5}$/i.test(v) || /^vayne[_-]/i.test(v) || /^[a-z0-9_-]+\.(xml|json|nessus|nmap)/i.test(v);
+  if (/\+?\s*\d+\s+more\s+files?/i.test(v)) return true;
+  if (/\.(xml|json|nessus|nmap|csv|sarif|html|txt)(\s|$|\+)/i.test(v)) return true;
+  if (/\.[a-z0-9]{2,5}$/i.test(v)) return true;
+  if (/^vayne[_-]/i.test(v)) return true;
+  if (/^[a-f0-9]{16,}$/i.test(v.replace(/[….\s-]/g, ""))) return true;
+  if (/^[a-z0-9_-]+\.(xml|json|nessus|nmap)/i.test(v)) return true;
+  return false;
+}
+
+/** True when a history/session label is a file dump rather than a task name. */
+export function looksLikeFileDumpLabel(value?: string): boolean {
+  if (!value?.trim()) return false;
+  const v = value.trim();
+  if (looksLikeFilename(v)) return true;
+  if (/\bmore files?\b/i.test(v)) return true;
+  if (/, .+\.(xml|json|nessus|nmap|csv)\b/i.test(v)) return true;
+  return false;
 }
 
 export function extractSourceFile(label?: string, report?: InvestigationReport): string | undefined {
@@ -209,7 +225,12 @@ export function generateInvestigationTitle(
   }
 
   const engineName = detail.summary.name?.trim();
-  if (engineName && !looksLikeFilename(engineName) && engineName.length > 8) {
+  if (
+    engineName &&
+    !looksLikeFilename(engineName) &&
+    !looksLikeFileDumpLabel(engineName) &&
+    engineName.length > 8
+  ) {
     return truncate(engineName, 56);
   }
 
@@ -345,9 +366,13 @@ export function displayInvestigationTitle(entry: {
   name?: string;
   headline?: string;
 }): string {
-  if (entry.title?.trim()) return entry.title;
-  if (entry.name?.trim() && !looksLikeFilename(entry.name)) return entry.name;
-  if (entry.headline?.trim() && !looksLikeFilename(entry.headline)) return entry.headline;
+  const candidates = [entry.title, entry.name, entry.headline];
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (!value) continue;
+    if (looksLikeFileDumpLabel(value) || looksLikeFilename(value)) continue;
+    return value;
+  }
   return "Security Investigation";
 }
 
