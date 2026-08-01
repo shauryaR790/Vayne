@@ -6,6 +6,8 @@ export const USER_MESSAGES = {
   serviceOffline:
     "Unable to reach VAYNE. Check your connection and try again.",
   serviceOfflineShort: "VAYNE is currently unavailable.",
+  serverStarting:
+    "Server starting up — this usually takes about 1 minute. VAYNE will start working once it's ready.",
   analysisTimeout:
     "This analysis took longer than expected. Try again with fewer files, or contact your administrator.",
   analysisFailed:

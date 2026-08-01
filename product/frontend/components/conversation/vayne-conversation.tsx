@@ -169,6 +169,8 @@ export function VaneWorkspace({
   const skipAutoScrollRef = useRef(false);
   const filesRef = useRef<File[]>([]);
   const analyzingRef = useRef(false);
+  /** Re-run analyze once the API finishes cold-start after an offline ingest. */
+  const retryAnalyzeWhenOnlineRef = useRef(false);
   filesRef.current = files;
 
   const beginStream = useCallback(() => {
@@ -745,10 +747,13 @@ export function VaneWorkspace({
     const online = backendOnline || (await checkHealth());
     if (!online) {
       setBackendOnline(false);
-      setError(USER_MESSAGES.serviceOfflineShort);
+      retryAnalyzeWhenOnlineRef.current = true;
+      setInvestigationSessionActive(true);
+      setError("");
       return;
     }
     setBackendOnline(true);
+    retryAnalyzeWhenOnlineRef.current = false;
 
     analyzingRef.current = true;
     setInvestigationSessionActive(true);
@@ -959,6 +964,18 @@ export function VaneWorkspace({
   ]);
 
   useEffect(() => {
+    if (!backendOnline || !retryAnalyzeWhenOnlineRef.current) return;
+    if (analyzingRef.current) return;
+    const queued = [...filesRef.current];
+    if (!queued.length) {
+      retryAnalyzeWhenOnlineRef.current = false;
+      return;
+    }
+    retryAnalyzeWhenOnlineRef.current = false;
+    void handleAnalyze(queued);
+  }, [backendOnline, handleAnalyze]);
+
+  useEffect(() => {
     const onNewChat = () => {
       streamAbortRef.current?.abort();
       briefingAbortRef.current?.abort();
@@ -966,6 +983,7 @@ export function VaneWorkspace({
       skipResumeRef.current = true;
       loadedResumeIdRef.current = null;
       analyzingRef.current = false;
+      retryAnalyzeWhenOnlineRef.current = false;
       switchingRef.current = null;
       setMessages([]);
       setAnalystMessages([]);
