@@ -161,7 +161,7 @@ export function VaneAnalystPanel({
 
         {thinking && !activityFeed?.lines.length ? (
           <div className={cn(messages.length ? "mt-5" : "mt-0")}>
-            <AnalystThinking step="Thinking" />
+            <AnalystThinking step={busy ? "Reviewing ingested evidence" : "Thinking"} />
           </div>
         ) : null}
 

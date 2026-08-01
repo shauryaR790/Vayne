@@ -59,6 +59,7 @@ import { streamAnalystBriefing } from "@/lib/analyst-stream";
 import {
   advanceActivityFeed,
   buildChatActivityScript,
+  buildIngestActivityScript,
   initActivityFeed,
   type AgentActivityFeed,
 } from "@/lib/analyst-activity";
@@ -764,6 +765,22 @@ export function VaneWorkspace({
     setEngineTraceOpen(true);
     setError("");
 
+    const ingestScript = buildIngestActivityScript(validation.files.length);
+    let ingestFeed = initActivityFeed(ingestScript, {
+      title: "Evidence ingested",
+      subtitle: ANALYST_NAME,
+      waitingLabel: "Waiting for investigation engine",
+    });
+    setActivityFeed(ingestFeed);
+    setThinking(true);
+    let ingestStep = 0;
+    const ingestTimer = window.setInterval(() => {
+      ingestStep += 1;
+      if (ingestStep >= ingestScript.length) return;
+      ingestFeed = advanceActivityFeed(ingestFeed, ingestScript, ingestStep);
+      setActivityFeed({ ...ingestFeed });
+    }, 1400);
+
     setMessages((prev) => [
       ...prev,
       { id: `user-${Date.now()}`, role: "user", content: prompt, attachments },
@@ -905,6 +922,9 @@ export function VaneWorkspace({
           intro += " VAYNE correlated overlapping assets across uploaded evidence.";
         }
         setBriefingPrompt(null);
+        window.clearInterval(ingestTimer);
+        setActivityFeed(null);
+        setThinking(false);
         void playAnalystBriefing(
           buildAnalystBriefingMessages(bundles, {
             intro,
@@ -933,6 +953,9 @@ export function VaneWorkspace({
         const scannerTypes = data.workbench?.evidence_sources?.length ?? 0;
         const intro = combinedAnalystIntro(fileNames.length, scannerTypes);
         setBriefingPrompt(null);
+        window.clearInterval(ingestTimer);
+        setActivityFeed(null);
+        setThinking(false);
         void playAnalystBriefing(
           buildAnalystBriefingMessages([data], {
             intro: intro || undefined,
@@ -941,6 +964,9 @@ export function VaneWorkspace({
         );
       }
     } catch (e) {
+      window.clearInterval(ingestTimer);
+      setActivityFeed(null);
+      setThinking(false);
       setError(describeAnalyzeError(e));
       setEnginePhase("idle");
     } finally {

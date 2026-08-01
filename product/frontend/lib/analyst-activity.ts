@@ -74,6 +74,19 @@ export function buildChatActivityScript(
   return scripts;
 }
 
+/** Cursor-style preamble in Ask VAYNE while evidence is ingesting / engine runs. */
+export function buildIngestActivityScript(
+  fileCount: number,
+): Omit<AgentActivityLine, "id" | "state">[] {
+  const filesLabel =
+    fileCount === 1 ? "1 uploaded file" : `${fileCount} uploaded files`;
+  return [
+    { verb: "Ingesting", detail: filesLabel },
+    { verb: "Waiting", detail: "investigation engine output" },
+    { verb: "Preparing", detail: "analyst briefing context" },
+  ];
+}
+
 /** Micro-steps shown during a briefing think pause. */
 export function buildThinkMicroScript(
   label: string,
