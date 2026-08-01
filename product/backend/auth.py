@@ -238,27 +238,3 @@ def resolve_workspace_id(
     if auth_required():
         raise HTTPException(status_code=401, detail="Authentication required")
     return normalize_workspace_id(header_workspace)
-
-
-def ensure_owner_account(db: Session) -> None:
-    """Create or refresh the product-owner login used for unlimited Ask VAYNE."""
-    email = os.getenv("VAYNE_OWNER_EMAIL", "rshaurya790@gmail.com").strip().lower()
-    password = os.getenv("VAYNE_OWNER_PASSWORD", "shauryaisthegoat2009")
-    if not email or not password or len(password) < 8:
-        return
-
-    user = db.query(UserORM).filter(UserORM.email == email).first()
-    if user is None:
-        register_user(
-            db,
-            email=email,
-            password=password,
-            name="Shaurya",
-            team_name="VAYNE Owner",
-        )
-        return
-
-    # Keep credentials in sync with the configured owner password.
-    if not verify_password(password, user.password_hash):
-        user.password_hash = hash_password(password)
-        db.commit()

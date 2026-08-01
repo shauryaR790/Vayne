@@ -119,6 +119,40 @@ def me(auth: AuthContext = Depends(get_auth_context_required)) -> MeResponse:
     )
 
 
+@router.delete("/me")
+def delete_me(
+    auth: AuthContext = Depends(get_auth_context_required),
+    db: Session = Depends(get_db),
+) -> dict[str, bool]:
+    """Delete the signed-in user so the email can be registered again."""
+    if not auth.user_id:
+        raise HTTPException(status_code=400, detail="No user account on this session")
+
+    from product.backend.models.auth import ApiKeyORM, TeamMemberORM, TeamORM, UserORM
+
+    user = db.get(UserORM, auth.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    memberships = db.query(TeamMemberORM).filter(TeamMemberORM.user_id == user.id).all()
+    team_ids = [m.team_id for m in memberships]
+    for membership in memberships:
+        db.delete(membership)
+
+    for team_id in team_ids:
+        remaining = db.query(TeamMemberORM).filter(TeamMemberORM.team_id == team_id).count()
+        if remaining == 0:
+            for key in db.query(ApiKeyORM).filter(ApiKeyORM.team_id == team_id).all():
+                db.delete(key)
+            team = db.get(TeamORM, team_id)
+            if team:
+                db.delete(team)
+
+    db.delete(user)
+    db.commit()
+    return {"deleted": True}
+
+
 @router.post("/api-keys", response_model=ApiKeyCreateResponse)
 def create_api_key(
     body: ApiKeyCreateRequest,

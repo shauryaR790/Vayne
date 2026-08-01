@@ -29,15 +29,7 @@ async def lifespan(app: FastAPI):
     validate_security_config()
     configure_logging()
     init_db()
-    from product.backend.auth import ensure_owner_account
-    from product.backend.db.session import SessionLocal
     from product.backend.services.analyst_llm import warmup_analyst_llm
-
-    db = SessionLocal()
-    try:
-        ensure_owner_account(db)
-    finally:
-        db.close()
 
     asyncio.create_task(warmup_analyst_llm())
     yield
