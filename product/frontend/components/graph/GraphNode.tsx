@@ -30,10 +30,7 @@ function GraphNodeComponent({ data, selected }: NodeProps) {
   const [hovered, setHovered] = useState(false);
   const active = selected || highlighted || onChain;
 
-  const meta =
-    node.confidence != null
-      ? `${Math.round(node.confidence)}% confidence`
-      : type.replace(/_/g, " ");
+  const meta = type.replace(/_/g, " ");
 
   return (
     <>

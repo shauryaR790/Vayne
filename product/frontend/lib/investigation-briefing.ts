@@ -242,7 +242,11 @@ function buildEvidenceTimeline(
         "Observed finding retained for review";
       const weight = row.confidence_weight;
       const note =
-        weight >= 0.75 ? "Confidence High" : weight >= 0.45 ? "Confidence Medium" : "Confidence Limited";
+        weight >= 0.75
+          ? "Strong evidence"
+          : weight >= 0.45
+            ? "Partial evidence"
+            : "Limited evidence";
       steps.push({ actor, detail, note });
     }
   } else if (item.evidenceSources.length) {
@@ -262,10 +266,10 @@ function buildEvidenceTimeline(
         detail: cleanLine(finding.title) || item.title,
         note:
           finding.machine_confidence >= 75
-            ? "Confidence High"
+            ? "Strong evidence"
             : finding.machine_confidence >= 50
-              ? "Confidence Medium"
-              : "Confidence Limited",
+              ? "Partial evidence"
+              : "Limited evidence",
       });
     }
   } else {

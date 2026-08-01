@@ -107,12 +107,8 @@ function buildBeliefReasons(f: Finding): string[] {
       reasons.push(trimmed.endsWith(".") ? trimmed : `${trimmed}.`);
     }
   }
-  const confidence = Math.round(f.confidence ?? 0);
   if (!reasons.length) {
     reasons.push("Service context and exposure were correlated against exploit preconditions.");
-  }
-  if (!reasons.some((r) => r.toLowerCase().includes("confidence"))) {
-    reasons.push(`Confidence score computed as ${confidence}%.`);
   }
   return reasons.slice(0, 5);
 }
@@ -216,7 +212,7 @@ function inferMissingEvidence(reason: string): string {
   const lower = reason.toLowerCase();
   if (lower.includes("credential")) return "Required credential or authentication evidence was not observed.";
   if (lower.includes("confidence") || lower.includes("threshold")) {
-    return "Aggregate chain confidence did not meet the validation threshold.";
+    return "Evidence did not meet the validation threshold for this chain.";
   }
   if (lower.includes("exploit") || lower.includes("poc")) {
     return "Exploit intelligence or proof-of-concept applicability was insufficient.";
@@ -268,12 +264,12 @@ function executiveAnalystNote(bundle: InvestigationBundle, pathCount: number): s
       `The environment contains ${validated.length} retained finding${validated.length === 1 ? "" : "s"} across ${assets} asset${assets === 1 ? "" : "s"}.`,
     ];
     if (focal) {
-      parts.push(`${focal} represents the most immediate business risk based on exposure and exploit confidence.`);
+      parts.push(`${focal} represents the most immediate business risk based on exposure and exploitability.`);
     }
-    const lowSupport = validated.filter((f) => (f.confidence ?? 0) < 65).length;
-    if (lowSupport > 0) {
+    const supportOnly = validated.filter((f) => (f.confidence ?? 0) < 65).length;
+    if (supportOnly > 0) {
       parts.push(
-        "Several lower-confidence findings provide supporting evidence rather than independent compromise paths.",
+        "Several findings provide supporting evidence rather than independent compromise paths.",
       );
     }
     return parts.slice(0, 4).join(" ");
@@ -299,7 +295,7 @@ function topPathAnalystNote(path: AttackPathSummary | undefined, rejectedCount: 
     );
   }
   parts.push(
-    `Confidence ${path.confidence}% reflects correlated service fingerprinting, version validation, and path-level proof factors.`,
+    "Retention reflects correlated service fingerprinting, version validation, and path-level proof factors.",
   );
   return parts.slice(0, 3).join(" ");
 }
@@ -370,7 +366,7 @@ export function buildInvestigationPresentation(
     low: 0,
     analystNote:
       validated.length > 0
-        ? "Most findings represent supporting evidence rather than independent compromise paths. Their value comes from strengthening exploit confidence across externally accessible services."
+        ? "Most findings represent supporting evidence rather than independent compromise paths. Their value comes from reinforcing exploitability across externally accessible services."
         : "No validated findings met the evidence threshold for retention.",
   };
 

@@ -493,7 +493,7 @@ export function normalizeFailureReason(reason: string): string {
   if (r.includes("target") || r.includes("downstream") || r.includes("impact")) {
     return "No downstream target";
   }
-  if (r.includes("confidence") || r.includes("threshold")) return "Below confidence threshold";
+  if (r.includes("confidence") || r.includes("threshold")) return "Insufficient evidence";
   if (r.includes("depth") || r.includes("prune")) return "Path depth exceeded";
   return reason.replace(/_/g, " ").slice(0, 48);
 }
@@ -549,28 +549,15 @@ export function coreStatistics(stats: WorkbenchStat[]): WorkbenchStat[] {
   return picked;
 }
 
-export function riskOverviewMetrics(workbench: WorkbenchData, risk: string, confidence: number | null) {
+export function riskOverviewMetrics(workbench: WorkbenchData, risk: string, _confidence: number | null) {
   const stat = (label: string) =>
     workbench.statistics.find((s) => s.label === label)?.value ?? "—";
-  const top = workbench.confirmed_findings[0];
-  const sem = top ? semanticConfidence(top) : null;
-  const score =
-    sem?.primary.score ?? (confidence != null ? confidence : top?.machine_confidence ?? null);
-  const band = score != null ? confidenceBand(score) : null;
   return [
     {
       label: "Attack surface",
       value: risk,
       highlight: true,
       sub: "Exposure if paths hold",
-    },
-    {
-      label: "Evidence strength",
-      value: score != null ? `${score}%` : "—",
-      highlight: true,
-      sub: band
-        ? `${band.word} — ${band.sentence}`
-        : "How strongly evidence supports the top finding",
     },
     {
       label: "Retained findings",
@@ -977,7 +964,7 @@ export function missingEvidenceChecklist(workbench: WorkbenchData): MissingEvide
     topic: row.topic,
     whyItMatters: row.reason || row.evidence_needed,
     confidenceChange: row.expected_gain
-      ? `Would add roughly +${row.expected_gain}% to relevant confidence if confirmed`
+      ? "Would strengthen the conclusion if confirmed"
       : "Would strengthen the conclusion if obtained",
     checked: false,
   }));

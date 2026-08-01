@@ -26,10 +26,7 @@ import {
   buildReadableVerdict,
   type ReadableVerdictTone,
   businessImpactRows,
-  confidenceContributors,
-  confidenceMeaning,
   coreStatistics,
-  displayedConfidenceMetrics,
   evidenceAgainst,
   evidenceChecklist,
   evidenceTimelineSteps,
@@ -42,7 +39,6 @@ import {
   polishEngineText,
   recommendationTasks,
   riskOverviewMetrics,
-  semanticConfidence,
   statusMeaning,
   stripLeadingEnumeration,
   summarizePathFailures,
@@ -161,53 +157,6 @@ function ExploitBadge({
         </span>
       </div>
       <p className="mt-1.5 text-[11px] leading-snug text-white/55">{verification.detail}</p>
-    </div>
-  );
-}
-
-function ConfidenceBar({
-  score,
-  contributors,
-  compact,
-}: {
-  score: number;
-  contributors: Array<{ label: string; delta: number }>;
-  compact?: boolean;
-}) {
-  const filled = Math.max(0, Math.min(10, Math.round(score / 10)));
-  return (
-    <div>
-      <div className="flex items-end gap-3">
-        <span
-          className={cn(
-            "font-black leading-none text-white",
-            compact ? "text-[18px]" : "text-[28px]",
-          )}
-        >
-          {score}%
-        </span>
-        <div className="mb-1 flex gap-0.5">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <span
-              key={i}
-              className={cn("w-2", compact ? "h-2" : "h-3", i < filled ? "bg-white" : "bg-white/15")}
-            />
-          ))}
-        </div>
-      </div>
-      {contributors.length ? (
-        <div className="mt-3 space-y-1">
-          <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white">Contributors</p>
-          {contributors.map((c) => (
-            <div key={c.label} className="flex items-center justify-between gap-3 text-[12px]">
-              <span className="text-white">{c.label}</span>
-              <span className="font-mono font-bold text-white">
-                {c.delta >= 0 ? `+${c.delta}` : c.delta}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -442,7 +391,6 @@ export function EngineFileDetailsSection({
 
 const RISK_TILE_MEANING: Record<string, string> = {
   "Attack surface": "How exposed the environment is if attack paths hold",
-  "Evidence strength": "How strongly evidence supports the top finding — not severity",
   "Retained findings": "Findings that passed evidence review",
   Assets: "Distinct hosts in scope",
   Files: "Scan files parsed",
@@ -478,8 +426,7 @@ export function RiskOverviewSection({
       }
     >
       <p className="mb-5 max-w-[72ch] text-[13px] leading-relaxed text-white/70">
-        Attack surface is about potential impact. Evidence strength is about proof — they measure
-        different things.
+        Snapshot of retained findings, assets, and path outcomes for this investigation.
       </p>
       <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
         {metrics.map((m) => (
@@ -547,26 +494,19 @@ function AnalystFindingCard({
 }) {
   const expert = useExpertMode();
   const explain = buildFindingExplainability(finding);
-  const { score, contributors } = confidenceContributors(finding);
   const state = findingDisplayStatus(finding);
-  const sem = semanticConfidence(finding);
-  const metrics = displayedConfidenceMetrics(finding);
-  const primary =
-    metrics.find((m) => m.key === sem?.primary.metric) || metrics[0] || null;
   const against = evidenceAgainst(finding);
   const exploit = exploitVerification(finding);
   const evidenceMeta = finding.evidence_summary;
 
   const agreed = new Set(
-    finding.scanner_agreement?.agreed || sem?.scanner_agreement?.agreed || finding.sources,
+    finding.scanner_agreement?.agreed || finding.sources,
   );
   const capable =
     finding.scanner_agreement?.capable ||
-    sem?.scanner_agreement?.capable ||
     (allScanners.length > 0 ? allScanners : finding.sources);
   const agreementRatio =
     finding.scanner_agreement?.ratio ||
-    sem?.scanner_agreement?.ratio ||
     `${agreed.size} / ${Math.max(capable.length, 1)}`;
   const showCapableAgreement = capable.length > 1;
   const sourceFile =
@@ -626,18 +566,6 @@ function AnalystFindingCard({
         </div>
 
         <div className="space-y-5 p-4">
-          {primary ? (
-            <div>
-              <SectionLabel>Confidence</SectionLabel>
-              <div className="mt-2">
-                <ConfidenceBar score={score} contributors={contributors} compact />
-                <p className="mt-2 text-[12px] leading-snug text-white/80">
-                  {score}% — {confidenceMeaning(primary.key, primary.metric.score)}
-                </p>
-              </div>
-            </div>
-          ) : null}
-
           {explain.whyBelieve.length ? (
             <ExplainabilityBlock title="Why retained">
               <BulletList items={explain.whyBelieve} />
@@ -687,9 +615,6 @@ function AnalystFindingCard({
                 {nextProbe.item}
                 {nextProbe.explanation ? (
                   <span className="text-white/55"> — {nextProbe.explanation}</span>
-                ) : null}
-                {typeof nextProbe.gain === "number" ? (
-                  <span className="font-mono text-white/45"> · +{nextProbe.gain}%</span>
                 ) : null}
               </p>
             </div>
@@ -838,7 +763,6 @@ function PathSimulationCard({ path }: { path: WorkbenchCandidatePath }) {
         >
           {blocked ? "Blocked" : "Reachable"}
         </span>
-        <span className="font-mono text-[12px] font-bold text-white/70">{path.confidence}%</span>
       </div>
 
       {blocked ? (
@@ -984,7 +908,7 @@ export function EvidenceTimelineSection({
       }
     >
       <p className="mb-4 max-w-[72ch] text-[13px] leading-relaxed text-white">
-        How confidence was built for the highest-priority finding — from initial scanner signal
+        How evidence accumulated for the highest-priority finding — from initial scanner signal
         through to retention.
         {top ? <span> ({top.title})</span> : null}
       </p>
@@ -998,16 +922,9 @@ export function EvidenceTimelineSection({
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-[13px] font-bold uppercase tracking-wide text-white">
-                    {step.label}
-                  </p>
-                  {step.delta != null ? (
-                    <span className="font-mono text-[12px] font-bold text-white">
-                      {step.delta >= 0 ? `+${step.delta}` : step.delta}
-                    </span>
-                  ) : null}
-                </div>
+                <p className="text-[13px] font-bold uppercase tracking-wide text-white">
+                  {step.label}
+                </p>
                 {step.detail ? (
                   <p className="mt-1 text-[12px] leading-relaxed text-white">
                     {polishEngineText(step.detail)}
@@ -1058,7 +975,6 @@ export function MissingEvidenceSection({
                 <span className="font-medium">Why it matters: </span>
                 {item.whyItMatters}
               </p>
-              <p className="mt-2 text-[12px] leading-relaxed text-white">{item.confidenceChange}</p>
             </div>
           </div>
         ))}
@@ -1161,16 +1077,6 @@ export function RecommendationsSection({
                   </p>
                   <p className="mt-0.5 text-[12px] leading-snug text-white">{task.expectedResult}</p>
                 </div>
-                {task.expectedGain ? (
-                  <div className="shrink-0 text-right">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white">
-                      Confidence gain
-                    </p>
-                    <p className="mt-0.5 font-mono text-[18px] font-black leading-none text-white">
-                      +{task.expectedGain}%
-                    </p>
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>
@@ -1240,11 +1146,6 @@ function ScannerAgreementCard({
         <h4 className="text-[14px] font-black uppercase tracking-wide text-white">
           {corr.subject}
         </h4>
-        <span className="font-mono text-[13px] font-bold text-white/70">
-          {corr.base_confidence != null && corr.final_confidence != null
-            ? `${corr.base_confidence}% → ${corr.final_confidence}%`
-            : `${corr.confidence}%`}
-        </span>
       </div>
       <div className="mt-4 space-y-3 border-t border-vx-border pt-4">
         <SectionLabel>Scanner agreement</SectionLabel>

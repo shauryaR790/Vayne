@@ -36,6 +36,7 @@ export function AttackPathPlayer({
   onStepForward: () => void;
   onExplore: () => void;
 }) {
+  void confidence;
   const progress = stepCount > 0 ? ((stepIndex + 1) / stepCount) * 100 : 0;
   const inCinematic = !exploreMode && phase !== "idle";
   const showIdleCta = exploreMode || phase === "idle";
@@ -134,9 +135,6 @@ export function AttackPathPlayer({
               >
                 Explore full graph
               </button>
-              {confidence > 0 ? (
-                <span className="ml-1 font-mono text-[10px] text-white/35">{confidence}% conf</span>
-              ) : null}
             </div>
           </div>
         </div>

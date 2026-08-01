@@ -25,7 +25,7 @@ function PriorityInvestigationRow({
   item,
   onOpen,
   compact,
-  hideConfidence,
+  hideConfidence = true,
 }: {
   item: PrioritizedInvestigation;
   onOpen?: (sectionId: string) => void;

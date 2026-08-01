@@ -39,13 +39,11 @@ import {
   InvestigationTimelineSection,
   MissingEvidenceSection,
   RecommendationsSection,
-  RiskOverviewSection,
 } from "@/components/workspace/investigation-workbench-sections";
 import { SectionAskAside } from "@/components/workspace/investigation-report-ask";
 import {
   sectionContextAttackGraph,
   sectionContextBusinessImpact,
-  sectionContextConfidence,
   sectionContextEvidence,
   sectionContextEvidenceFiles,
   sectionContextEvidenceTimeline,
@@ -72,17 +70,15 @@ function InvestigationHeader({
   reveal: number;
 }) {
   const { executive } = presentation;
-  const confidence = presentation.graphConfidence ?? "—";
 
   return (
     <WorkstationSection title="Investigation Header" reveal={reveal}>
-      <div className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
         <HeaderMetric label="Investigation ID" value={displayId} mono />
         <HeaderMetric label="Environment" value={environment} mono />
         <HeaderMetric label="Risk" value={executive.risk} />
         <HeaderMetric label="Attack Paths" value={executive.attackPaths} />
         <HeaderMetric label="Findings" value={executive.validatedFindings} />
-        <HeaderMetric label="Confidence" value={confidence === "—" ? "—" : `${confidence}%`} />
       </div>
       <p className="mt-3 text-[12px] text-vx-muted">Created {createdAt}</p>
     </WorkstationSection>
@@ -122,8 +118,7 @@ function PrimaryAttackVector({
           ))}
         </div>
 
-        <div className="grid min-w-0 grid-cols-2 gap-2 border-t border-vx-border pt-4 sm:grid-cols-4">
-          <HeaderMetric label="Confidence" value={`${topPath.confidence}%`} />
+        <div className="grid min-w-0 grid-cols-2 gap-2 border-t border-vx-border pt-4 sm:grid-cols-3">
           <HeaderMetric label="Risk" value={topPath.riskScore.toFixed(1)} />
           <HeaderMetric label="Blast Radius" value={topPath.blastRadius} />
           <HeaderMetric
@@ -158,8 +153,7 @@ function SecondaryPathCard({ chain, index }: { chain: ValidatedChainPresentation
         Validated Path #{index + 1}
       </p>
       <p className="mt-2 text-[14px] text-white">{chain.steps.join(" → ")}</p>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-[12px] text-vx-secondary">
-        <span>Conf {chain.confidence}%</span>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] text-vx-secondary">
         <span>Risk {chain.riskScore.toFixed(1)}</span>
         <span>Blast {chain.blastRadius}</span>
       </div>
@@ -195,8 +189,8 @@ function FindingWorkstationCard({ finding }: { finding: FindingCardData }) {
       </div>
       <div className="grid grid-cols-2 gap-px border-b border-vx-border bg-vx-border sm:grid-cols-3">
         <div className="bg-vx-section-body px-4 py-3">
-          <p className="text-[10px] uppercase text-vx-muted">Evidence</p>
-          <p className="mt-1 text-[14px] text-white">{finding.confidence}%</p>
+          <p className="text-[10px] uppercase text-vx-muted">Evidence signals</p>
+          <p className="mt-1 text-[14px] text-white">{finding.evidenceCount}</p>
         </div>
         <div className="bg-vx-section-body px-4 py-3">
           <p className="text-[10px] uppercase text-vx-muted">Status</p>
@@ -251,10 +245,6 @@ function EvidenceWorkstationCard({
         <div className="grid grid-cols-[100px_1fr] gap-2">
           <dt className="text-vx-muted">Host</dt>
           <dd className="text-white">{finding.asset}</dd>
-        </div>
-        <div className="grid grid-cols-[100px_1fr] gap-2">
-          <dt className="text-vx-muted">Confidence</dt>
-          <dd className="text-white">{finding.confidence}%</dd>
         </div>
       </dl>
       <div className="mt-4 border-t border-vx-border pt-3">
@@ -398,7 +388,7 @@ export function InvestigationWorkstationReport({
                   hasPaths: presentation.hasPaths,
                   attackPaths: executive.attackPaths,
                   rejectedPaths: presentation.rejectedPathCount,
-                  confidence: presentation.graphConfidence,
+                  confidence: null,
                   summary: "",
                   emptyChecks: EMPTY_GRAPH_CHECKS.filter((c) => c.ok || !presentation.hasPaths),
                 }}
@@ -445,34 +435,6 @@ export function InvestigationWorkstationReport({
             }
           >
             <BusinessImpactSection workbench={workbench} reveal={0} embedded />
-          </CollapsibleSection>
-
-          <CollapsibleSection
-            sectionId="confidence"
-            title="Confidence"
-            defaultOpen={false}
-            open={sectionOpen("confidence")}
-            onOpenChange={(open) => setSectionOpen("confidence", open)}
-            bodyClassName="p-0"
-            reveal={nextDelay()}
-            aside={
-              <SectionAskAside
-                sectionTitle="Confidence"
-                engineContext={sectionContextConfidence(
-                  workbench,
-                  executive.risk,
-                  presentation.graphConfidence,
-                )}
-              />
-            }
-          >
-            <RiskOverviewSection
-              workbench={workbench}
-              risk={executive.risk}
-              confidence={presentation.graphConfidence}
-              reveal={0}
-              embedded
-            />
           </CollapsibleSection>
 
           <CollapsibleSection
@@ -561,7 +523,7 @@ export function InvestigationWorkstationReport({
                 engineContext={sectionContextExecutiveSummary(
                   workbench,
                   executive.risk,
-                  presentation.graphConfidence,
+                  null,
                 )}
               />
             }
@@ -569,7 +531,7 @@ export function InvestigationWorkstationReport({
             <ExecutiveSummarySection
               workbench={workbench}
               risk={executive.risk}
-              confidence={presentation.graphConfidence}
+              confidence={null}
               reveal={0}
               embedded
             />
@@ -675,7 +637,7 @@ export function InvestigationWorkstationReport({
                 hasPaths: presentation.hasPaths,
                 attackPaths: executive.attackPaths,
                 rejectedPaths: presentation.rejectedPathCount,
-                confidence: presentation.graphConfidence,
+                confidence: null,
                 summary: "",
                 emptyChecks: EMPTY_GRAPH_CHECKS.filter((c) => c.ok || !presentation.hasPaths),
               }}
@@ -807,17 +769,6 @@ export function InvestigationWorkstationReport({
               </div>
             </WorkstationSection>
           ) : null}
-
-          <WorkstationSection title="Confidence Breakdown" reveal={nextDelay()}>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {findings.map((f) => (
-                <div key={f.id} className="border border-vx-border bg-vx-app px-4 py-3">
-                  <p className="text-[12px] text-vx-muted">{f.finding}</p>
-                  <p className="mt-1 text-[18px] font-semibold text-white">{f.confidence}%</p>
-                </div>
-              ))}
-            </div>
-          </WorkstationSection>
 
           <WorkstationSection title="Asset Exposure Matrix" reveal={nextDelay()}>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

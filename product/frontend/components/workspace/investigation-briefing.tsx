@@ -53,10 +53,6 @@ function InvestigationSummary({
       <div className="mt-6 max-w-[520px] font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
         <SummaryField label="Host" value={summary.host} />
         <SummaryField label="Status" value={summary.status} />
-        <SummaryField
-          label="Confidence"
-          value={summary.confidence != null ? `${summary.confidence}%` : "—"}
-        />
         <SummaryField label="Business Risk" value={summary.businessRisk} />
         <SummaryField label="Estimated Review" value={summary.estimatedReview} />
 

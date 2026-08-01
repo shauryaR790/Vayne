@@ -53,12 +53,6 @@ export function GraphNodeInspector({
             <div className="text-[9px] uppercase tracking-wide text-white/30">Severity</div>
             <div className="text-[12px] font-semibold text-white/90">{severityLabel(node)}</div>
           </div>
-          <div className="rounded-md border border-white/8 bg-white/[0.02] px-2.5 py-1.5 text-center">
-            <div className="text-[9px] uppercase tracking-wide text-white/30">Confidence</div>
-            <div className="text-[12px] font-semibold text-white/90">
-              {node.confidence != null ? `${Math.round(node.confidence)}%` : "—"}
-            </div>
-          </div>
           <button
             type="button"
             onClick={onClose}
