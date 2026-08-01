@@ -58,7 +58,7 @@ function latestPhase(events: EngineTraceEvent[]): PhaseState {
     elapsedS: null,
     status: "idle",
     version: "0.2.0",
-    createdBy: "Nemzyi",
+    createdBy: "SHAURYA",
   };
   for (const ev of events) {
     if (ev.event !== "phase" || !ev.fields) continue;
@@ -272,7 +272,7 @@ export function EngineWorkstation({
             <div className="py-1 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
               <p className="mb-2 text-white/90">Run status</p>
               <MetaRow label="Version" value={phase.version} />
-              <MetaRow label="Created By" value={phase.createdBy} />
+              <MetaRow label="Made By" value={phase.createdBy} />
               <MetaRow label="Current Phase" value={phase.phase} />
               <MetaRow label="Files Ingested" value={String(phase.filesIngested)} />
               <MetaRow

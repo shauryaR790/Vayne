@@ -85,7 +85,7 @@ export function InvestigationWorkspaceHome({
             <div className="py-1 text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
               <p className="mb-2 text-white/90">Run status</p>
               <MetaRow label="Version" value="0.2.0" />
-              <MetaRow label="Created By" value="Nemzyi" />
+              <MetaRow label="Made By" value="SHAURYA" />
               <MetaRow label="Current Phase" value="Idle — ingest to start" />
               <MetaRow label="Files Ingested" value="0" />
               <MetaRow label="Files Processed" value="0 / 0" />
