@@ -257,13 +257,6 @@ function SidebarPanel({
               <>
                 <p className="truncate text-[15px] text-white">{authProfile.name || authProfile.email}</p>
                 <p className="truncate text-[13px] text-white/60">{authProfile.team_name}</p>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="mt-2 text-[13px] text-white/55 transition-colors hover:text-white hover:underline"
-                >
-                  Log out
-                </button>
               </>
             ) : (
               <div className="space-y-1">
@@ -290,7 +283,18 @@ function SidebarPanel({
               </div>
             )}
           </div>
-          <DeveloperMenu placement="above" />
+          <div className="flex shrink-0 items-center gap-2">
+            <DeveloperMenu placement="above" />
+            {authProfile ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-1 text-[13px] text-white/55 transition-colors hover:text-white hover:underline"
+              >
+                Log out
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </>
