@@ -770,7 +770,7 @@ export function VaneWorkspace({
     ]);
 
     const runStartedAt = performance.now();
-    const MIN_ENGINE_FEEL_MS = 1800;
+    const MIN_ENGINE_FEEL_MS = 900;
 
     try {
       const label =
@@ -791,12 +791,12 @@ export function VaneWorkspace({
           while (pumpToken.live && (pumpActive || pending.length)) {
             const next = pending.shift();
             if (!next) {
-              await sleep(16);
+              await sleep(8);
               continue;
             }
             collected.push(next);
             setEngineTraceEvents((prev) => [...prev, next]);
-            await sleep(20);
+            await sleep(10);
           }
         })();
 

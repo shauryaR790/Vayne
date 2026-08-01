@@ -387,11 +387,11 @@ function scrollElToEnd(el: HTMLElement | null) {
 }
 
 function delayForTraceItem(item: RevealItem | undefined): number {
-  if (!item) return 140;
-  if (item.kind === "stage-title") return 200;
-  if (item.kind === "proof-line") return 110;
-  if (item.kind === "line" && item.line.arrow) return 170;
-  return 140;
+  if (!item) return 40;
+  if (item.kind === "stage-title") return 70;
+  if (item.kind === "proof-line") return 28;
+  if (item.kind === "line" && item.line.arrow) return 45;
+  return 35;
 }
 
 export function EngineTraceLive({
