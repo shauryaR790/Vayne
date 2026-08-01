@@ -13,7 +13,7 @@ import {
   type ReportMode,
 } from "@/lib/analyst-chat";
 import type { ChatTurn } from "@/lib/vayne-analyst";
-import { createStreamBatcher } from "@/lib/stream-buffer";
+import { revealLines, sleep } from "@/lib/text-reveal";
 import { HoverCard } from "@/components/shared/hover-card";
 import { VayneThinking } from "@/components/shared/vayne-thinking";
 import { ChatBubble } from "@/components/investigation/chat-bubble";
@@ -81,12 +81,10 @@ export function AskVaynePanel({
       setReasoning(true);
 
       const streamId = `stream-${Date.now()}`;
+      let fullText = "";
       let gotTokens = false;
-      let streamMessageId: string | null = null;
-
-      const batcher = createStreamBatcher((text) => {
-        updateStreamMessage(streamId, text, true);
-      });
+      const thinkStartedAt = Date.now();
+      const minThinkMs = 2200;
 
       try {
         for await (const event of streamAnalystChat(investigationId, question, history, {
@@ -99,7 +97,6 @@ export function AskVaynePanel({
 
           if (event.type === "error") {
             setReasoning(false);
-            batcher.finish();
             const offline =
               event.code === "llm_offline" ||
               event.code === "http_error" ||
@@ -118,17 +115,8 @@ export function AskVaynePanel({
           }
 
           if (event.type === "token") {
-            if (!gotTokens) {
-              gotTokens = true;
-              setReasoning(false);
-              streamMessageId = streamId;
-              setMessages((prev) => [
-                ...prev,
-                { id: streamId, role: "assistant", content: "", streaming: true },
-              ]);
-              setAnalystStatus((s) => (s ? { ...s, online: true } : s));
-            }
-            batcher.append(event.token);
+            gotTokens = true;
+            fullText += event.token;
           }
 
           if (event.type === "usage") {
@@ -144,24 +132,42 @@ export function AskVaynePanel({
         }
       } catch {
         setReasoning(false);
-        batcher.finish();
-        updateStreamMessage(streamId, ANALYST_OFFLINE_MESSAGE, false);
-        setBusy(false);
-        return;
-      }
-
-      batcher.finish();
-      const finalText = batcher.text;
-
-      if (!gotTokens && !streamAbort.current) {
         setMessages((prev) => [
           ...prev,
           { id: streamId, role: "assistant", content: ANALYST_OFFLINE_MESSAGE },
         ]);
-      } else if (gotTokens && streamMessageId) {
-        updateStreamMessage(streamMessageId, finalText, false);
+        setBusy(false);
+        return;
       }
 
+      if (streamAbort.current) return;
+
+      const thinkRemain = Math.max(0, minThinkMs - (Date.now() - thinkStartedAt));
+      if (thinkRemain > 0) await sleep(thinkRemain);
+
+      setReasoning(false);
+
+      if (!gotTokens || !fullText.trim()) {
+        setMessages((prev) => [
+          ...prev,
+          { id: streamId, role: "assistant", content: ANALYST_OFFLINE_MESSAGE },
+        ]);
+        setBusy(false);
+        return;
+      }
+
+      setAnalystStatus((s) => (s ? { ...s, online: true } : s));
+      setMessages((prev) => [
+        ...prev,
+        { id: streamId, role: "assistant", content: "", streaming: true },
+      ]);
+
+      await revealLines(
+        fullText,
+        (partial) => updateStreamMessage(streamId, partial, true),
+        { linePauseMs: 180, wordGroupPauseMs: 70, wordsPerBite: 7 },
+      );
+      updateStreamMessage(streamId, fullText, false);
       setBusy(false);
     },
     [investigationId, updateStreamMessage],

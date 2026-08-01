@@ -7,7 +7,7 @@ import {
   ANALYST_OFFLINE_MESSAGE,
   streamInvestigationBrief,
 } from "@/lib/analyst-chat";
-import { createStreamBatcher } from "@/lib/stream-buffer";
+import { revealLines, sleep } from "@/lib/text-reveal";
 import { HoverCard } from "@/components/shared/hover-card";
 import { CursorLoadingStatus } from "@/components/shared/cursor-loading-status";
 import { AnalystMarkdown } from "@/components/workspace/analyst/analyst-markdown";
@@ -24,49 +24,69 @@ export function InvestigationBriefSection({
   const [streaming, setStreaming] = useState(true);
   const [thinking, setThinking] = useState(true);
   const abortRef = useRef(false);
-  const startedRef = useRef(false);
 
   const load = useCallback(async () => {
     abortRef.current = false;
-    startedRef.current = false;
     setThinking(true);
     setStreaming(true);
     setContent("");
 
-    const batcher = createStreamBatcher(setContent);
+    let fullText = "";
+    const thinkStartedAt = Date.now();
+    const minThinkMs = 1800;
 
     try {
       for await (const event of streamInvestigationBrief(investigationId)) {
         if (abortRef.current) return;
         if (event.type === "thinking") continue;
         if (event.type === "error") {
-          batcher.finish();
           setContent(
             event.code === "llm_offline" || event.code === "llm_not_configured"
               ? ANALYST_OFFLINE_MESSAGE
               : event.message,
           );
-          break;
+          setThinking(false);
+          setStreaming(false);
+          return;
         }
         if (event.type === "token") {
-          if (!startedRef.current) {
-            startedRef.current = true;
-            setThinking(false);
-          }
-          batcher.append(event.token);
+          fullText += event.token;
         }
         if (event.type === "done") break;
       }
     } catch {
-      setContent(ANALYST_OFFLINE_MESSAGE);
+      if (!abortRef.current) setContent(ANALYST_OFFLINE_MESSAGE);
+      setThinking(false);
+      setStreaming(false);
+      return;
     }
 
-    batcher.finish();
-    if (!batcher.text && !abortRef.current) {
-      setContent((c) => c || ANALYST_OFFLINE_MESSAGE);
-    }
+    if (abortRef.current) return;
+
+    const thinkRemain = Math.max(0, minThinkMs - (Date.now() - thinkStartedAt));
+    if (thinkRemain > 0) await sleep(thinkRemain);
+    if (abortRef.current) return;
+
     setThinking(false);
-    setStreaming(false);
+
+    if (!fullText.trim()) {
+      setContent(ANALYST_OFFLINE_MESSAGE);
+      setStreaming(false);
+      return;
+    }
+
+    await revealLines(
+      fullText,
+      (partial) => {
+        if (!abortRef.current) setContent(partial);
+      },
+      { linePauseMs: 180, wordGroupPauseMs: 70, wordsPerBite: 7 },
+    );
+
+    if (!abortRef.current) {
+      setContent(fullText);
+      setStreaming(false);
+    }
   }, [investigationId]);
 
   useEffect(() => {

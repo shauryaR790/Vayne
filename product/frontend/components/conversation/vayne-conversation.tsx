@@ -26,8 +26,7 @@ import {
   type InvestigationBundle,
 } from "@/lib/investigation-bundle";
 import { saveRecentInvestigation, recentEntryFromBundle } from "@/lib/recent-investigations";
-import { createLineRevealBatcher } from "@/lib/stream-buffer";
-import { sleep } from "@/lib/text-reveal";
+import { sleep, revealLines } from "@/lib/text-reveal";
 import {
   clearConversationSession,
   OPEN_INVESTIGATION_EVENT,
@@ -616,7 +615,7 @@ export function VaneWorkspace({
       setActivityFeed(feed);
 
       const thinkStartedAt = Date.now();
-      const minThinkMs = 2000;
+      const minThinkMs = 2200;
 
       let activityStep = 0;
       const stepTimer = window.setInterval(() => {
@@ -626,24 +625,12 @@ export function VaneWorkspace({
         setActivityFeed({ ...feed });
       }, 900);
 
-      let revealedAny = false;
-      const batcher = createLineRevealBatcher(
-        (text) => {
-          if (!revealedAny) {
-            revealedAny = true;
-            window.clearInterval(stepTimer);
-            setActivityFeed(null);
-            setThinking(false);
-          }
-          updateAnalystMessage(streamId, text, true);
-        },
-        { linePauseMs: 150, sentencePauseMs: 170 },
-      );
+      // Collect the full model reply while thinking UI is visible — never paint
+      // tokens live (that looked like an instant paste). Then type line-by-line.
+      let fullText = "";
       let gotTokens = false;
 
       const signal = beginStream();
-      // With an investigation loaded, chat is grounded in its context; with an
-      // empty workspace, VAYNE answers general cybersecurity questions.
       const stream = investigationId
         ? streamAnalystChat(investigationId, question, history, { signal })
         : streamGeneralChat(question, history, { signal });
@@ -657,7 +644,6 @@ export function VaneWorkspace({
             window.clearInterval(stepTimer);
             setActivityFeed(null);
             setThinking(false);
-            await batcher.finish();
             if (event.code === "quota_exceeded") {
               setChatQuotaRemaining(0);
               updateAnalystMessage(streamId, event.message || ANALYST_QUOTA_MESSAGE, false);
@@ -668,8 +654,6 @@ export function VaneWorkspace({
               event.code === "llm_offline" ||
               event.code === "http_error" ||
               event.code === "llm_not_configured";
-            // Offline only: fall back to deterministic workbench reconstruction
-            // when it can answer, otherwise the offline notice.
             const fallback = offline
               ? interpretAnalystQuestion(question, bundle?.workbench) ?? ANALYST_OFFLINE_MESSAGE
               : event.message;
@@ -679,15 +663,8 @@ export function VaneWorkspace({
           }
 
           if (event.type === "token") {
-            if (!gotTokens) {
-              const thinkRemain = Math.max(0, minThinkMs - (Date.now() - thinkStartedAt));
-              if (thinkRemain > 0) {
-                await new Promise((r) => window.setTimeout(r, thinkRemain));
-              }
-            }
             gotTokens = true;
-            // Keep the thinking UI until the first line is actually revealed.
-            batcher.append(event.token);
+            fullText += event.token;
           }
 
           if (event.type === "done") break;
@@ -696,21 +673,35 @@ export function VaneWorkspace({
         window.clearInterval(stepTimer);
         setActivityFeed(null);
         setThinking(false);
-        await batcher.finish();
         updateAnalystMessage(streamId, ANALYST_OFFLINE_MESSAGE, false);
         setBusy(false);
         return;
       }
 
-      await batcher.finish();
+      if (signal.aborted) return;
+
+      const thinkRemain = Math.max(0, minThinkMs - (Date.now() - thinkStartedAt));
+      if (thinkRemain > 0) {
+        await sleep(thinkRemain);
+      }
+
       window.clearInterval(stepTimer);
       setActivityFeed(null);
       setThinking(false);
-      updateAnalystMessage(
-        streamId,
-        gotTokens ? batcher.text || ANALYST_OFFLINE_MESSAGE : ANALYST_OFFLINE_MESSAGE,
-        false,
+
+      if (!gotTokens || !fullText.trim()) {
+        updateAnalystMessage(streamId, ANALYST_OFFLINE_MESSAGE, false);
+        setBusy(false);
+        return;
+      }
+
+      updateAnalystMessage(streamId, "", true);
+      await revealLines(
+        fullText,
+        (partial) => updateAnalystMessage(streamId, partial, true),
+        { linePauseMs: 180, wordGroupPauseMs: 70, wordsPerBite: 7 },
       );
+      updateAnalystMessage(streamId, fullText, false);
       if (gotTokens) {
         setChatQuotaRemaining((prev) =>
           prev === null ? prev : Math.max(0, prev - 1),
@@ -770,7 +761,7 @@ export function VaneWorkspace({
     setBusy(true);
     setEnginePhase("running");
     setEngineTraceEvents([]);
-    setEngineTraceOpen(false);
+    setEngineTraceOpen(true);
     setError("");
 
     setMessages((prev) => [
@@ -779,7 +770,7 @@ export function VaneWorkspace({
     ]);
 
     const runStartedAt = performance.now();
-    const MIN_ENGINE_FEEL_MS = 2600;
+    const MIN_ENGINE_FEEL_MS = 1800;
 
     try {
       const label =
@@ -791,8 +782,7 @@ export function VaneWorkspace({
 
       let result: Awaited<ReturnType<typeof analyzeFiles>> | null = null;
       try {
-        // Pace Trace events onto the UI so the terminal types line-by-line even
-        // when the backend finishes near-instantly.
+        // Push Trace events as soon as the engine emits them — no artificial backlog.
         const pending: EngineTraceEvent[] = [];
         const collected: EngineTraceEvent[] = [];
         let pumpActive = true;
@@ -801,12 +791,12 @@ export function VaneWorkspace({
           while (pumpToken.live && (pumpActive || pending.length)) {
             const next = pending.shift();
             if (!next) {
-              await sleep(80);
+              await sleep(16);
               continue;
             }
             collected.push(next);
             setEngineTraceEvents((prev) => [...prev, next]);
-            await sleep(48);
+            await sleep(20);
           }
         })();
 
