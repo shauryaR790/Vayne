@@ -270,7 +270,7 @@ export function EngineWorkstation({
 
           <div className="mt-6 flex flex-col pb-2">
             <div className="py-1 font-mono text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
-              <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
+              <p className="mb-2 text-white/90">Run status</p>
               <MetaRow label="Version" value={phase.version} />
               <MetaRow label="Created By" value={phase.createdBy} />
               <MetaRow label="Current Phase" value={phase.phase} />
@@ -308,19 +308,19 @@ export function EngineWorkstation({
             <div className="pt-8 pb-1">
               <div className="mb-3 flex items-baseline justify-between gap-3">
                 <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
-                  Attention Queue
+                  Priority findings
                 </p>
                 {queue.length > 0 ? (
                   <p className="font-mono text-[11px] tabular-nums text-white/35">
-                    {queue.length} need{queue.length === 1 ? "s" : ""} attention
+                    {queue.length} need{queue.length === 1 ? "s" : ""} review
                   </p>
                 ) : null}
               </div>
               {queue.length === 0 ? (
                 <p className="font-mono text-[12px] text-white/35">
                   {running
-                    ? "Correlating evidence into the Attention Queue…"
-                    : "No investigations required attention for this run"}
+                    ? "Ranking findings that need analyst review…"
+                    : "No findings required immediate action for this run"}
                 </p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">

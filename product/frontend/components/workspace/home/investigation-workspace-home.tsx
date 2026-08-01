@@ -83,7 +83,7 @@ export function InvestigationWorkspaceHome({
 
           <div className="mt-6 flex flex-col pb-2">
             <div className="py-1 text-[11px] leading-[1.35] text-white/80 sm:text-[12px]">
-              <p className="mb-2 text-white/90">Deterministic Investigation Engine</p>
+              <p className="mb-2 text-white/90">Run status</p>
               <MetaRow label="Version" value="0.2.0" />
               <MetaRow label="Created By" value="Nemzyi" />
               <MetaRow label="Current Phase" value="Idle — ingest to start" />
@@ -141,13 +141,13 @@ export function InvestigationWorkspaceHome({
 
             <div className="pt-8 pb-1">
               <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
-                Attention Queue
+                Priority findings
               </p>
               <div className="py-2 font-mono text-[12px] leading-relaxed text-white/45">
                 <p>Empty until the run finishes.</p>
                 <p className="mt-3">
-                  After completion you will see a short inbox of actionable investigations — not a
-                  dump of scanner findings. Each card answers what needs attention, which uploaded
+                  After completion you will see a short inbox of findings that need review — not a
+                  dump of scanner noise. Each card covers what needs attention, which uploaded
                   file(s) produced the evidence, why it matters, and what to do next.
                 </p>
               </div>

@@ -84,7 +84,7 @@ class GraphProof(BaseModel):
 
     def log_lines(self) -> list[str]:
         lines = [
-            "=== VAYNE PROOF MODE ===",
+            "Graph construction",
             f"Nodes discovered: {len(self.nodes)}",
             f"Edges created: {sum(1 for e in self.edges if e.accepted)}",
             f"Edges rejected: {len(self.rejected_edges)}",
@@ -115,7 +115,7 @@ class GraphProof(BaseModel):
             pd = self.path_discovery
             lines.extend([
                 "",
-                "=== PATH DISCOVERY ===",
+                "Path discovery",
                 f"Algorithm: {pd.algorithm}",
                 f"Entry nodes: {', '.join(pd.entry_nodes)}",
                 f"Terminal nodes: {', '.join(pd.terminal_nodes) or 'none (high-value targets required)'}",
@@ -139,7 +139,7 @@ class GraphProof(BaseModel):
             for p in pd.sample_raw_paths[:5]:
                 lines.append(f"  sample path: {p}")
             if pd.path_classifications:
-                lines.extend(["", "=== ATTACK CATEGORY CLASSIFICATION ==="])
+                lines.extend(["", "Attack categories"])
                 for pc in pd.path_classifications[:8]:
                     lines.append(f"ATTACK CATEGORY: {pc.get('attack_category', 'unknown').upper()}")
                     proof = pc.get("proof") or {}
@@ -162,7 +162,7 @@ class GraphProof(BaseModel):
             gs = self.graph_statistics
             lines.extend([
                 "",
-                "=== GRAPH STATISTICS ===",
+                "Graph statistics",
                 f"Connected components: {gs.connected_components}",
                 f"Average degree: {gs.average_degree}",
                 f"Reachable nodes: {gs.reachable_nodes}",
@@ -170,7 +170,7 @@ class GraphProof(BaseModel):
             ])
         lines.extend([
             "",
-            "=== SUMMARY ===",
+            "Summary",
             f"Nodes discovered: {len(self.nodes)}",
             f"Edges discovered: {sum(1 for e in self.edges if e.accepted)}",
             f"Edges rejected: {len(self.rejected_edges)}",

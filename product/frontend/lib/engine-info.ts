@@ -5,7 +5,7 @@ export const ENGINE_MODULES = [
   "confidence engine",
   "exploit intelligence",
   "graph engine",
-  "proof mode",
+  "graph evidence",
   "reports",
 ] as const;
 
@@ -24,7 +24,7 @@ export const ENGINE_CAPABILITIES = [
   "risk scoring",
   "mitre mapping",
   "attack stories",
-  "proof mode",
+  "graph evidence",
 ] as const;
 
 export const SYSTEM_INFO = {

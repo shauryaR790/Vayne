@@ -7,14 +7,14 @@ from vayne.models import InvestigationReport
 
 
 def render_proof_txt(report: InvestigationReport, graph_proof: GraphProof | None) -> str:
-    lines = ["=== VAYNE PRODUCTION PROOF EXPORT ===", ""]
+    lines = ["Production evidence export", ""]
 
     if graph_proof:
         lines.extend(graph_proof.log_lines())
     elif report.proof_log:
         lines.extend(report.proof_log)
 
-    lines.extend(["", "=== ATTACK PATH PROOFS ===", ""])
+    lines.extend(["", "Attack path evidence", ""])
     for i, p in enumerate(report.attack_paths, 1):
         lines.extend([
             f"PATH {i} [{p.attack_category}]",
@@ -29,7 +29,7 @@ def render_proof_txt(report: InvestigationReport, graph_proof: GraphProof | None
     if report.attack_surface_proof:
         lines.extend([
             "",
-            "=== ATTACK SURFACE SCORE ===",
+            "Attack surface score",
             f"  score: {report.attack_surface_score}/100 ({report.attack_surface_classification})",
         ])
         for f in report.attack_surface_proof.get("factors", []):

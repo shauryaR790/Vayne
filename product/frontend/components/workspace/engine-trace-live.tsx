@@ -37,8 +37,36 @@ type TraceChunk =
 type RevealItem =
   | { kind: "stage-title"; key: string; title: string; first: boolean }
   | { kind: "line"; key: string; line: TraceLine }
-  | { kind: "proof-banner"; key: string; first: boolean }
   | { kind: "proof-line"; key: string; text: string };
+
+/** Map legacy === banners and shouty labels to plain section titles. */
+const SECTION_TITLE_ALIASES: Record<string, string> = {
+  "vayne proof mode": "Graph construction",
+  "proof mode": "Graph construction",
+  "path discovery": "Path discovery",
+  "attack category classification": "Attack categories",
+  "graph statistics": "Graph statistics",
+  summary: "Summary",
+  "vayne production proof export": "Production export",
+  "attack path proofs": "Attack path evidence",
+  "attack surface score": "Attack surface score",
+};
+
+function professionalSectionTitle(raw: string): string {
+  const key = raw.trim().replace(/^=+\s*|\s*=+$/g, "").trim().toLowerCase();
+  if (!key) return "Graph construction";
+  return SECTION_TITLE_ALIASES[key] ?? raw.trim().replace(/^=+\s*|\s*=+$/g, "").trim();
+}
+
+function sectionTitleFromLine(line: string): string | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+  const banner = trimmed.match(/^===\s*(.+?)\s*===$/);
+  if (banner) return professionalSectionTitle(banner[1]);
+  const lower = trimmed.toLowerCase();
+  if (SECTION_TITLE_ALIASES[lower]) return SECTION_TITLE_ALIASES[lower];
+  return null;
+}
 
 function pushField(
   lines: TraceLine[],
@@ -61,8 +89,8 @@ function flushProof(
 }
 
 /**
- * Live CLI-faithful stream: stage telemetry first; PATH DISCOVERY / proof dumps
- * are deferred to the bottom (after Investigation Generator and later stages).
+ * Live stream: stage telemetry first; graph-construction evidence deferred
+ * to the bottom (after investigation assembly and later stages).
  */
 export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
   const chunks: TraceChunk[] = [];
@@ -84,7 +112,7 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
       continue;
     }
 
-    const stageLabel = (STAGE_LABELS[ev.stage] || ev.stage).toUpperCase();
+    const stageLabel = STAGE_LABELS[ev.stage] || ev.stage;
     const f = ev.fields || {};
     const lines: TraceLine[] = [];
     const id = `${ev.id || `${ev.stage}-${ev.event}-${ev.timestamp_ms || chunks.length}`}`;
@@ -157,7 +185,7 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
         chunks.push({
           kind: "stage",
           id: `${id}-sample-${String(s.finding_id || s.title)}`,
-          title: "CORRELATION",
+          title: "Correlation detail",
           lines: sLines,
         });
       }
@@ -195,7 +223,7 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
           ? ev.formula.result * 100
           : ev.formula.result);
       pushField(lines, "Final", final, { arrow: true });
-      chunks.push({ kind: "stage", id, title: "CONFIDENCE", lines });
+      chunks.push({ kind: "stage", id, title: "Confidence scoring", lines });
       continue;
     }
 
@@ -208,7 +236,7 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
         pushField(lines, "Internet Exposure", Number(f.internet_exposure) >= 60, { arrow: true });
       }
       pushField(lines, "Priority", ev.formula.result ?? f.priority, { arrow: true });
-      chunks.push({ kind: "stage", id, title: "PRIORITY", lines });
+      chunks.push({ kind: "stage", id, title: "Priority ranking", lines });
       continue;
     }
 
@@ -222,7 +250,7 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
       if (ev.execution_ms != null) {
         pushField(lines, "Execution", `${formatVal(ev.execution_ms)} ms`, { arrow: true });
       }
-      chunks.push({ kind: "stage", id, title: "ATTACK GRAPH", lines });
+      chunks.push({ kind: "stage", id, title: "Attack graph", lines });
       continue;
     }
 
@@ -231,7 +259,7 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
       pushField(lines, "Risk", f.risk_score, { arrow: true });
       pushField(lines, "Confidence", f.confidence, { arrow: true });
       pushField(lines, "Effort", f.attacker_effort, { arrow: true });
-      chunks.push({ kind: "stage", id, title: "ATTACK PATH", lines });
+      chunks.push({ kind: "stage", id, title: "Attack path", lines });
       continue;
     }
 
@@ -246,8 +274,8 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
     }
 
     if (ev.stage === "priority" && ev.event === "attention") {
-      pushField(lines, "Attention findings", f.count);
-      chunks.push({ kind: "stage", id, title: "PRIORITY", lines });
+      pushField(lines, "Priority findings", f.count);
+      chunks.push({ kind: "stage", id, title: "Priority ranking", lines });
       continue;
     }
 
@@ -257,15 +285,20 @@ export function buildTraceChunks(events: EngineTraceEvent[]): TraceChunk[] {
       pushField(lines, "Attack paths", f.attack_paths, { arrow: true });
       pushField(lines, "Average confidence", f.average_confidence, { arrow: true });
       pushField(lines, "Highest priority", f.highest_priority, { arrow: true });
-      chunks.push({ kind: "stage", id, title: "SUMMARY", lines });
+      chunks.push({ kind: "stage", id, title: "Run summary", lines });
       continue;
     }
 
     if (ev.stage === "ai_explanation") {
-      lines.push({ value: "Deterministic engine complete — AI boundary reached" });
+      lines.push({ value: "Engine analysis complete. Narrative explanation runs separately." });
       pushField(lines, "AI invoked in engine", f.ai_invoked_in_engine, { arrow: true });
-      pushField(lines, "Deterministic ms", f.deterministic_execution_ms, { arrow: true });
-      chunks.push({ kind: "stage", id, title: "AI BOUNDARY", lines });
+      pushField(
+        lines,
+        "Engine runtime",
+        f.deterministic_execution_ms != null ? `${formatVal(f.deterministic_execution_ms)} ms` : null,
+        { arrow: true },
+      );
+      chunks.push({ kind: "stage", id, title: "Engine complete", lines });
       continue;
     }
 
@@ -296,10 +329,30 @@ export function flattenTraceChunks(chunks: TraceChunk[]): RevealItem[] {
 
   for (const chunk of chunks) {
     if (chunk.kind === "proof") {
-      const first = proofIndex === 0;
-      items.push({ kind: "proof-banner", key: `${chunk.id}-banner`, first: stageIndex === 0 && first });
       const lines = chunk.text.split("\n");
+      let emittedHeader = false;
       lines.forEach((text, i) => {
+        const section = sectionTitleFromLine(text);
+        if (section) {
+          items.push({
+            kind: "stage-title",
+            key: `${chunk.id}-sec-${i}`,
+            title: section,
+            first: stageIndex === 0 && proofIndex === 0 && !emittedHeader,
+          });
+          emittedHeader = true;
+          return;
+        }
+        if (!text.trim()) return;
+        if (!emittedHeader) {
+          items.push({
+            kind: "stage-title",
+            key: `${chunk.id}-header`,
+            title: "Graph construction",
+            first: stageIndex === 0 && proofIndex === 0,
+          });
+          emittedHeader = true;
+        }
         items.push({ kind: "proof-line", key: `${chunk.id}-L${i}`, text });
       });
       proofIndex += 1;
@@ -449,17 +502,7 @@ export function EngineTraceLive({
                     key={item.key}
                     className={cn("min-w-0", !item.first && "mt-4 border-t border-white/[0.08] pt-4")}
                   >
-                    <p className="mb-2 tracking-[0.12em] text-white/85">[{item.title}]</p>
-                  </div>
-                );
-              }
-              if (item.kind === "proof-banner") {
-                return (
-                  <div
-                    key={item.key}
-                    className={cn("min-w-0", !item.first && "mt-4 border-t border-white/[0.08] pt-4")}
-                  >
-                    <p className="mb-2 tracking-[0.12em] text-white/50">=== VAYNE PROOF MODE ===</p>
+                    <p className="mb-2 text-[12px] font-medium text-white/90">{item.title}</p>
                   </div>
                 );
               }
