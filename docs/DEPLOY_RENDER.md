@@ -1,73 +1,60 @@
 # Deploy VAYNE API on Render
 
-If the Render service shows **"Exited with status 3"**, the API failed during startup. The most common cause is missing production secrets.
+If the Render service shows **"Exited with status 3"**, the API failed during startup. Check **Logs** for the exact error.
 
-## Fix an existing Render web service
+## Most common error: Postgres hostname not found
 
-If the service shows **"Exited with status 3"**, check **Logs** first. Common causes:
-
-1. **Wrong start command** — must run the FastAPI app, not the `vayne` CLI.
-2. **Invalid `DATABASE_URL`** — Postgres must be reachable from the service.
-3. **Explicitly weak secrets** — if you set `VAYNE_JWT_SECRET`, it must be 32+ chars.
-
-JWT secrets are **optional** for legacy deploys (missing secrets use dev defaults with a log warning). Set strong secrets when you require production auth.
-
-1. Open your service on Render → **Environment**.
-2. Confirm these variables (you likely already have most):
-
-| Variable | Value |
-|----------|--------|
-| `DATABASE_URL` | Your Postgres connection string |
-| `VAYNE_STORAGE` | `/opt/render/project/src/product/storage/investigations` |
-| `VAYNE_LLM_API_KEY` | Your OpenAI key (for Ask VAYNE) |
-| `CORS_ORIGINS` | Your Vercel frontend URL, e.g. `https://vayne-alpha.vercel.app` |
-
-Optional but recommended for production auth:
-
-| Variable | Value |
-|----------|--------|
-| `VAYNE_JWT_SECRET` | Random string, **at least 32 characters** |
-| `VAYNE_API_KEY_PEPPER` | Different random string, **at least 32 characters** |
-
-3. Under **Settings** → **Start Command**, set:
-
-```bash
-bash scripts/start_api.sh
+```
+psycopg2.OperationalError: could not translate host name "dpg-..." to address
 ```
 
-4. **Manual Deploy** → Deploy latest commit.
+This means `DATABASE_URL` points at a Postgres host that no longer exists or was never linked to your web service.
+
+### Fix
+
+1. Render dashboard → your **Postgres** database (create one if it was deleted).
+2. Copy **Internal Database URL** (use Internal, not External, when both services are on Render).
+3. Web service **Vayne** → **Environment** → set `DATABASE_URL` to that full URL.
+4. Or: Postgres → **Connect** → select your web service to inject the URL automatically.
+5. **Manual Deploy** the web service again.
+
+The URL must look like:
+
+```
+postgresql://USER:PASSWORD@dpg-XXXXXXXX-a/DATABASE_NAME
+```
+
+Do not truncate it. The hostname must end with `-a` (internal) or `.render.com` (external).
+
+## Other startup issues
+
+| Log message | Fix |
+|-------------|-----|
+| Wrong start command | Use `uvicorn product.backend.main:app --host 0.0.0.0 --port $PORT` |
+| Weak `VAYNE_JWT_SECRET` | Only if you explicitly set it — use 32+ random chars, or remove it |
+| `Using default JWT secret` | Warning only — server still starts |
+
+JWT secrets are **optional** for legacy deploys. Postgres **must** be reachable.
+
+## Required environment variables
+
+| Variable | Value |
+|----------|--------|
+| `DATABASE_URL` | Internal Postgres URL from Render |
+| `VAYNE_STORAGE` | `/opt/render/project/src/product/storage/investigations` |
+| `VAYNE_LLM_API_KEY` | Your OpenAI key |
+| `CORS_ORIGINS` | `https://vayne-alpha.vercel.app` (your Vercel URL) |
 
 ## Vercel frontend
-
-Set on the Vercel project:
 
 ```
 NEXT_PUBLIC_API_URL=https://vayne-716n.onrender.com
 ```
 
-(Replace with your Render service URL.)
-
 ## Verify
 
-After deploy, open:
-
 ```
-https://YOUR-SERVICE.onrender.com/api/health
+https://vayne-716n.onrender.com/api/health
 ```
 
-You should see: `{"status":"ok","service":"vayne-product-api"}`
-
-## Logs
-
-If startup still fails, open **Logs** on Render. Look for messages like:
-
-- `VAYNE_JWT_SECRET must be set to a random string of at least 32 characters in production.`
-- `VAYNE_API_KEY_PEPPER must differ from VAYNE_JWT_SECRET in production.`
-
-Generate secrets locally:
-
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(48))"
-```
-
-Run that twice — use one value for `VAYNE_JWT_SECRET` and the other for `VAYNE_API_KEY_PEPPER`.
+Expected: `{"status":"ok","service":"vayne-product-api"}`

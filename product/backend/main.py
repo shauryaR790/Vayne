@@ -28,7 +28,20 @@ logger = configure_logging()
 async def lifespan(app: FastAPI):
     validate_security_config()
     configure_logging()
-    init_db()
+    try:
+        init_db()
+    except Exception as exc:
+        from sqlalchemy.exc import OperationalError
+
+        if isinstance(exc, OperationalError) or isinstance(getattr(exc, "__cause__", None), OperationalError):
+            logger.critical(
+                "Database connection failed during startup. "
+                "On Render: open your Postgres instance → copy Internal Database URL → "
+                "set DATABASE_URL on the web service (or use Connect to link them). "
+                "Error: %s",
+                exc,
+            )
+        raise
     from product.backend.services.analyst_llm import warmup_analyst_llm
 
     asyncio.create_task(warmup_analyst_llm())
