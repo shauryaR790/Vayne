@@ -8,7 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml requirements.txt README.md ./
 COPY vayne ./vayne
+COPY product ./product
+COPY scripts ./scripts
 
 RUN pip install --no-cache-dir -r requirements.txt && pip install -e .
 
-ENTRYPOINT ["vayne"]
+ENV PYTHONPATH=/app
+
+CMD ["bash", "scripts/start_api.sh"]

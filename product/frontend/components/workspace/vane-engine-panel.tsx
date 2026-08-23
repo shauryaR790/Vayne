@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 
 import { InvestigationNoEvidence } from "@/components/workspace/home/investigation-no-evidence";
 import { ServerStartingUp } from "@/components/workspace/home/server-starting-up";
+import { BackendUnavailable } from "@/components/workspace/home/backend-unavailable";
 import { VaneEngineEmpty } from "@/components/workspace/vane-engine-empty";
 import { VaneInvestigationWorkspace } from "@/components/workspace/vane-investigation-workspace";
 import type { StoredChatMessage } from "@/lib/conversation-session";
@@ -18,6 +19,7 @@ export function VaneEnginePanel({
   hasInvestigationData,
   busy,
   backendOnline,
+  backendStartupFailed,
   analystOnline,
   error,
   files,
@@ -44,6 +46,7 @@ export function VaneEnginePanel({
   hasInvestigationData: boolean;
   busy: boolean;
   backendOnline: boolean;
+  backendStartupFailed?: boolean;
   analystOnline: boolean;
   error: string;
   files: File[];
@@ -111,7 +114,7 @@ export function VaneEnginePanel({
           ref={scrollRef}
           className="relative flex h-full min-h-0 flex-col overflow-y-auto bg-vx-app [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          <ServerStartingUp />
+          {backendStartupFailed ? <BackendUnavailable /> : <ServerStartingUp />}
         </div>
       );
     }

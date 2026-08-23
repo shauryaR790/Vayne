@@ -120,6 +120,7 @@ export function VaneWorkspace({
   const [thinking, setThinking] = useState(false);
   const [activityFeed, setActivityFeed] = useState<AgentActivityFeed | null>(null);
   const [backendOnline, setBackendOnline] = useState(false);
+  const [backendStartupFailed, setBackendStartupFailed] = useState(false);
   const [analystOnline, setAnalystOnline] = useState(false);
   const [error, setError] = useState("");
   const [investigationMode, setInvestigationMode] = useState<InvestigationMode>("combined");
@@ -172,6 +173,8 @@ export function VaneWorkspace({
   const analyzingRef = useRef(false);
   /** Re-run analyze once the API finishes cold-start after an offline ingest. */
   const retryAnalyzeWhenOnlineRef = useRef(false);
+  /** Consecutive failed health checks — surfaces backend crash vs cold start. */
+  const healthFailStreakRef = useRef(0);
   filesRef.current = files;
 
   const beginStream = useCallback(() => {
@@ -473,7 +476,18 @@ export function VaneWorkspace({
 
     const poll = async () => {
       const ok = await checkHealth();
-      if (!cancelled) setBackendOnline(ok);
+      if (cancelled) return;
+      if (ok) {
+        healthFailStreakRef.current = 0;
+        setBackendStartupFailed(false);
+        setBackendOnline(true);
+        return;
+      }
+      healthFailStreakRef.current += 1;
+      setBackendOnline(false);
+      if (healthFailStreakRef.current >= 20) {
+        setBackendStartupFailed(true);
+      }
     };
 
     void poll();
@@ -1270,6 +1284,7 @@ export function VaneWorkspace({
                         hasInvestigationData={hasInvestigationData}
                         busy={busy}
                         backendOnline={backendOnline}
+                        backendStartupFailed={backendStartupFailed}
                         analystOnline={analystOnline}
                         error={error}
                         files={files}

@@ -36,7 +36,7 @@ vayne = "vayne.cli.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["vayne*"]
+include = ["vayne*", "product*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

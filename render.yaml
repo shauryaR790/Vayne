@@ -1,0 +1,29 @@
+# Render blueprint for the VAYNE Product API.
+# Existing services: sync env vars + start command from this file in the Render dashboard.
+services:
+  - type: web
+    name: vayne
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && pip install -e .
+    startCommand: bash scripts/start_api.sh
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHONPATH
+        value: .
+      - key: VAYNE_ENV
+        value: production
+      - key: VAYNE_JWT_SECRET
+        generateValue: true
+      - key: VAYNE_API_KEY_PEPPER
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:////opt/render/project/src/product/storage/vayne.db
+      - key: VAYNE_STORAGE
+        value: /opt/render/project/src/product/storage/investigations
+      - key: VAYNE_ALLOW_REGISTRATION
+        value: "true"
+      - key: VAYNE_LLM_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

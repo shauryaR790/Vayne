@@ -42,15 +42,23 @@ def validate_security_config() -> None:
             raise RuntimeError("VAYNE_LLM_API_KEY looks invalid in production.")
 
         if secret.lower() in _WEAK_SECRETS or len(secret) < 32:
-            raise RuntimeError(
-                "VAYNE_JWT_SECRET must be set to a random string of at least 32 characters in production."
+            msg = (
+                "VAYNE_JWT_SECRET must be set to a random string of at least 32 characters "
+                "in production. On Render: Environment → add VAYNE_JWT_SECRET (see docs/DEPLOY_RENDER.md)."
             )
+            logger.critical(msg)
+            raise RuntimeError(msg)
         if pepper.lower() in _WEAK_SECRETS or len(pepper) < 32:
-            raise RuntimeError(
-                "VAYNE_API_KEY_PEPPER must be set to a random string of at least 32 characters in production."
+            msg = (
+                "VAYNE_API_KEY_PEPPER must be set to a random string of at least 32 characters "
+                "in production. On Render: Environment → add VAYNE_API_KEY_PEPPER (see docs/DEPLOY_RENDER.md)."
             )
+            logger.critical(msg)
+            raise RuntimeError(msg)
         if secret == pepper:
-            raise RuntimeError("VAYNE_API_KEY_PEPPER must differ from VAYNE_JWT_SECRET in production.")
+            msg = "VAYNE_API_KEY_PEPPER must differ from VAYNE_JWT_SECRET in production."
+            logger.critical(msg)
+            raise RuntimeError(msg)
 
         dev_tools = os.getenv("VAYNE_DEV_TOOLS", "false").lower() in ("1", "true", "yes")
         if dev_tools:

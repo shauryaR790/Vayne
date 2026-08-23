@@ -83,11 +83,12 @@ def rate_limit_settings() -> dict:
 
 
 def cors_allow_origin_regex() -> str | None:
+    vercel = r"https://([a-z0-9-]+\.)*vercel\.app$"
     if is_production():
-        return None
+        return vercel
     return (
         r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$"
-        r"|https://([a-z0-9-]+\.)*vercel\.app$"
+        f"|{vercel}"
     )
 
 
