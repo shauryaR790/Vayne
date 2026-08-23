@@ -54,7 +54,7 @@ NEXT_PUBLIC_API_URL=https://vayne-716n.onrender.com
 ## Verify
 
 ```
-https://vayne-716n.onrender.com/api/health
+https://vayne-7l6n.onrender.com/api/health
 ```
 
 Expected: `{"status":"ok","service":"vayne-product-api"}`

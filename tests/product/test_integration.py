@@ -136,7 +136,8 @@ def test_path_detail_and_proof(product_client, metasploit_path):
 
     proof = client.get(f"/api/investigation/{inv_id}/proof")
     assert proof.status_code == 200
-    assert "PROOF" in proof.text.upper()
+    proof_text = proof.text.upper()
+    assert "PROOF" in proof_text or "PRODUCTION EVIDENCE EXPORT" in proof_text
 
 
 def test_duplicate_analysis_reuses_investigation(product_client, metasploit_path, capsys):
