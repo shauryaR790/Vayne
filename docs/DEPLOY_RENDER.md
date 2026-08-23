@@ -48,7 +48,7 @@ JWT secrets are **optional** for legacy deploys. Postgres **must** be reachable.
 ## Vercel frontend
 
 ```
-NEXT_PUBLIC_API_URL=https://vayne-716n.onrender.com
+NEXT_PUBLIC_API_URL=https://vayne-7l6n.onrender.com
 ```
 
 ## Verify
