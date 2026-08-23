@@ -34,24 +34,24 @@ from vayne.llm.providers.openai_provider import OpenAIProvider, TokenUsage
 logger = logging.getLogger(__name__)
 
 REPORT_MODE_HINTS: dict[str, str] = {
-    "executive": "Format for leadership. Explain engine priority and business impact — not a report summary. Plain English first. Use Cursor-style markdown sections.",
-    "technical": "Format for SOC analysts. Explain engine investigations: evidence, contradictions, missing evidence, graph facts. Start with **In plain terms**. Never summarize uploads section by section.",
-    "remediation": "Format as analyst workflows (validate exploitability, review logs, collect evidence). Start with **In plain terms**. Do not output generic patch lists unless the engine tasks say so.",
-    "audit": "Format for compliance auditors. Missing evidence, contradictions, and traceable engine conclusions. Use Cursor-style markdown sections.",
+    "executive": "Format for leadership. Explain engine priority and business impact — not a report summary. Open with a leadership-friendly lead (e.g. **Bottom line**). Use Cursor-style markdown sections.",
+    "technical": "Format for SOC analysts. Explain engine investigations: evidence, contradictions, missing evidence, graph facts. Open with what the analyst needs first (e.g. **What happened**, **Key finding**). Never summarize uploads section by section.",
+    "remediation": "Format as analyst workflows (validate exploitability, review logs, collect evidence). Open with **What to do first** or similar. Do not output generic patch lists unless the engine tasks say so.",
+    "audit": "Format for compliance auditors. Open with **Compliance takeaway** or **Evidence gap summary** as appropriate. Missing evidence, contradictions, and traceable engine conclusions.",
 }
 
 PRESET_HINTS: dict[str, str] = {
-    "finding": "Explain the top engine investigation. Cover what happened, why it matters, evidence, contradictions, unknowns.",
-    "attack_chain": "Explain validated attack paths from graph traversal. Plain terms first, then step-by-step evidence.",
-    "rejected_chain": "Explain rejected paths and missing evidence that blocked validation.",
-    "graph": "Explain the evidence graph — nodes, edges, and how traversal produced investigations.",
-    "root_cause": "Root cause from correlated evidence — not a single scanner narrative.",
-    "evidence": "Cross-scanner evidence supporting the top investigation; cite which tools confirmed what.",
-    "business": "Business impact and priority ranking factors from the engines.",
-    "next": "Analyst workflows and investigation tasks from the engine — validation before remediation.",
-    "time_saved": "Estimate investigation time saved by dedup, correlation, and prioritization engines.",
-    "contradictions": "Conflicting evidence and how confidence was reduced.",
-    "priority": "Explain priority score components: criticality, exposure, blast radius, evidence strength, etc.",
+    "finding": "Explain the top engine investigation. Open with **What stands out** or **Key finding**, then cover why it matters, evidence, contradictions, unknowns.",
+    "attack_chain": "Explain validated attack paths from graph traversal. Open with **Attack path summary**, then step-by-step evidence.",
+    "rejected_chain": "Explain rejected paths and missing evidence that blocked validation. Open with **Why this path failed**.",
+    "graph": "Explain the evidence graph — nodes, edges, and how traversal produced investigations. Open with **Graph overview**.",
+    "root_cause": "Root cause from correlated evidence — not a single scanner narrative. Open with **Root cause**.",
+    "evidence": "Cross-scanner evidence supporting the top investigation; cite which tools confirmed what. Open with **Evidence summary**.",
+    "business": "Business impact and priority ranking factors from the engines. Open with **Business impact**.",
+    "next": "Analyst workflows and investigation tasks from the engine — validation before remediation. Open with **What to do first**.",
+    "time_saved": "Estimate investigation time saved by dedup, correlation, and prioritization engines. Open with **Time saved**.",
+    "contradictions": "Conflicting evidence and how confidence was reduced. Open with **Where evidence conflicts**.",
+    "priority": "Explain priority score components: criticality, exposure, blast radius, evidence strength, etc. Open with **Why this is ranked here**.",
 }
 
 OFFLINE_MESSAGE = (
@@ -86,7 +86,7 @@ Write for analysts first.
 
 Use Cursor-style markdown (required):
 
-1. **In plain terms** — What the engines concluded (merged investigations, not per-scanner lists), confidence level in words, and why a human should care.
+1. Open with a short bold lead that fits this investigation (e.g. **Summary**, **What stands out**, **Bottom line**) — 2–4 plain-English sentences on merged investigations, confidence in words, and why a human should care.
 
 2. **What happened** — numbered list from the top investigation(s).
 
@@ -104,8 +104,10 @@ Never invent facts. No ALL CAPS headers or divider lines.
 
 CURSOR_FORMAT_REMINDER = (
     "OUTPUT FORMAT: Reply in Cursor-style markdown. "
-    "Always start with **In plain terms** (2–4 human sentences), then technical sections. "
-    "Numbered lists for what happened; `-` bullets for evidence and actions; "
+    "Open with 2–4 plain-English sentences and a bold heading that matches what the user asked "
+    "(e.g. **Quick answer**, **Bottom line**, **Why this matters**) — do NOT default to **In plain terms** every time. "
+    "Then add technical sections with titles that fit the request. "
+    "Numbered lists for steps or causes; `-` bullets for evidence and actions; "
     "`backticks` for hosts/CVEs. Explain what things *mean*, not just what was detected.\n\n"
 )
 
