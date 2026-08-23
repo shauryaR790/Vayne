@@ -22,10 +22,9 @@ export function BackendUnavailable() {
           Backend unavailable
         </p>
         <p className="mt-4 font-mono text-[13px] leading-relaxed text-white/55">
-          The API server is not responding. On Render this usually means missing environment
-          variables — especially <span className="text-white/70">VAYNE_JWT_SECRET</span> and{" "}
-          <span className="text-white/70">VAYNE_API_KEY_PEPPER</span>. Check Render logs, fix
-          env vars, then redeploy.
+          The API server is not responding. On Render this is usually a bad{" "}
+          <span className="text-white/70">DATABASE_URL</span> (Postgres host unreachable) or a
+          crashed deploy. Check Render logs, fix env vars, then redeploy.
         </p>
         <p className="mt-4 font-mono text-[12px] text-white/40">
           Health checks retry every few seconds — this page updates when the server comes back.
