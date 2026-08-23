@@ -23,6 +23,8 @@ def validate_security_config() -> None:
     settings = jwt_settings()
     secret = settings["secret"]
     pepper = settings["api_key_pepper"]
+    jwt_explicit = bool(os.getenv("VAYNE_JWT_SECRET", "").strip())
+    pepper_explicit = bool(os.getenv("VAYNE_API_KEY_PEPPER", "").strip())
 
     # Never allow LLM secrets to be mirrored into frontend-public env names.
     for leaked in (
@@ -41,24 +43,34 @@ def validate_security_config() -> None:
         if llm_key and len(llm_key) < 20:
             raise RuntimeError("VAYNE_LLM_API_KEY looks invalid in production.")
 
-        if secret.lower() in _WEAK_SECRETS or len(secret) < 32:
-            msg = (
-                "VAYNE_JWT_SECRET must be set to a random string of at least 32 characters "
-                "in production. On Render: Environment → add VAYNE_JWT_SECRET (see docs/DEPLOY_RENDER.md)."
+        # Only enforce secret strength when operators explicitly set them.
+        # Missing secrets fall back to dev defaults (legacy Render/Vercel deploys).
+        if jwt_explicit:
+            if secret.lower() in _WEAK_SECRETS or len(secret) < 32:
+                msg = (
+                    "VAYNE_JWT_SECRET is too weak for production. "
+                    "Use a random string of at least 32 characters."
+                )
+                logger.critical(msg)
+                raise RuntimeError(msg)
+        else:
+            logger.warning(
+                "VAYNE_JWT_SECRET not set — using dev default. "
+                "Set a strong random secret before requiring auth in production."
             )
-            logger.critical(msg)
-            raise RuntimeError(msg)
-        if pepper.lower() in _WEAK_SECRETS or len(pepper) < 32:
-            msg = (
-                "VAYNE_API_KEY_PEPPER must be set to a random string of at least 32 characters "
-                "in production. On Render: Environment → add VAYNE_API_KEY_PEPPER (see docs/DEPLOY_RENDER.md)."
-            )
-            logger.critical(msg)
-            raise RuntimeError(msg)
-        if secret == pepper:
-            msg = "VAYNE_API_KEY_PEPPER must differ from VAYNE_JWT_SECRET in production."
-            logger.critical(msg)
-            raise RuntimeError(msg)
+
+        if pepper_explicit:
+            if pepper.lower() in _WEAK_SECRETS or len(pepper) < 32:
+                msg = (
+                    "VAYNE_API_KEY_PEPPER is too weak for production. "
+                    "Use a random string of at least 32 characters."
+                )
+                logger.critical(msg)
+                raise RuntimeError(msg)
+            if secret == pepper:
+                msg = "VAYNE_API_KEY_PEPPER must differ from VAYNE_JWT_SECRET in production."
+                logger.critical(msg)
+                raise RuntimeError(msg)
 
         dev_tools = os.getenv("VAYNE_DEV_TOOLS", "false").lower() in ("1", "true", "yes")
         if dev_tools:

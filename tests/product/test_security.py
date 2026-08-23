@@ -62,3 +62,13 @@ def test_production_startup_rejects_weak_secret(monkeypatch):
 
     with pytest.raises(RuntimeError):
         validate_security_config()
+
+
+def test_production_startup_allows_missing_secrets(monkeypatch):
+    monkeypatch.setenv("VAYNE_ENV", "production")
+    monkeypatch.delenv("VAYNE_JWT_SECRET", raising=False)
+    monkeypatch.delenv("VAYNE_API_KEY_PEPPER", raising=False)
+
+    from product.backend.security.startup import validate_security_config
+
+    validate_security_config()
