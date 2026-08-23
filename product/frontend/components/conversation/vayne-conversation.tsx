@@ -1405,6 +1405,7 @@ export function VaneWorkspace({
                     hasInvestigationData={hasInvestigationData}
                     busy={busy}
                     backendOnline={backendOnline}
+                    backendStartupFailed={backendStartupFailed}
                     analystOnline={analystOnline}
                     error={error}
                     files={files}
